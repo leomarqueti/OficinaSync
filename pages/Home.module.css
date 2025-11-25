@@ -1,0 +1,14 @@
+/* Note que não precisamos de prefixos complexos */
+.container {
+  background-color: #191919;
+  padding: 20px;
+  color: red;
+}
+
+.title {
+  color: #ffffff;
+}
+
+body {
+  background-color: #191919;
+}
