@@ -1,8 +1,10 @@
 /* Note que não precisamos de prefixos complexos */
 .container {
-  background-color: #191919;
-  padding: 20px;
-  color: red;
+  margin-top: 20vh;
+  margin-left: auto;
+  margin-right: auto;
+  text-align: center;
+  width: 400px;
 }
 
 .title {
