@@ -2,4 +2,35 @@
   background-color: black;
   display: flex;
   justify-content: space-between;
+  align-items: center;
+}
+
+.rightGroup {
+  display: flex;
+  justify-content: center;
+  gap: 29px;
+  padding: 18px;
+}
+
+.leftGroup {
+  padding: 18px;
+}
+
+.nav {
+  display: flex;
+  gap: 80px;
+  color: white;
+  font-weight: 800;
+  font-size: 19px;
+}
+
+.a {
+  list-style: none;
+  text-decoration: none;
+  color: white;
+  transition: color 0.2s;
+}
+
+.a:hover {
+  color: #bbe930;
 }

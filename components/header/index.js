@@ -8,8 +8,8 @@ function Header() {
       <div className={styles.leftGroup}>
         <Image
           className={styles.img}
-          width={200}
-          height={200}
+          width={80}
+          height={40}
           src="/assets/images/Logo.png"
         />
       </div>
