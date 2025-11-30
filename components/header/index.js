@@ -7,10 +7,14 @@ function Header() {
     <header className={styles.headerContainer}>
       <div className={styles.leftGroup}>
         <Image
-          className={styles.img}
-          width={80}
-          height={40}
+          //Acessibilidade para o google
+          alt="Logo Oficina Sync"
+          width={213}
+          height={108}
+          //Caminho da imagem
           src="/assets/images/Logo.png"
+          //h é a altura , w para largura auto e cursor-pointer para a maozinhe o contain server para nao achatar a imagem
+          className="h-20 w-auto cursor-pointer object-contain"
         />
       </div>
       <div className={styles.centerGroup}>
@@ -27,8 +31,8 @@ function Header() {
         </nav>
       </div>
       <div className={styles.rightGroup}>
-        <Botao title={"Login"} />
-        <Botao title={"Cadastrar"} />
+        <Botao title={"Login"} variant="primary" />
+        <Botao title={"Cadastrar"} variant="secondary" />
       </div>
     </header>
   );
