@@ -1,4 +1,3 @@
-import styles from "./Home.module.css";
 import Header from "../components/header";
 
 //futura logica de autenticação
@@ -6,12 +5,15 @@ function Pop() {
   alert("Teste");
 }
 
+//componente principal
 function Home() {
   return (
     <>
       <Header />
-      <div className={styles.container}>
-        <h1 className={styles.title}>OficinaSync Em construçao</h1>
+      <div className="grid h-screen place-items-center bg-black">
+        <h1 className="text-5xl font-bold text-sync-green">
+          OficinaSync Em construçao
+        </h1>
         {/*<Botao title="Clique aqui" aoClicar={Pop} /> */}
       </div>
     </>
