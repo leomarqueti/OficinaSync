@@ -16,14 +16,6 @@
   padding: 18px;
 }
 
-.nav {
-  display: flex;
-  gap: 80px;
-  color: white;
-  font-weight: 800;
-  font-size: 19px;
-}
-
 .a {
   list-style: none;
   text-decoration: none;
