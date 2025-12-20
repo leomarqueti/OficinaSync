@@ -1,6 +1,6 @@
 import Image from "next/image";
 
-function Hero2() {
+export default function Hero2() {
   return (
     <section className="bg-neutral-900">
       <div className="mx-auto flex min-h-[100dvh] max-w-6xl flex-col items-center justify-center gap-10 px-6 py-16 md:flex-row md:gap-16">
@@ -29,5 +29,3 @@ function Hero2() {
     </section>
   );
 }
-
-export default Hero2;
