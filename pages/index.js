@@ -12,9 +12,12 @@ function Home() {
   return (
     <>
       <Header />
-      <Hero />
-
-      <Hero2 />
+      <div className="grid h-screen place-items-center bg-black">
+        <Hero />
+      </div>
+      <div className="grid h-screen place-items-center bg-neutral-900">
+        <h1 className="font-bold text-sync-green text-5xl">Em construção</h1>
+      </div>
     </>
   );
 }
