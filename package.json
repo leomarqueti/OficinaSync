@@ -5,6 +5,7 @@
   "main": "index.js",
   "scripts": {
     "dev": "next dev",
+    "test:watch": "jest --watchAll",
     "lintcheck": "prettier --check"
   },
   "author": "",
@@ -16,6 +17,7 @@
   },
   "devDependencies": {
     "autoprefixer": "^10.4.22",
+    "jest": "^30.2.0",
     "postcss": "^8.5.6",
     "prettier": "^3.7.3",
     "prettier-plugin-tailwindcss": "^0.7.1",
