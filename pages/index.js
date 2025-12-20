@@ -1,6 +1,6 @@
 import Header from "../components/header";
 import Hero from "../components/hero";
-import Hero2 from "../components/hero2";
+import Hero2 from "../components/Hero2";
 
 //futura logica de autenticação
 function Pop() {
