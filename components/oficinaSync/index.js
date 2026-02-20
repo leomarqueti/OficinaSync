@@ -1128,12 +1128,15 @@ export default function OficinaSync() {
                 <div className="grid-2">
                   <div className="image-placeholder">
                     <img
-                      src="/workspaces/OficinaSync/components/oficinaSync/sujo.png"
+                      src="/assets/images/sujo.png"
                       alt="Scanner diagnóstico"
                     />
                   </div>
                   <div className="image-placeholder">
-                    Comparação Antes/Depois
+                    <img
+                      src="/assets/images/limpa.png"
+                      alt="Scanner diagnóstico"
+                    />
                   </div>
                 </div>
               </div>
