@@ -1,20 +1,3 @@
-/*
-  OficinaSync OBD -- Firmware v4 FINAL (TCC)
-  
-  Combina:
-  OK Base do codigo antigo que funcionava (setPin 2 args, nome "OBDII")
-  OK Correcoes BT: esp_task_wdt_reset + resposta HTTP antes do bloqueio
-  OK Provisionamento Wi-Fi via AP (sem senha hardcoded)
-  OK Admin Key gerada no 1o boot (seguranca basica)
-  OK Modo AP fallback automatico se Wi-Fi falhar
-  OK Endpoints /snapshot.json e /bt_raw para diagnostico
-  OK Parser DTC corrigido (4 bytes por codigo)
-  OK UI completa com graficos, cards coloridos e dicionario DTC
-
-  Bibliotecas necessarias:
-  - ESP32 by Espressif Systems (Board Manager)
-  - ELMduino (Library Manager)
-*/
 
 #include <WiFi.h>
 #include <WebServer.h>
@@ -65,7 +48,7 @@ bool btAutoReconnect = false;
 // =========================
 String wifiSsid     = "";
 String wifiPass     = "";
-String btDeviceName = "OBDII";   // nome padrao -- mais confiavel que MAC
+String btDeviceName = "OBDII";   
 String btPinCode    = "1234";
 String adminKey     = "";
 String apPass       = "";
