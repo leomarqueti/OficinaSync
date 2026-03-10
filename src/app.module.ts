@@ -24,7 +24,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
         synchronize: true, //Aqui diz para o typeOrm sincronizar as entidades com o banco de dados, ou seja, criar as tabelas no banco de dados, caso elas não existam, ou atualizar as tabelas caso elas já existam, mas tenham sido alteradas. 10/03/2026
         options: {
           encrypt: false, //Aqui diz para o typeOrm não criptografar a conexão com o banco de dados, isso é necessário para o SQL Server, caso contrário, ele não vai conseguir se conectar. 10/03/2026
-          trustServerCertificate: true, //Aqui diz para o typeOrm confiar no certificado do servidor, isso é necessário para o SQL Server, caso contrário, ele não vai conseguir se conectar. 10/03/2026
+          trustServerCertificate: true, //Aqui diz para o typeOrm confiar no certificado do servidor, isso é necessário para o SQL Server, caso contrário, ele não vai conseguir se conectar. 10/03/2026.
         },
       }),
     }),
