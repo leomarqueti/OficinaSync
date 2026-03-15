@@ -85,7 +85,7 @@ PORT=3000
 NODE_ENV=development
 ```
 
-> ⚠️ Combina a senha com o time via WhatsApp ou presencialmente. Nunca coloca senha no GitHub.
+
 
 ---
 
