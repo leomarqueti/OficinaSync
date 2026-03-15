@@ -1,98 +1,253 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# OficinaSync
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+Sistema digital de transparência e registro técnico estruturado para oficinas mecânicas.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+---
 
-## Description
+## Pré-requisitos
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+Instala uma vez só na máquina. Depois nunca mais precisa.
 
-## Project setup
+| Ferramenta | Link | Observação |
+|---|---|---|
+| Git | git-scm.com | No Windows, instala o **Git Bash** junto |
+| Node.js 20+ | nodejs.org | Baixa a versão LTS |
+| Docker Desktop | docker.com/products/docker-desktop | No Windows precisa do WSL2 — o instalador pede automaticamente |
+
+> **Windows:** Depois de instalar o Docker Desktop, reinicia o PC antes de continuar.
+
+Para verificar se está tudo certo, abre o terminal e roda:
 
 ```bash
-$ npm install
+git --version
+node --version
+docker --version
+docker compose version
 ```
 
-## Compile and run the project
+Se aparecer os quatro números de versão — está pronto.
+
+---
+
+## Configurando o projeto
+
+### 1. Clona o repositório
 
 ```bash
-# development
-$ npm run start
-
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
+git clone https://github.com/leomarqueti/OficinaSync.git
+cd OficinaSync
 ```
 
-## Run tests
+> Se já clonou antes, só atualiza:
+> ```bash
+> cd OficinaSync
+> git pull origin main
+> ```
+
+---
+
+### 2. Cria o arquivo `.env`
+
+O `.env` guarda as senhas e nunca vai para o GitHub. Você cria na sua máquina.
+
+**No Git Bash ou terminal do Mac/Linux:**
+```bash
+cp backend/.env.example backend/.env
+```
+
+**No PowerShell ou CMD do Windows:**
+```powershell
+copy backend\.env.example backend\.env
+```
+
+Abre o `backend/.env` e preenche com as senhas que o time combinou:
+
+```env
+# Banco de dados
+DB_HOST=localhost
+DB_PORT=1433
+DB_NAME=oficinasync
+DB_USER=sa
+DB_PASSWORD=SENHA_DO_TIME_AQUI
+
+# MinIO
+MINIO_USER=oficinasync
+MINIO_PASSWORD=SENHA_DO_TIME_AQUI
+MINIO_ENDPOINT=localhost
+MINIO_PORT=9000
+
+# JWT
+JWT_SECRET=SENHA_DO_TIME_AQUI_JWT
+JWT_EXPIRES_IN=7d
+
+# App
+PORT=3000
+NODE_ENV=development
+```
+
+> ⚠️ Combina a senha com o time via WhatsApp ou presencialmente. Nunca coloca senha no GitHub.
+
+---
+
+### 3. Sobe o banco e o storage
+
+Na **raiz do projeto** (pasta `OficinaSync`, não dentro de `backend`):
 
 ```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
+docker compose up -d
 ```
 
-## Deployment
+Na primeira vez vai demorar alguns minutos porque baixa as imagens do SQL Server e MinIO. Da próxima vez é instantâneo.
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+Verifica se subiu corretamente:
 
 ```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+docker compose ps
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+Deve aparecer assim:
 
-## Resources
+```
+NAME                  STATUS
+oficinasync-db        Up
+oficinasync-storage   Up
+```
 
-Check out a few resources that may come in handy when working with NestJS:
+Se os dois estiverem `Up` — banco e storage funcionando.
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+---
 
-## Support
+### 4. Cria o banco de dados
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+O SQL Server sobe mas não cria o banco automaticamente. Faz isso uma única vez:
 
-## Stay in touch
+**No Git Bash:**
+```bash
+MSYS_NO_PATHCONV=1 docker exec -it oficinasync-db /opt/mssql-tools18/bin/sqlcmd \
+  -S localhost -U sa -P "SENHA_DO_TIME_AQUI" \
+  -No -Q "CREATE DATABASE oficinasync"
+```
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+**No PowerShell:**
+```powershell
+docker exec -it oficinasync-db //opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "SENHA_DO_TIME_AQUI" -No -Q "CREATE DATABASE oficinasync"
+```
 
-## License
+> Substitui `SENHA_DO_TIME_AQUI` pela senha que está no seu `.env`.
+>
+> Se aparecer uma linha em branco sem erro — banco criado com sucesso.
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+---
+
+### 5. Instala as dependências do backend
+
+Entra na pasta `backend` e instala:
+
+```bash
+cd backend
+npm install
+```
+
+---
+
+### 6. Roda o backend
+
+```bash
+npm run start:dev
+```
+
+Se aparecer isso no terminal — tudo funcionando:
+
+```
+[NestFactory] Starting Nest application...
+[TypeOrmCoreModule] dependencies initialized
+[NestApplication] Nest application successfully started
+```
+
+A API estará disponível em `http://localhost:3000/api`.
+
+---
+
+## Estrutura do projeto
+
+```
+OficinaSync/
+├── backend/          ← API NestJS
+│   ├── src/
+│   │   ├── modules/  ← módulos do sistema
+│   │   ├── app.module.ts
+│   │   └── main.ts
+│   ├── .env          ← suas variáveis (nunca vai para o GitHub)
+│   └── .env.example  ← modelo das variáveis (vai para o GitHub)
+├── web/              ← Frontend React (em desenvolvimento)
+├── mobile/           ← App React Native (em desenvolvimento)
+├── iot/              ← Firmware ESP32
+├── docker-compose.yml
+└── README.md
+```
+
+---
+
+## Comandos do dia a dia
+
+```bash
+# Subir banco e storage
+docker compose up -d
+
+# Parar banco e storage (dados são mantidos)
+docker compose down
+
+# Ver se os containers estão rodando
+docker compose ps
+
+# Rodar o backend em modo desenvolvimento
+cd backend
+npm run start:dev
+
+# Puxar atualizações do repositório
+git pull origin main
+```
+
+---
+
+## Problemas comuns
+
+### "Login failed for user sa"
+O banco `oficinasync` não existe ainda. Roda o passo 4 acima.
+
+### "No such file or directory" no Git Bash
+Usa o `MSYS_NO_PATHCONV=1` antes do comando, ou troca para o PowerShell.
+
+### "destination path already exists"
+Você já clonou o repositório. Só entra na pasta e atualiza:
+```bash
+cd OficinaSync
+git pull origin main
+```
+
+### "cp: command not found" no CMD do Windows
+Usa `copy` ao invés de `cp`. Ou abre o Git Bash.
+
+### Docker não inicia
+Verifica se o Docker Desktop está aberto. No Windows, procura o ícone da baleia na barra de tarefas.
+
+---
+
+## Stack
+
+| Camada | Tecnologia |
+|---|---|
+| Backend | NestJS + TypeScript |
+| Banco de dados | SQL Server 2022 |
+| Storage de mídia | MinIO |
+| Frontend Web | React |
+| Mobile | React Native |
+| IoT / OBD | ESP32 + ELM327 |
+| Autenticação | JWT + ARGON2ID |
+
+---
+
+## Time
+
+Projeto TCC 
+Repositório: github.com/leomarqueti/OficinaSync
