@@ -7,7 +7,7 @@ import {
   IsNotEmpty,
   IsPhoneNumber,
 } from 'class-validator';
-import { IsCNPJ } from 'validation-br';
+import { IsCnpj } from 'src/common/validators/is-cnpj-decorator';
 
 //Esse dto serve para criar um tenant
 export class CreateTenantDto {
@@ -19,7 +19,7 @@ export class CreateTenantDto {
   //aqui usamos uma biblioteca de validação do brasil para o cnpj
   @IsNotEmpty()
   @IsNumberString()
-  @IsCNPJ({ message: 'CNPJ invalido' })
+  @IsCnpj()
   cnpj: string;
 
   //O no phonenumber passamos a regiao br

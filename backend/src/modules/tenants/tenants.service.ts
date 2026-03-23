@@ -15,6 +15,17 @@ export class TenantsService {
     private tenantsRepository: Repository<Tenants>,
   ) {}
 
+  /*
+   essa função fica responsavel por criar um tenants, ela recebe um dto 
+  usamos o findone , para verificar se tem algum tenant ja cadastrado 
+  com esses dados, assim evitamos varios cadastros iguais,
+  caso nao tenha esse tenant , nos adicionamos o plano , e o status
+  por padrao trial, para evitar que isso venha na requisiao de criação
+  , dessa forma evitamos ataques onde o usuario manipule a requisiçao 
+  para pro , sem ter pagado antes.
+  por final , adicionamos a data de atual mais 7 dias que vai ser 
+  o prazo para o trial
+  */
   async create(createTenantDto: CreateTenantDto): Promise<Tenants> {
     const newTenant = this.tenantsRepository.create(createTenantDto);
 
