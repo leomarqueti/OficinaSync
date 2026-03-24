@@ -6,6 +6,7 @@ import {
   IsNumberString,
   IsNotEmpty,
   IsPhoneNumber,
+  MaxLength,
 } from 'class-validator';
 import { IsCnpj } from 'src/common/validators/is-cnpj-decorator';
 
@@ -14,6 +15,7 @@ export class CreateTenantDto {
   //Somente o nome, nada de mais aqui
   @IsString()
   @IsDefined()
+  @MaxLength(100)
   name: string;
 
   //aqui usamos uma biblioteca de validação do brasil para o cnpj
@@ -25,5 +27,6 @@ export class CreateTenantDto {
   //O no phonenumber passamos a regiao br
   @IsPhoneNumber('BR')
   @IsNotEmpty()
+  @MaxLength(100)
   phone: string;
 }
