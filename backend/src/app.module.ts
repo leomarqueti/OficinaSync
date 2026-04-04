@@ -1,7 +1,13 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { TenantsModule } from './modules/tenants/tenants.module';
+import { UsersModule } from './modules/users/users.module';
+import { AuthModule } from './modules/AuthModule/authModule.module';
+import { Email_verificationsModule } from './modules/email_verifications/email_verifications.module';
+
+export const PASSWORD_PEPPER = 'PASSWORD_PEPPER';
 
 @Module({
   imports: [
@@ -30,8 +36,26 @@ import { TenantsModule } from './modules/tenants/tenants.module';
       }),
     }),
     TenantsModule,
+    UsersModule,
+    Email_verificationsModule,
+    AuthModule,
   ],
   controllers: [],
-  providers: [],
+  providers: [
+    {
+      provide: PASSWORD_PEPPER,
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => {
+        const value = config.get<string>('PASSWORD_PEPPER');
+
+        if (!value) {
+          throw new Error('PASSWORD_PEPPER não foi definido no .env');
+        }
+
+        return Buffer.from(value, 'utf8');
+      },
+    },
+  ],
+  exports: [PASSWORD_PEPPER],
 })
 export class AppModule {}

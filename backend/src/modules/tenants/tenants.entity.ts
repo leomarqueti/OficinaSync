@@ -5,11 +5,12 @@ import {
   CreateDateColumn,
   Entity,
   Index,
+  OneToMany,
   PrimaryGeneratedColumn,
-  MaxLength,
 } from 'typeorm';
 import { Plan } from './plan.enum';
 import { Status } from './status.enum';
+import { Users } from '../users/users.entity';
 
 @Entity('tenants')
 //colocamos dois check que tem enums para o banco checkar so o que definimos entrar no banco
@@ -24,12 +25,12 @@ export class Tenants {
   id: number;
 
   //A coluna de nome
-  @Column({ length: 100 })
+  @Column()
   name: string;
 
   //esse campo adicionamos o unique para nao ter cpf repetido
   @Index({ unique: true })
-  @Column({ length: 14 , unique: true, })
+  @Column()
   cnpj: string;
 
   //Coluna para o telefone
@@ -69,4 +70,7 @@ export class Tenants {
   // Aqui usamos o decorator de criar uma data
   @CreateDateColumn()
   created_at: Date;
+
+  @OneToMany(() => Users, (user) => user.tenant)
+  users: Users[];
 }
