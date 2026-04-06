@@ -9,7 +9,7 @@ import {
 import { Users } from '../users/users.entity';
 
 @Entity('email_verifications')
-export class Email_verificarions {
+export class Email_verifications {
   @PrimaryGeneratedColumn()
   id: number;
 

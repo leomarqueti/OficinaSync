@@ -6,6 +6,7 @@ import { Repository } from 'typeorm';
 import { CreateTenantDto } from './dto/create-tenants.dto';
 import { Status } from './status.enum';
 import { Plan } from './plan.enum';
+import { EmailService } from '../emailResend/emailResend.service';
 
 @Injectable()
 export class TenantsService {
@@ -13,6 +14,7 @@ export class TenantsService {
   constructor(
     @InjectRepository(Tenants)
     private tenantsRepository: Repository<Tenants>,
+    private emailService: EmailService,
   ) {}
 
   /*
@@ -40,6 +42,9 @@ export class TenantsService {
     newTenant.plan = Plan.TRIAL;
     newTenant.status = Status.TRIAL;
     newTenant.trial_ends_at = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+
+    //this.emailService.sendVerificationEmail()
+    // terminar depois de fzer p jwt temporario
 
     return this.tenantsRepository.save(newTenant);
   }

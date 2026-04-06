@@ -6,6 +6,7 @@ import { TenantsModule } from './modules/tenants/tenants.module';
 import { UsersModule } from './modules/users/users.module';
 import { AuthModule } from './modules/AuthModule/authModule.module';
 import { Email_verificationsModule } from './modules/email_verifications/email_verifications.module';
+import { EmailModule } from './modules/emailResend/emailResend.module';
 
 export const PASSWORD_PEPPER = 'PASSWORD_PEPPER';
 
@@ -39,6 +40,7 @@ export const PASSWORD_PEPPER = 'PASSWORD_PEPPER';
     UsersModule,
     Email_verificationsModule,
     AuthModule,
+    EmailModule,
   ],
   controllers: [],
   providers: [

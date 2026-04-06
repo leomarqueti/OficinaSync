@@ -11,7 +11,7 @@ import {
 } from 'typeorm';
 import { Role } from './role.enum';
 import { Tenants } from '../tenants/tenants.entity';
-import { Email_verificarions } from '../email_verifications/email_verifications.entity';
+import { Email_verifications } from '../email_verifications/email_verifications.entity';
 
 @Entity('users')
 @Check(
@@ -53,8 +53,8 @@ export class Users {
   tenant: Tenants | null;
 
   @OneToMany(
-    () => Email_verificarions,
+    () => Email_verifications,
     (email_verifications) => email_verifications.users,
   )
-  email_verifications: Email_verificarions[];
+  email_verifications: Email_verifications[];
 }
