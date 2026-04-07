@@ -24,17 +24,11 @@ export class AuthService {
   async register(createUserDto: CreateUserDto) {
     const user = await this.usersService.create(createUserDto);
 
-    // usamos a biblioteca cryptp para criar um token de 32 bits e hexadecimal
-    const token = randomBytes(32).toString('hex');
-
-    //Agora vamos chamar a funçao de criar a verificacao de email
-    await this.email_verificationService.saveToken(user.user_id, token);
-    console.log(token);
-
     const onboardingToken = await this.jwtService.signAsync(
       {
         sub: user.user_id,
         email: user.email,
+        name: user.name,
         scope: 'onboarding',
       },
       {

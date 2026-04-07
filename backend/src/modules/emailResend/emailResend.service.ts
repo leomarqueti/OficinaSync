@@ -19,12 +19,21 @@ export class EmailService {
     this.resend = new Resend(apiKey);
   }
 
-  /*async sendVerificationEmail(email, token, name) {
-    return this.resend.emails.send({
+  async sendVerificationEmail(email, token, name) {
+    const { data, error } = await this.resend.emails.send({
       from: 'onboarding@resend.dev',
-      to: email,
+      to: [email],
       subject: 'Ola, ' + name,
       html: `<a href="http://localhost:3000/verify?token=${token}">Verificar conta</a>`,
     });
-  }*/
+
+    console.log('RESEND DATA:', data);
+    console.log('RESEND ERROR:', error);
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    return data;
+  }
 }

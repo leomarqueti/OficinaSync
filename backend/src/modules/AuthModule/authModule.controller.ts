@@ -17,5 +17,11 @@ export class AuthController {
     const userRegister = await this.authService.register(createUserDto);
 
     return plainToInstance(ResponseAuthDto, userRegister);
+
+    /* criamos o response-auth.dto, nele temos o onboarding e ele acessa
+    o response userAuth (mudei o nome para ficar melhor) e retorna
+      tudo filtrado , dessa forma nao retorna mais o json vazio e retorna
+      junto o jwt para usar na validaçao dentro do /tenants
+    */
   }
 }
