@@ -21,7 +21,7 @@ export class EmailService {
 
   async sendVerificationEmail(email, token, name) {
     const { data, error } = await this.resend.emails.send({
-      from: 'onboarding@resend.dev',
+      from: 'OficinaSync <no-reply@oficinasync.com.br>',
       to: [email],
       subject: 'Ola, ' + name,
       html: `<a href="http://localhost:3000/verify?token=${token}">Verificar conta</a>`,

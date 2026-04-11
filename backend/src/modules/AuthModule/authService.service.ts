@@ -1,9 +1,10 @@
+/* eslint-disable @typescript-eslint/no-misused-promises */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-floating-promises */
 /* eslint-disable prettier/prettier */
-import { Injectable } from '@nestjs/common';
-import { randomBytes } from 'node:crypto';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
+
 import { CreateUserDto } from '../users/dto/create-users.dto';
 import { UsersService } from '../users/users.service';
 import { Email_verificationsService } from '../email_verifications/email_verifications.service';
@@ -43,5 +44,38 @@ export class AuthService {
     };
   }
 
-  login() {}
+  async login(email: string, senha: string) {
+    const user = await this.usersService.findHashPassword(email);
+
+    if (!user) {
+      throw new UnauthorizedException('Usuario ou senha invalidos!');
+    }
+
+    const hashVerify = await this.usersService.verifyHash(
+      senha,
+      user.password_hash,
+    );
+
+    if (!hashVerify) {
+      throw new UnauthorizedException('Usuario ou senha invalidos!');
+    }
+
+    if (!user.is_active) {
+      throw new UnauthorizedException('Email não verificado!');
+    }
+
+    const payload = {
+      sub: user.user_id,
+      email: user.email,
+      scope: 'access',
+    };
+
+    return {
+      access_token: await this.jwtService.signAsync(payload),
+    };
+  }
+
+  async verifyEmail(token: string) {
+    await this.email_verificationService.verifyEmailToken(token);
+  }
 }

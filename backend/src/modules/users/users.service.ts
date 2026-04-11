@@ -1,8 +1,11 @@
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
+/* eslint-disable @typescript-eslint/await-thenable */
 /* eslint-disable prettier/prettier */
 import {
   ConflictException,
   Injectable,
   InternalServerErrorException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Users } from './users.entity';
@@ -51,15 +54,80 @@ export class UsersService {
   }
 
   async updateTenantId(userId: number, tenant: Tenants) {
-    const user = await this.usersRepository.findOne({
-      where: { user_id: userId },
-    });
+    const user = await this.findById(userId);
 
     if (!user) {
       throw new Error('Usuario nao encontrado!');
     }
 
     user.tenant = tenant;
+
+    await this.usersRepository.save(user);
+  }
+
+  async findByEmail(email: string) {
+    const emailUser = await this.usersRepository.findOne({
+      where: {
+        email: email,
+      },
+    });
+
+    return emailUser;
+  }
+
+  // função responsavel por buscar a hash do usuario
+  async findHashPassword(email: string) {
+    const user = await this.usersRepository
+      .createQueryBuilder('user')
+      .addSelect('user.password_hash')
+      .where('user.email = :email', { email })
+      .getOne();
+
+    const hashUser = user?.password_hash;
+
+    if (!hashUser) {
+      throw new UnauthorizedException('Credenciais inválidas');
+    }
+
+    return user;
+  }
+
+  // Usamos essa funçao para validar senhas no login
+  async verifyHash(password: string, hash: string) {
+    // aqui fica o pepper , os dados dele ficam no .env
+    const PEPPER = this.configService.get<string>('PASSWORD_PEPPER');
+
+    if (!PEPPER) {
+      throw new InternalServerErrorException(
+        'PASSWORD_PEPPER não foi definido no .env',
+      );
+    }
+
+    //aqui usamos a verificaçao do proprio argon dois, que pega a senha e ja transforma em hash
+    //e verifica com a do banco
+    return await argon2.verify(hash, password, {
+      secret: Buffer.from(PEPPER, 'utf8'),
+    });
+  }
+
+  async findById(id: number) {
+    const user = await this.usersRepository.findOne({
+      where: {
+        user_id: id,
+      },
+    });
+
+    if (!user) {
+      throw new Error('Usuario nao encontrado!');
+    }
+
+    return user;
+  }
+
+  async activeUser(id: number) {
+    const user = await this.findById(id);
+
+    user.is_active = true;
 
     await this.usersRepository.save(user);
   }

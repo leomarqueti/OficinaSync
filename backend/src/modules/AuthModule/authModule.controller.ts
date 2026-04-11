@@ -1,9 +1,20 @@
+/* eslint-disable @typescript-eslint/no-unsafe-return */
 /* eslint-disable prettier/prettier */
-import { Body, Controller, HttpCode, HttpStatus, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { AuthService } from './authService.service';
 import { CreateUserDto } from '../users/dto/create-users.dto';
 import { plainToInstance } from 'class-transformer';
 import { ResponseAuthDto } from './dto/response-auth.dto';
+import { LoginDto } from './dto/login.dto';
+import { TokenExpiredError } from '@nestjs/jwt';
 
 @Controller('auth')
 export class AuthController {
@@ -23,5 +34,17 @@ export class AuthController {
       tudo filtrado , dessa forma nao retorna mais o json vazio e retorna
       junto o jwt para usar na validaçao dentro do /tenants
     */
+  }
+
+  @Post('/login')
+  @HttpCode(HttpStatus.OK)
+  async login(@Body() body: LoginDto) {
+    return this.authService.login(body.email, body.password);
+  }
+
+  @Get('/verify-email')
+  @HttpCode(HttpStatus.OK)
+  async verifyEmail(@Query('token') token: string) {
+    return await this.authService.verifyEmail(token);
   }
 }
