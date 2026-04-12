@@ -24,7 +24,7 @@ export class EmailService {
       from: 'OficinaSync <no-reply@oficinasync.com.br>',
       to: [email],
       subject: 'Ola, ' + name,
-      html: `<a href="http://localhost:3000/verify?token=${token}">Verificar conta</a>`,
+      html: `<a href="http://localhost:3000/auth/verify-email?token=${token}">Verificar conta</a>`,
     });
 
     console.log('RESEND DATA:', data);
