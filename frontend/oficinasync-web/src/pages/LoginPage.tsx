@@ -13,50 +13,39 @@ export function LoginPage() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
 
-    const [token, setToken] = useState('');
-
     const sendData = async () => {
         const rawDataLogin = {
-            email: email,
-            password: password
-        }
-    
+            email,
+            password,
+        };
 
-    try {
-      // 2. Fetch POST
-      const response = await fetch('http://localhost:3000/auth/login', {
-        method: 'POST',
-        headers: {
-          // 3. Essencial: Define que está enviando JSON
-          'Content-Type': 'application/json' 
-        },
-        // 4. Converte o Objeto JS para String JSON (raw)
-        body: JSON.stringify(rawDataLogin) 
-      });
-        
+        try {
+            const response = await fetch("http://localhost:3000/auth/login", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify(rawDataLogin),
+            });
 
-        const result = await response.json();
+            const result = await response.json();
 
-        if (result.access_token) {
-            setToken(result.access_token)
-            console.log('sucesso', result)
-            console.log('token:', result.access_token) 
-            navigate("/dashboard")
+            if (result.access_token) {
+                localStorage.setItem("token", result.access_token);
+                navigate("/dashboard");
+            }
+        } catch (error) {
+            console.error("Erro:", error);
         }
 
-        
-    } catch (error) {
-        console.error('Erro:', error)
+
     }
-
-}
             
 
     return (
         <>
-            <div className="min-h-screen w-full bg-zinc-100 flex items-center justify-center p-6">
-                <Card className="w-full max-w-6xl overflow-hidden rounded-3xl p-0 shadow-2xl border-0">
-                <div className="grid min-h-[700px] grid-cols-1 md:grid-cols-2">
+            
+                <div className="grid min-h-screen w-full grid-cols-1 md:grid-cols-2">
                     <div className="hidden md:flex bg-black items-center justify-center p-10">
                     <img
                         src={logoOficinaSync}
@@ -126,8 +115,7 @@ export function LoginPage() {
                     </div>
                     </div>
                 </div>
-                </Card>
-            </div>
+               
             </>
     )
 }

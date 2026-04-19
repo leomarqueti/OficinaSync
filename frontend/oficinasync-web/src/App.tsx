@@ -6,6 +6,9 @@ import { TenantRegisterPage } from './pages/TenantRegisterPage'
 import { EmailSendPage } from './pages/EmailSendPage'
 import { DashboardPage } from './pages/dashBoardPage'
 import { SidebarProvider } from '@/components/ui/sidebar'
+import { OsCreateClientPage } from './pages/osCreateClientPage'
+import { OsCreateCarPage } from './pages/osCreateCarPage'
+import { OsVehicleDefectPage } from './pages/osVehicleDefectPage'
 
 function App() {
   return (
@@ -23,6 +26,9 @@ function App() {
             </SidebarProvider>
           }
         />
+        <Route path="/os-client-create" element={<OsCreateClientPage/>} />
+        <Route path='/os-car-create' element={<OsCreateCarPage/>} />
+        <Route path='/os-defect-create' element={<OsVehicleDefectPage/>} />
       </Routes>
     </BrowserRouter>
   )

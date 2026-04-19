@@ -11,6 +11,8 @@ import {
 import { Plan } from './plan.enum';
 import { Status } from './status.enum';
 import { Users } from '../users/users.entity';
+import { Clients } from '../clients/clients.entity';
+import { Cars } from '../cars/cars.entity';
 
 @Entity('tenants')
 //colocamos dois check que tem enums para o banco checkar so o que definimos entrar no banco
@@ -73,4 +75,10 @@ export class Tenants {
 
   @OneToMany(() => Users, (user) => user.tenant)
   users: Users[];
+
+  @OneToMany(() => Clients, (client) => client.tenant)
+  clients: Clients[];
+
+  @OneToMany(() => Cars, (car) => car.tenant)
+  cars: Cars[];
 }

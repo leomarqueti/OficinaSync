@@ -7,6 +7,8 @@ import { UsersModule } from './modules/users/users.module';
 import { AuthModule } from './modules/AuthModule/authModule.module';
 import { Email_verificationsModule } from './modules/email_verifications/email_verifications.module';
 import { EmailModule } from './modules/emailResend/emailResend.module';
+import { ClientsModule } from './modules/clients/clients.module';
+import { CarsModule } from './modules/cars/cars.module';
 
 export const PASSWORD_PEPPER = 'PASSWORD_PEPPER';
 
@@ -41,6 +43,8 @@ export const PASSWORD_PEPPER = 'PASSWORD_PEPPER';
     Email_verificationsModule,
     AuthModule,
     EmailModule,
+    ClientsModule,
+    CarsModule,
   ],
   controllers: [],
   providers: [

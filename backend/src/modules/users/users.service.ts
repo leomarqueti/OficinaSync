@@ -115,6 +115,9 @@ export class UsersService {
       where: {
         user_id: id,
       },
+      relations: {
+        tenant: true,
+      },
     });
 
     if (!user) {
