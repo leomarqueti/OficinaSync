@@ -9,6 +9,10 @@ import { Email_verificationsModule } from './modules/email_verifications/email_v
 import { EmailModule } from './modules/emailResend/emailResend.module';
 import { ClientsModule } from './modules/clients/clients.module';
 import { CarsModule } from './modules/cars/cars.module';
+import { ServiceOrders } from './modules/serviceOrder/serviceOrder.entity';
+import { ServiceOrdersModule } from './modules/serviceOrder/serviceOrder.module';
+import { Sections } from './modules/sections/section.entity';
+import { Media } from './modules/medias/media.entity';
 
 export const PASSWORD_PEPPER = 'PASSWORD_PEPPER';
 
@@ -45,6 +49,9 @@ export const PASSWORD_PEPPER = 'PASSWORD_PEPPER';
     EmailModule,
     ClientsModule,
     CarsModule,
+    ServiceOrdersModule,
+    Sections,
+    Media,
   ],
   controllers: [],
   providers: [

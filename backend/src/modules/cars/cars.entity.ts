@@ -5,11 +5,13 @@ import {
   Entity,
   JoinColumn,
   ManyToOne,
+  OneToMany,
   PrimaryGeneratedColumn,
 } from 'typeorm';
 import { Clients } from '../clients/clients.entity';
 import { Tenants } from '../tenants/tenants.entity';
 import { FuelType } from './fuelType.enum';
+import { ServiceOrders } from '../serviceOrder/serviceOrder.entity';
 
 @Entity('cars')
 export class Cars {
@@ -39,6 +41,7 @@ export class Cars {
 
   @Column({
     type: 'varchar',
+    enum: FuelType,
   })
   fuel_type: FuelType;
 
@@ -73,4 +76,7 @@ export class Cars {
   })
   @JoinColumn({ name: 'tenant_id' })
   tenant: Tenants;
+
+  @OneToMany(() => ServiceOrders, (serviceOrder) => serviceOrder.car)
+  serviceOrders: ServiceOrders[];
 }

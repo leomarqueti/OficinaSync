@@ -21,5 +21,6 @@ import { UsersService } from '../users/users.service';
   ],
   controllers: [CarsController],
   providers: [CarsService, UsersService],
+  exports: [CarsService],
 })
 export class CarsModule {}

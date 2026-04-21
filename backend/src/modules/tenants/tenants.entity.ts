@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-unsafe-return */
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable prettier/prettier */
 import {
   Check,
@@ -13,6 +15,7 @@ import { Status } from './status.enum';
 import { Users } from '../users/users.entity';
 import { Clients } from '../clients/clients.entity';
 import { Cars } from '../cars/cars.entity';
+import { ServiceOrders } from '../serviceOrder/serviceOrder.entity';
 
 @Entity('tenants')
 //colocamos dois check que tem enums para o banco checkar so o que definimos entrar no banco
@@ -81,4 +84,7 @@ export class Tenants {
 
   @OneToMany(() => Cars, (car) => car.tenant)
   cars: Cars[];
+
+  @OneToMany(() => ServiceOrders, (serviceOrder) => serviceOrder.tenant)
+  serviceOrders: ServiceOrders[];
 }

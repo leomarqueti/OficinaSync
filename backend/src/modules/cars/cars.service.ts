@@ -43,4 +43,22 @@ export class CarsService {
 
     return this.carsRepository.save(newCar);
   }
+
+  async findById(id: number) {
+    const client = await this.carsRepository.findOne({
+      where: {
+        car_id: id,
+      },
+      relations: {
+        tenant: true,
+        client: true,
+      },
+    });
+
+    if (!client) {
+      throw new Error('Carro nao encontrado!');
+    }
+
+    return client;
+  }
 }

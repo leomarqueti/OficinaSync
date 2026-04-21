@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-return */
 /* eslint-disable prettier/prettier */
 import {
   Check,
@@ -12,6 +13,8 @@ import {
 import { Role } from './role.enum';
 import { Tenants } from '../tenants/tenants.entity';
 import { Email_verifications } from '../email_verifications/email_verifications.entity';
+import { ServiceOrders } from '../serviceOrder/serviceOrder.entity';
+import { Sections } from '../sections/section.entity';
 
 @Entity('users')
 @Check(
@@ -57,4 +60,10 @@ export class Users {
     (email_verifications) => email_verifications.users,
   )
   email_verifications: Email_verifications[];
+
+  @OneToMany(() => ServiceOrders, (serviceOrder) => serviceOrder.user)
+  serviceOrders: ServiceOrders[];
+
+  @OneToMany(() => Sections, (section) => section.publishedBy)
+  publishedSections: Sections[];
 }
