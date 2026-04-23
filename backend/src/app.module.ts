@@ -13,6 +13,9 @@ import { ServiceOrders } from './modules/serviceOrder/serviceOrder.entity';
 import { ServiceOrdersModule } from './modules/serviceOrder/serviceOrder.module';
 import { Sections } from './modules/sections/section.entity';
 import { Media } from './modules/medias/media.entity';
+import { SectionsModule } from './modules/sections/section.module';
+import { MediaModule } from './modules/medias/media.module';
+import { MinioModule } from './modules/minio/minio.module';
 
 export const PASSWORD_PEPPER = 'PASSWORD_PEPPER';
 
@@ -50,8 +53,9 @@ export const PASSWORD_PEPPER = 'PASSWORD_PEPPER';
     ClientsModule,
     CarsModule,
     ServiceOrdersModule,
-    Sections,
-    Media,
+    SectionsModule,
+    MediaModule,
+    MinioModule,
   ],
   controllers: [],
   providers: [

@@ -16,21 +16,23 @@ export class Media {
   @PrimaryGeneratedColumn()
   media_id: number;
 
-  @Column({
-    type: 'varchar',
-  })
-  type: MediaType;
+  @Column()
+  type: string;
 
-  @Column({
-    type: 'varchar',
-  })
-  url: string;
+  @Column()
+  bucket: string;
 
-  @Column({
-    type: 'varchar',
-    nullable: true,
-  })
-  label: string | null;
+  @Column()
+  object_name: string;
+
+  @Column()
+  mime_type: string;
+
+  @Column()
+  size: number;
+
+  @Column({ nullable: true })
+  label: string;
 
   @CreateDateColumn()
   created_at: Date;
