@@ -9,6 +9,10 @@ import { SidebarProvider } from '@/components/ui/sidebar'
 import { OsCreateClientPage } from './pages/osCreateClientPage'
 import { OsCreateCarPage } from './pages/osCreateCarPage'
 import { OsVehicleDefectPage } from './pages/osVehicleDefectPage'
+import { OsMediaDefectPage } from './pages/osMediaDefectPage'
+import { PublicServiceOrderPage } from './pages/PublicServiceOrderPage'
+import { OsVehicleEntryPhotosPage } from './pages/OsVehicleEntryPhotosPage'
+
 
 function App() {
   return (
@@ -29,6 +33,9 @@ function App() {
         <Route path="/os-client-create" element={<OsCreateClientPage/>} />
         <Route path='/os-car-create' element={<OsCreateCarPage/>} />
         <Route path='/os-defect-create' element={<OsVehicleDefectPage/>} />
+        <Route path="/os-media-upload" element={<OsMediaDefectPage />} />
+        <Route path="/servico/:token" element={<PublicServiceOrderPage />} />
+        <Route path="/os-entry-photos" element={<OsVehicleEntryPhotosPage />} />
       </Routes>
     </BrowserRouter>
   )

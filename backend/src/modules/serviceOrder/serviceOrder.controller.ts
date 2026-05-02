@@ -3,8 +3,10 @@
 import {
   Body,
   Controller,
+  Get,
   HttpCode,
   HttpStatus,
+  Param,
   Post,
   Req,
   UseGuards,
@@ -32,5 +34,20 @@ export class ServiceOrdersController {
       userId,
     );
     return plainToInstance(ResponseServiceOrderDto, serviceOrder);
+  }
+
+  @Get('public/:token')
+  @HttpCode(HttpStatus.OK)
+  async findByPublicToken(@Param('token') token: string) {
+    return this.serviceOrdersService.findByPublicToken(token);
+  }
+
+  @Get('/orders')
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.OK)
+  async findAll(@Req() req: any) {
+    const userId = req.user.sub;
+
+    return this.serviceOrdersService.findAll(userId);
   }
 }

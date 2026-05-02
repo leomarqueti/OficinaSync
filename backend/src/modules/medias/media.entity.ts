@@ -31,8 +31,11 @@ export class Media {
   @Column()
   size: number;
 
-  @Column({ nullable: true })
-  label: string;
+  @Column({
+    type: 'varchar',
+    nullable: true,
+  })
+  label: string | null;
 
   @CreateDateColumn()
   created_at: Date;

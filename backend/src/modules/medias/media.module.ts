@@ -5,6 +5,7 @@ import { MediaController } from './media.controller';
 import { MediaService } from './media.service';
 import { UsersModule } from '../users/users.module';
 import { SectionsModule } from '../sections/section.module';
+import { MinioModule } from '../minio/minio.module';
 import { AuthModule } from '../AuthModule/authModule.module';
 
 @Module({
@@ -12,6 +13,7 @@ import { AuthModule } from '../AuthModule/authModule.module';
     TypeOrmModule.forFeature([Media]),
     UsersModule,
     SectionsModule,
+    MinioModule,
     AuthModule,
   ],
   controllers: [MediaController],

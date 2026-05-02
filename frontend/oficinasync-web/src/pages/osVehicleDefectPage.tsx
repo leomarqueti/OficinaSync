@@ -34,7 +34,7 @@ export function OsVehicleDefectPage() {
     };
 
     try {
-      const response = await fetch("http://localhost:3000/service_orders", {
+      const serviceOrderResponse = await fetch("http://localhost:3000/service_orders", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -43,18 +43,53 @@ export function OsVehicleDefectPage() {
         body: JSON.stringify(rawDataCreateServiceOrder),
       });
 
-      const result = await response.json();
+      const serviceOrderResult = await serviceOrderResponse.json();
 
-      console.log("status:", response.status);
-      console.log("result:", result);
+      console.log("service order status:", serviceOrderResponse.status);
+      console.log("service order result:", serviceOrderResult);
 
-      if (response.ok) {
-        localStorage.setItem(
-          "current_service_order_id",
-          String(result.service_order_id)
-        );
-        navigate("/dashboard");
+      if (!serviceOrderResponse.ok) {
+        return;
       }
+
+      const serviceOrderId = serviceOrderResult.service_order_id;
+
+      localStorage.setItem(
+        "current_service_order_id",
+        String(serviceOrderId)
+      );
+
+      // cria uma section inicial automaticamente
+      const rawDataCreateSection = {
+        service_order_id: Number(serviceOrderId),
+        type: "diagnosis",
+        notes: clientComplaint,
+      };
+
+      const sectionResponse = await fetch("http://localhost:3000/sections", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(rawDataCreateSection),
+      });
+
+      const sectionResult = await sectionResponse.json();
+
+      console.log("section status:", sectionResponse.status);
+      console.log("section result:", sectionResult);
+
+      if (!sectionResponse.ok) {
+        return;
+      }
+
+      localStorage.setItem(
+        "current_section_id",
+        String(sectionResult.section_id)
+      );
+
+      navigate("/os-media-upload");
     } catch (error) {
       console.error("Erro:", error);
     }

@@ -8,6 +8,7 @@ import { CarsModule } from '../cars/cars.module';
 import { UsersModule } from '../users/users.module';
 import { JwtModule } from '@nestjs/jwt';
 import { AuthModule } from '../AuthModule/authModule.module';
+import { MinioModule } from '../minio/minio.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { AuthModule } from '../AuthModule/authModule.module';
     CarsModule,
     UsersModule,
     AuthModule,
+    MinioModule,
   ],
   controllers: [ServiceOrdersController],
   providers: [ServiceOrdersService],

@@ -5,6 +5,9 @@ import {
   Controller,
   HttpCode,
   HttpStatus,
+  Param,
+  ParseIntPipe,
+  Patch,
   Post,
   Req,
   UseGuards,
@@ -33,5 +36,18 @@ export class SectionsController {
     return plainToInstance(ResponseSectionDto, section, {
       excludeExtraneousValues: true,
     });
+  }
+
+  @Patch(':id/publish')
+  @UseGuards(JwtAuthGuard)
+  async publish(
+    @Param('id', ParseIntPipe) sectionId: number,
+    @Req() req: any,
+  ): Promise<ResponseSectionDto> {
+    const userId = req.user.sub;
+
+    const sectionUpdate = await this.sectionsService.publish(sectionId, userId);
+
+    return plainToInstance(ResponseSectionDto, sectionUpdate);
   }
 }

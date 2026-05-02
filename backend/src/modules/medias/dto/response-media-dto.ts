@@ -1,8 +1,7 @@
-/* eslint-disable @typescript-eslint/no-unsafe-return */
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-import { Expose, Transform } from 'class-transformer';
+import { Exclude, Expose } from 'class-transformer';
 import { MediaType } from '../mediaType.enum';
 
+@Exclude()
 export class ResponseMediaDto {
   @Expose()
   media_id: number;
@@ -11,7 +10,16 @@ export class ResponseMediaDto {
   type: MediaType;
 
   @Expose()
-  url: string;
+  bucket: string;
+
+  @Expose()
+  object_name: string;
+
+  @Expose()
+  mime_type: string;
+
+  @Expose()
+  size: number;
 
   @Expose()
   label: string | null;
@@ -20,6 +28,5 @@ export class ResponseMediaDto {
   created_at: Date;
 
   @Expose()
-  @Transform(({ obj }) => obj.section?.section_id ?? null)
   section_id: number | null;
 }

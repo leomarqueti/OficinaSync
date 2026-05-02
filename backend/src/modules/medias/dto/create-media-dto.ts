@@ -10,9 +10,6 @@ export class CreateMediaDto {
   @IsEnum(MediaType)
   type: MediaType;
 
-  @IsString()
-  url: string;
-
   @IsOptional()
   @IsString()
   label?: string;

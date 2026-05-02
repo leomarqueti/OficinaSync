@@ -3,6 +3,7 @@ import {
   Injectable,
   UnauthorizedException,
   ForbiddenException,
+  NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -10,6 +11,7 @@ import { Sections } from './section.entity';
 import { CreateSectionDto } from './dto/create-section-dto';
 import { UsersService } from '../users/users.service';
 import { ServiceOrdersService } from '../serviceOrder/serviceOrder.service';
+import { SectionStatus } from './statusSection.enum';
 
 @Injectable()
 export class SectionsService {
@@ -52,19 +54,40 @@ export class SectionsService {
   }
 
   async findById(id: number) {
-    const client = await this.sectionRepository.findOne({
+    const section = await this.sectionRepository.findOne({
       where: {
         section_id: id,
       },
       relations: {
-        serviceOrder: true,
+        serviceOrder: {
+          tenant: true,
+        },
       },
     });
 
-    if (!client) {
-      throw new Error('Carro nao encontrado!');
+    if (!section) {
+      throw new NotFoundException('Section não encontrada!');
     }
 
-    return client;
+    return section;
+  }
+
+  async publish(sectionId: number, userId: number) {
+    const sectionUpdate = await this.findById(sectionId);
+    const user = await this.usersService.findById(userId);
+
+    if (sectionUpdate.serviceOrder.tenant.id !== user.tenant?.id) {
+      throw new ForbiddenException(
+        'Essa ordem de serviço não pertence ao tenant do usuário.',
+      );
+    }
+
+    sectionUpdate.status = SectionStatus.PUBLISHED;
+    sectionUpdate.published_at = new Date();
+    sectionUpdate.publishedBy = user;
+
+    const saved = await this.sectionRepository.save(sectionUpdate);
+
+    return saved;
   }
 }
