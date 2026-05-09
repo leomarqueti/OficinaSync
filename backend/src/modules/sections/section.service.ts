@@ -32,7 +32,7 @@ export class SectionsService {
       throw new UnauthorizedException();
     }
 
-    const serviceOrder = await this.serviceOrderService.findById(
+    const serviceOrder = await this.serviceOrderService.findEntityById(
       createSectionDto.service_order_id,
     );
 
@@ -45,6 +45,7 @@ export class SectionsService {
     const section = this.sectionRepository.create({
       type: createSectionDto.type,
       notes: createSectionDto.notes ?? null,
+      status: SectionStatus.DRAFT,
       serviceOrder,
       publishedBy: null,
       published_at: null,
@@ -86,8 +87,6 @@ export class SectionsService {
     sectionUpdate.published_at = new Date();
     sectionUpdate.publishedBy = user;
 
-    const saved = await this.sectionRepository.save(sectionUpdate);
-
-    return saved;
+    return this.sectionRepository.save(sectionUpdate);
   }
 }

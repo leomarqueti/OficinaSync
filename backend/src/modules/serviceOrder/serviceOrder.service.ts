@@ -49,22 +49,95 @@ export class ServiceOrdersService {
     return this.serviceOrdersRepository.save(serviceOrder);
   }
 
-  async findById(id: number) {
-    const client = await this.serviceOrdersRepository.findOne({
+  async findEntityById(id: number): Promise<ServiceOrders> {
+    const serviceOrder = await this.serviceOrdersRepository.findOne({
       where: {
         service_order_id: id,
       },
       relations: {
         tenant: true,
         user: true,
+        car: {
+          client: true,
+        },
+        sections: {
+          medias: true,
+        },
       },
     });
 
-    if (!client) {
-      throw new Error('Carro nao encontrado!');
+    if (!serviceOrder) {
+      throw new NotFoundException('Ordem de serviço não encontrada!');
     }
 
-    return client;
+    return serviceOrder;
+  }
+
+  async findById(id: number) {
+    const serviceOrder = await this.findEntityById(id);
+
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+
+    return {
+      service_order_id: serviceOrder.service_order_id,
+      status: serviceOrder.status,
+      client_complaint: serviceOrder.client_complaint,
+      created_at: serviceOrder.created_at,
+      public_token: serviceOrder.public_token,
+      public_url: `${frontendUrl}/servico/${serviceOrder.public_token}`,
+
+      tenant: {
+        name: serviceOrder.tenant.name,
+      },
+
+      user: {
+        user_id: serviceOrder.user.user_id,
+        name: serviceOrder.user.name,
+        email: serviceOrder.user.email,
+      },
+
+      car: {
+        car_id: serviceOrder.car.car_id,
+        brand: serviceOrder.car.brand,
+        model: serviceOrder.car.model,
+        year: serviceOrder.car.year,
+        plate: serviceOrder.car.plate,
+        mileage_in: serviceOrder.car.mileage_in,
+        color: serviceOrder.car.color,
+        fuel_type: serviceOrder.car.fuel_type,
+      },
+
+      client: {
+        name: serviceOrder.car.client.name,
+        phone: serviceOrder.car.client.phone,
+        email: serviceOrder.car.client.email,
+        cpf: serviceOrder.car.client.cpf,
+      },
+
+      sections: await Promise.all(
+        (serviceOrder.sections ?? []).map(async (section) => ({
+          section_id: section.section_id,
+          type: section.type,
+          status: section.status,
+          notes: section.notes,
+          published_at: section.published_at,
+          created_at: section.created_at,
+          medias: await Promise.all(
+            (section.medias ?? []).map(async (media) => ({
+              media_id: media.media_id,
+              type: media.type,
+              bucket: media.bucket,
+              object_name: media.object_name,
+              mime_type: media.mime_type,
+              size: media.size,
+              label: media.label,
+              created_at: media.created_at,
+              url: await this.minioService.getPresignedUrl(media.object_name),
+            })),
+          ),
+        })),
+      ),
+    };
   }
 
   async findByPublicToken(token: string) {

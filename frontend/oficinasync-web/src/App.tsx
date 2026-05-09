@@ -12,6 +12,7 @@ import { OsVehicleDefectPage } from './pages/osVehicleDefectPage'
 import { OsMediaDefectPage } from './pages/osMediaDefectPage'
 import { PublicServiceOrderPage } from './pages/PublicServiceOrderPage'
 import { OsVehicleEntryPhotosPage } from './pages/OsVehicleEntryPhotosPage'
+import { OsWorkPage } from './pages/OsWorkPage'
 
 
 function App() {
@@ -36,6 +37,7 @@ function App() {
         <Route path="/os-media-upload" element={<OsMediaDefectPage />} />
         <Route path="/servico/:token" element={<PublicServiceOrderPage />} />
         <Route path="/os-entry-photos" element={<OsVehicleEntryPhotosPage />} />
+        <Route path="/os/:id" element={<OsWorkPage />} />
       </Routes>
     </BrowserRouter>
   )

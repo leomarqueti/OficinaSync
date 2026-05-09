@@ -7,6 +7,7 @@ import {
   HttpCode,
   HttpStatus,
   Param,
+  ParseIntPipe,
   Post,
   Req,
   UseGuards,
@@ -49,5 +50,12 @@ export class ServiceOrdersController {
     const userId = req.user.sub;
 
     return this.serviceOrdersService.findAll(userId);
+  }
+
+  @Get(':id')
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.OK)
+  findById(@Param('id', ParseIntPipe) id: number) {
+    return this.serviceOrdersService.findById(id);
   }
 }
