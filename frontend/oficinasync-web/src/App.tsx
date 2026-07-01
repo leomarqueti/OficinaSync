@@ -1,3 +1,4 @@
+
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import './App.css'
 import { LoginPage } from './pages/LoginPage'
@@ -13,6 +14,7 @@ import { OsMediaDefectPage } from './pages/osMediaDefectPage'
 import { PublicServiceOrderPage } from './pages/PublicServiceOrderPage'
 import { OsVehicleEntryPhotosPage } from './pages/OsVehicleEntryPhotosPage'
 import { OsWorkPage } from './pages/OsWorkPage'
+import { OsFinishPage } from './pages/OsFinishPage'
 
 
 function App() {
@@ -31,16 +33,20 @@ function App() {
             </SidebarProvider>
           }
         />
-        <Route path="/os-client-create" element={<OsCreateClientPage/>} />
-        <Route path='/os-car-create' element={<OsCreateCarPage/>} />
-        <Route path='/os-defect-create' element={<OsVehicleDefectPage/>} />
+        <Route path="/os-client-create" element={<OsCreateClientPage />} />
+        <Route path="/os-car-create" element={<OsCreateCarPage />} />
+        <Route path="/os-defect-create" element={<OsVehicleDefectPage />} />
         <Route path="/os-media-upload" element={<OsMediaDefectPage />} />
         <Route path="/servico/:token" element={<PublicServiceOrderPage />} />
         <Route path="/os-entry-photos" element={<OsVehicleEntryPhotosPage />} />
+
         <Route path="/os/:id" element={<OsWorkPage />} />
+
+        <Route path="/os/:id/finalizar" element={<OsFinishPage />} />
+
       </Routes>
     </BrowserRouter>
-  )
+  );
 }
 
-export default App
+export default App;

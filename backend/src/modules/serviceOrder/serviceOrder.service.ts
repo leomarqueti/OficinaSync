@@ -6,6 +6,7 @@ import {
   Injectable,
   NotFoundException,
   UnauthorizedException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { randomBytes } from 'crypto';
@@ -254,5 +255,23 @@ export class ServiceOrdersService {
         phone: serviceOrder.car.client.phone,
       },
     }));
+  }
+
+  async finish(orderId: number, userId: number) {
+    const order = await this.findById(orderId);
+    const user = await this.usersService.findById(userId);
+
+    if (order.tenant.id !== user.tenant?.id) {
+      throw new ForbiddenException(
+        'Essa ordem de serviço não pertence ao tenant do usuário.',
+      );
+    }
+
+    order.status = Status.DONE;
+    order.finished_at = new Date();
+
+    const saved = await this.serviceOrdersRepository.save(order);
+
+    return saved;
   }
 }

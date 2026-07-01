@@ -11,6 +11,7 @@ import {
   Post,
   Req,
   UseGuards,
+  Patch,
 } from '@nestjs/common';
 import { ServiceOrdersService } from './serviceOrder.service';
 import { CreateServiceOrderDto } from './dto/create-serviceOrder-dto';
@@ -57,5 +58,14 @@ export class ServiceOrdersController {
   @HttpCode(HttpStatus.OK)
   findById(@Param('id', ParseIntPipe) id: number) {
     return this.serviceOrdersService.findById(id);
+  }
+
+  @Patch('/:id/finish')
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.OK)
+  async finish(@Req() req: any, @Param('id', ParseIntPipe) id: number) {
+    const userId = req.user.sub;
+
+    return this.serviceOrdersService.finish(id, userId);
   }
 }
