@@ -9,6 +9,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Sections } from './section.entity';
 import { CreateSectionDto } from './dto/create-section-dto';
+import { UpdateSectionDto } from './dto/update-section-dto';
 import { UsersService } from '../users/users.service';
 import { ServiceOrdersService } from '../serviceOrder/serviceOrder.service';
 import { SectionStatus } from './statusSection.enum';
@@ -88,5 +89,26 @@ export class SectionsService {
     sectionUpdate.publishedBy = user;
 
     return this.sectionRepository.save(sectionUpdate);
+  }
+
+  async update(
+    sectionId: number,
+    updateSectionDto: UpdateSectionDto,
+    userId: number,
+  ) {
+    const section = await this.findById(sectionId);
+    const user = await this.usersService.findById(userId);
+
+    if (section.serviceOrder.tenant.id !== user.tenant?.id) {
+      throw new ForbiddenException(
+        'Essa ordem de serviço não pertence ao tenant do usuário.',
+      );
+    }
+
+    if (updateSectionDto.notes !== undefined) {
+      section.notes = updateSectionDto.notes;
+    }
+
+    return this.sectionRepository.save(section);
   }
 }

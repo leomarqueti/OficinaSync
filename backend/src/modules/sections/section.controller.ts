@@ -16,6 +16,7 @@ import { plainToInstance } from 'class-transformer';
 import { JwtAuthGuard } from '../AuthModule/jwt-auth.guard';
 import { SectionsService } from './section.service';
 import { CreateSectionDto } from './dto/create-section-dto';
+import { UpdateSectionDto } from './dto/update-section-dto';
 import { ResponseSectionDto } from './dto/response-section-dto';
 
 @Controller('sections')
@@ -47,6 +48,24 @@ export class SectionsController {
     const userId = req.user.sub;
 
     const sectionUpdate = await this.sectionsService.publish(sectionId, userId);
+
+    return plainToInstance(ResponseSectionDto, sectionUpdate);
+  }
+
+  @Patch(':id')
+  @UseGuards(JwtAuthGuard)
+  async update(
+    @Param('id', ParseIntPipe) sectionId: number,
+    @Body() updateSectionDto: UpdateSectionDto,
+    @Req() req: any,
+  ): Promise<ResponseSectionDto> {
+    const userId = req.user.sub;
+
+    const sectionUpdate = await this.sectionsService.update(
+      sectionId,
+      updateSectionDto,
+      userId,
+    );
 
     return plainToInstance(ResponseSectionDto, sectionUpdate);
   }

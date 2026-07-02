@@ -1,0 +1,18 @@
+# Builda o frontend estático e serve junto com o proxy reverso (Caddy),
+# evitando um container separado só pra servir arquivos estáticos.
+FROM node:20-bullseye-slim AS frontend-builder
+WORKDIR /app
+
+COPY frontend/oficinasync-web/package*.json ./
+RUN npm ci
+
+COPY frontend/oficinasync-web/ ./
+
+ARG VITE_API_URL
+ENV VITE_API_URL=${VITE_API_URL}
+
+RUN npm run build
+
+FROM caddy:2-alpine
+COPY --from=frontend-builder /app/dist /srv
+COPY Caddyfile /etc/caddy/Caddyfile

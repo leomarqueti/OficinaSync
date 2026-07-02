@@ -1,0 +1,11 @@
+.git
+node_modules
+backend/node_modules
+backend/dist
+frontend/oficinasync-web/node_modules
+frontend/oficinasync-web/dist
+*.env
+*.env.production
+*.log
+*.mp4
+*.pdf

@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { useState } from "react";
+import { API_URL } from "@/lib/api";
 
 export function OsCreateCarPage() {
   const navigate = useNavigate();
@@ -51,7 +52,7 @@ export function OsCreateCarPage() {
     };
 
     try {
-      const response = await fetch("http://localhost:3000/cars", {
+      const response = await fetch(`${API_URL}/cars`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

@@ -3,6 +3,23 @@ import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { TestTypeSelector } from "@/components/tests/TestTypeSelector";
+import { BateriaForm } from "@/components/tests/BateriaForm";
+import { BateriaCard } from "@/components/tests/BateriaCard";
+import { LeituraDtcForm } from "@/components/tests/LeituraDtcForm";
+import { LeituraDtcCard } from "@/components/tests/LeituraDtcCard";
+import { CompressaoMecanicaForm } from "@/components/tests/CompressaoMecanicaForm";
+import { CompressaoMecanicaCard } from "@/components/tests/CompressaoMecanicaCard";
+import { InjetoresBancoForm } from "@/components/tests/InjetoresBancoForm";
+import { InjetoresBancoCard } from "@/components/tests/InjetoresBancoCard";
+import type {
+  BateriaData,
+  CompressaoMecanicaData,
+  InjetoresBancoData,
+  LeituraDtcData,
+  TestTypeCategory,
+} from "@/components/tests/testTypes";
+import { API_URL } from "@/lib/api";
 
 type MediaItem = {
   media_id: number;
@@ -16,6 +33,32 @@ type MediaItem = {
   url?: string;
 };
 
+type TestMeasurement = {
+  label: string;
+  expected?: string;
+  actual: string;
+};
+
+type Verdict = "approved" | "failed" | "inconclusive";
+
+type TestItem = {
+  test_id: number;
+  title: string;
+  measurements: TestMeasurement[] | null;
+  test_type: TestTypeCategory | null;
+  data: Record<string, unknown> | null;
+  verdict: Verdict | null;
+  notes: string | null;
+  created_at: string;
+};
+
+type TestDraft = {
+  title: string;
+  measurements: TestMeasurement[];
+  verdict: Verdict | "";
+  notes: string;
+};
+
 type SectionItem = {
   section_id: number;
   type: string;
@@ -24,6 +67,7 @@ type SectionItem = {
   published_at: string | null;
   created_at: string;
   medias: MediaItem[];
+  tests: TestItem[];
 };
 
 type ServiceOrderData = {
@@ -31,6 +75,7 @@ type ServiceOrderData = {
   status: string;
   client_complaint: string;
   created_at: string;
+  promo_video_status?: "none" | "processing" | "ready" | "failed";
   public_token: string;
   public_url: string;
   tenant: {
@@ -77,6 +122,49 @@ const statusLabels: Record<string, string> = {
   done: "Concluída",
   cancelled: "Cancelada",
 };
+
+const verdictLabels: Record<string, string> = {
+  approved: "Aprovado",
+  failed: "Reprovado",
+  inconclusive: "Inconclusivo",
+};
+
+const testTitleSuggestions = [
+  "Teste de bateria",
+  "Teste de compressão",
+  "Teste de vazão dos bicos injetores",
+  "Leitura de scanner",
+  "Teste de bomba de combustível",
+];
+
+function getVerdictPillClass(verdict: string | null) {
+  const map: Record<string, string> = {
+    approved: "bg-emerald-100 text-emerald-700",
+    failed: "bg-red-100 text-red-700",
+    inconclusive: "bg-amber-100 text-amber-700",
+  };
+
+  return verdict ? map[verdict] ?? "bg-muted text-foreground" : "bg-muted text-foreground";
+}
+
+function emptyTestDraft(): TestDraft {
+  return {
+    title: "",
+    measurements: [{ label: "", expected: "", actual: "" }],
+    verdict: "",
+    notes: "",
+  };
+}
+
+function cleanMeasurements(measurements: TestMeasurement[]) {
+  return measurements
+    .filter((m) => m.label.trim() !== "" || m.actual.trim() !== "")
+    .map((m) => ({
+      label: m.label.trim(),
+      actual: m.actual.trim(),
+      ...(m.expected?.trim() ? { expected: m.expected.trim() } : {}),
+    }));
+}
 
 const sectionTypeOptions = [
   { value: "checkin", label: "Check-in" },
@@ -182,6 +270,21 @@ export function OsWorkPage() {
   const [editingNotesBySection, setEditingNotesBySection] = useState<Record<number, string>>({});
   const [savingEditSectionId, setSavingEditSectionId] = useState<number | null>(null);
 
+  const [openTestSectionId, setOpenTestSectionId] = useState<number | null>(null);
+  const [testDraftBySection, setTestDraftBySection] = useState<Record<number, TestDraft>>({});
+  const [savingTestSectionId, setSavingTestSectionId] = useState<number | null>(null);
+  const [newTestTypeBySection, setNewTestTypeBySection] = useState<
+    Record<number, TestTypeCategory | "generic" | null>
+  >({});
+
+  const [editingTestId, setEditingTestId] = useState<number | null>(null);
+  const [editingTestDraft, setEditingTestDraft] = useState<TestDraft | null>(null);
+  const [savingEditTestId, setSavingEditTestId] = useState<number | null>(null);
+  const [deletingTestId, setDeletingTestId] = useState<number | null>(null);
+
+  const [downloadingReport, setDownloadingReport] = useState(false);
+  const [triggeringPromoVideo, setTriggeringPromoVideo] = useState(false);
+
   const fetchServiceOrder = async () => {
     const token = localStorage.getItem("token");
 
@@ -195,7 +298,7 @@ export function OsWorkPage() {
       setLoading(true);
       setError("");
 
-      const response = await fetch(`http://localhost:3000/service_orders/${id}`, {
+      const response = await fetch(`${API_URL}/service_orders/${id}`, {
         method: "GET",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -220,6 +323,16 @@ export function OsWorkPage() {
   useEffect(() => {
     fetchServiceOrder();
   }, [id]);
+
+  useEffect(() => {
+    if (data?.promo_video_status !== "processing") return;
+
+    const interval = setInterval(() => {
+      fetchServiceOrder();
+    }, 4000);
+
+    return () => clearInterval(interval);
+  }, [data?.promo_video_status]);
 
   const orderedSections = useMemo(() => {
     if (!data?.sections) return [];
@@ -266,7 +379,7 @@ export function OsWorkPage() {
     try {
       setCreatingSection(true);
 
-      const response = await fetch("http://localhost:3000/sections", {
+      const response = await fetch(`${API_URL}/sections`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -349,7 +462,7 @@ export function OsWorkPage() {
       formData.append("type", selectedType);
       formData.append("label", selectedLabel);
 
-      const response = await fetch("http://localhost:3000/medias", {
+      const response = await fetch(`${API_URL}/medias`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -397,7 +510,7 @@ export function OsWorkPage() {
       setPublishingSectionId(sectionId);
 
       const response = await fetch(
-        `http://localhost:3000/sections/${sectionId}/publish`,
+        `${API_URL}/sections/${sectionId}/publish`,
         {
           method: "PATCH",
           headers: {
@@ -442,7 +555,7 @@ export function OsWorkPage() {
     try {
       setSavingEditSectionId(sectionId);
 
-      const response = await fetch(`http://localhost:3000/sections/${sectionId}`, {
+      const response = await fetch(`${API_URL}/sections/${sectionId}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
@@ -469,6 +582,520 @@ export function OsWorkPage() {
       setSavingEditSectionId(null);
     }
   };
+
+  const handleDownloadReport = async () => {
+    const token = localStorage.getItem("token");
+
+    if (!token || !id) {
+      alert("Token não encontrado.");
+      return;
+    }
+
+    try {
+      setDownloadingReport(true);
+
+      const response = await fetch(
+        `${API_URL}/service_orders/${id}/report.pdf`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      if (!response.ok) {
+        const result = await response.json().catch(() => null);
+        alert(result?.message ?? "Erro ao gerar o laudo em PDF.");
+        return;
+      }
+
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `laudo-os-${id}.pdf`;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error(error);
+      alert("Erro ao gerar o laudo em PDF.");
+    } finally {
+      setDownloadingReport(false);
+    }
+  };
+
+  const handleGeneratePromoVideo = async () => {
+    const token = localStorage.getItem("token");
+
+    if (!token || !id) {
+      alert("Token não encontrado.");
+      return;
+    }
+
+    try {
+      setTriggeringPromoVideo(true);
+
+      const response = await fetch(
+        `${API_URL}/service_orders/${id}/promo-video`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        alert(result?.message ?? "Erro ao gerar vídeo de divulgação.");
+        return;
+      }
+
+      await fetchServiceOrder();
+    } catch (error) {
+      console.error(error);
+      alert("Erro ao gerar vídeo de divulgação.");
+    } finally {
+      setTriggeringPromoVideo(false);
+    }
+  };
+
+  const promoVideoMedia = data?.sections
+    .flatMap((section) => section.medias)
+    .find((media) => media.label === "Vídeo de divulgação");
+
+  const handleOpenTestForm = (sectionId: number) => {
+    setOpenTestSectionId((current) => (current === sectionId ? null : sectionId));
+
+    setTestDraftBySection((prev) => ({
+      ...prev,
+      [sectionId]: prev[sectionId] ?? emptyTestDraft(),
+    }));
+
+    setNewTestTypeBySection((prev) => ({ ...prev, [sectionId]: null }));
+  };
+
+  const updateNewTestField = (
+    sectionId: number,
+    field: "title" | "verdict" | "notes",
+    value: string,
+  ) => {
+    setTestDraftBySection((prev) => ({
+      ...prev,
+      [sectionId]: { ...(prev[sectionId] ?? emptyTestDraft()), [field]: value },
+    }));
+  };
+
+  const updateNewTestMeasurement = (
+    sectionId: number,
+    index: number,
+    field: keyof TestMeasurement,
+    value: string,
+  ) => {
+    setTestDraftBySection((prev) => {
+      const draft = prev[sectionId] ?? emptyTestDraft();
+      const measurements = draft.measurements.map((m, i) =>
+        i === index ? { ...m, [field]: value } : m,
+      );
+      return { ...prev, [sectionId]: { ...draft, measurements } };
+    });
+  };
+
+  const addNewTestMeasurementRow = (sectionId: number) => {
+    setTestDraftBySection((prev) => {
+      const draft = prev[sectionId] ?? emptyTestDraft();
+      return {
+        ...prev,
+        [sectionId]: {
+          ...draft,
+          measurements: [...draft.measurements, { label: "", expected: "", actual: "" }],
+        },
+      };
+    });
+  };
+
+  const removeNewTestMeasurementRow = (sectionId: number, index: number) => {
+    setTestDraftBySection((prev) => {
+      const draft = prev[sectionId] ?? emptyTestDraft();
+      const measurements = draft.measurements.filter((_, i) => i !== index);
+      return {
+        ...prev,
+        [sectionId]: {
+          ...draft,
+          measurements: measurements.length ? measurements : [{ label: "", expected: "", actual: "" }],
+        },
+      };
+    });
+  };
+
+  const handleCreateTest = async (sectionId: number) => {
+    const token = localStorage.getItem("token");
+    const draft = testDraftBySection[sectionId];
+
+    if (!token || !draft || !draft.title.trim()) {
+      alert("Informe o título do teste.");
+      return;
+    }
+
+    try {
+      setSavingTestSectionId(sectionId);
+
+      const response = await fetch(`${API_URL}/tests`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          section_id: sectionId,
+          title: draft.title.trim(),
+          measurements: cleanMeasurements(draft.measurements),
+          verdict: draft.verdict || undefined,
+          notes: draft.notes.trim() || undefined,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        alert(result?.message ?? "Erro ao criar teste.");
+        return;
+      }
+
+      setTestDraftBySection((prev) => ({ ...prev, [sectionId]: emptyTestDraft() }));
+      setOpenTestSectionId(null);
+      await fetchServiceOrder();
+    } catch (error) {
+      console.error(error);
+      alert("Erro ao criar teste.");
+    } finally {
+      setSavingTestSectionId(null);
+    }
+  };
+
+  const handleSaveSpecializedTest = async (
+    sectionId: number,
+    testType: TestTypeCategory,
+    payload: { title: string; data: Record<string, unknown>; verdict: string; notes: string },
+  ) => {
+    const token = localStorage.getItem("token");
+
+    if (!token) {
+      alert("Token não encontrado.");
+      return;
+    }
+
+    if (!payload.title.trim()) {
+      alert("Informe o título do teste.");
+      return;
+    }
+
+    try {
+      setSavingTestSectionId(sectionId);
+
+      const response = await fetch(`${API_URL}/tests`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          section_id: sectionId,
+          title: payload.title.trim(),
+          test_type: testType,
+          data: payload.data,
+          verdict: payload.verdict || undefined,
+          notes: payload.notes.trim() || undefined,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        alert(result?.message ?? "Erro ao criar teste.");
+        return;
+      }
+
+      setOpenTestSectionId(null);
+      setNewTestTypeBySection((prev) => ({ ...prev, [sectionId]: null }));
+      await fetchServiceOrder();
+    } catch (error) {
+      console.error(error);
+      alert("Erro ao criar teste.");
+    } finally {
+      setSavingTestSectionId(null);
+    }
+  };
+
+  const handleOpenEditTest = (test: TestItem) => {
+    if (editingTestId === test.test_id) {
+      setEditingTestId(null);
+      setEditingTestDraft(null);
+      return;
+    }
+
+    setEditingTestId(test.test_id);
+    setEditingTestDraft({
+      title: test.title,
+      measurements:
+        test.measurements && test.measurements.length > 0
+          ? test.measurements.map((m) => ({
+              label: m.label,
+              expected: m.expected ?? "",
+              actual: m.actual,
+            }))
+          : [{ label: "", expected: "", actual: "" }],
+      verdict: test.verdict ?? "",
+      notes: test.notes ?? "",
+    });
+  };
+
+  const updateEditTestField = (field: "title" | "verdict" | "notes", value: string) => {
+    setEditingTestDraft((prev) => (prev ? { ...prev, [field]: value } : prev));
+  };
+
+  const updateEditTestMeasurement = (
+    index: number,
+    field: keyof TestMeasurement,
+    value: string,
+  ) => {
+    setEditingTestDraft((prev) => {
+      if (!prev) return prev;
+      const measurements = prev.measurements.map((m, i) =>
+        i === index ? { ...m, [field]: value } : m,
+      );
+      return { ...prev, measurements };
+    });
+  };
+
+  const addEditTestMeasurementRow = () => {
+    setEditingTestDraft((prev) =>
+      prev
+        ? { ...prev, measurements: [...prev.measurements, { label: "", expected: "", actual: "" }] }
+        : prev,
+    );
+  };
+
+  const removeEditTestMeasurementRow = (index: number) => {
+    setEditingTestDraft((prev) => {
+      if (!prev) return prev;
+      const measurements = prev.measurements.filter((_, i) => i !== index);
+      return {
+        ...prev,
+        measurements: measurements.length ? measurements : [{ label: "", expected: "", actual: "" }],
+      };
+    });
+  };
+
+  const handleUpdateTest = async (testId: number) => {
+    const token = localStorage.getItem("token");
+
+    if (!token || !editingTestDraft || !editingTestDraft.title.trim()) {
+      alert("Informe o título do teste.");
+      return;
+    }
+
+    try {
+      setSavingEditTestId(testId);
+
+      const response = await fetch(`${API_URL}/tests/${testId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          title: editingTestDraft.title.trim(),
+          measurements: cleanMeasurements(editingTestDraft.measurements),
+          verdict: editingTestDraft.verdict || undefined,
+          notes: editingTestDraft.notes.trim() || undefined,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        alert(result?.message ?? "Erro ao editar teste.");
+        return;
+      }
+
+      setEditingTestId(null);
+      setEditingTestDraft(null);
+      await fetchServiceOrder();
+    } catch (error) {
+      console.error(error);
+      alert("Erro ao editar teste.");
+    } finally {
+      setSavingEditTestId(null);
+    }
+  };
+
+  const handleDeleteTest = async (testId: number) => {
+    const token = localStorage.getItem("token");
+
+    if (!token) {
+      alert("Token não encontrado.");
+      return;
+    }
+
+    if (!window.confirm("Excluir este teste?")) {
+      return;
+    }
+
+    try {
+      setDeletingTestId(testId);
+
+      const response = await fetch(`${API_URL}/tests/${testId}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        const result = await response.json().catch(() => null);
+        alert(result?.message ?? "Erro ao excluir teste.");
+        return;
+      }
+
+      await fetchServiceOrder();
+    } catch (error) {
+      console.error(error);
+      alert("Erro ao excluir teste.");
+    } finally {
+      setDeletingTestId(null);
+    }
+  };
+
+  const renderMeasurementRows = (
+    measurements: TestMeasurement[],
+    onChange: (index: number, field: keyof TestMeasurement, value: string) => void,
+    onAdd: () => void,
+    onRemove: (index: number) => void,
+  ) => (
+    <div className="space-y-2">
+      {measurements.map((measurement, index) => (
+        <div key={index} className="grid grid-cols-1 gap-2 md:grid-cols-[1fr_1fr_1fr_auto]">
+          <input
+            type="text"
+            value={measurement.label}
+            onChange={(e) => onChange(index, "label", e.target.value)}
+            placeholder="Ex: Tensão mínima"
+            className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+          />
+          <input
+            type="text"
+            value={measurement.expected ?? ""}
+            onChange={(e) => onChange(index, "expected", e.target.value)}
+            placeholder="Esperado (opcional)"
+            className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+          />
+          <input
+            type="text"
+            value={measurement.actual}
+            onChange={(e) => onChange(index, "actual", e.target.value)}
+            placeholder="Obtido"
+            className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+          />
+          <Button type="button" variant="outline" onClick={() => onRemove(index)}>
+            Remover
+          </Button>
+        </div>
+      ))}
+      <Button type="button" variant="outline" onClick={onAdd}>
+        + Adicionar linha
+      </Button>
+    </div>
+  );
+
+  const renderTestFormBody = (
+    draft: TestDraft,
+    handlers: {
+      onTitleChange: (value: string) => void;
+      onVerdictChange: (value: string) => void;
+      onNotesChange: (value: string) => void;
+      onMeasurementChange: (index: number, field: keyof TestMeasurement, value: string) => void;
+      onAddRow: () => void;
+      onRemoveRow: (index: number) => void;
+    },
+    onSave: () => void,
+    onCancel: () => void,
+    saving: boolean,
+  ) => (
+    <div className="space-y-4">
+      <div className="space-y-2">
+        <label className="text-sm font-medium">Título do teste</label>
+        <input
+          type="text"
+          value={draft.title}
+          onChange={(e) => handlers.onTitleChange(e.target.value)}
+          placeholder="Ex: Teste de bateria"
+          className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+        />
+        <div className="flex flex-wrap gap-2">
+          {testTitleSuggestions.map((suggestion) => (
+            <button
+              key={suggestion}
+              type="button"
+              onClick={() => handlers.onTitleChange(suggestion)}
+              className="rounded-full border px-3 py-1 text-xs text-muted-foreground hover:bg-muted"
+            >
+              {suggestion}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <label className="text-sm font-medium">Medições</label>
+        {renderMeasurementRows(
+          draft.measurements,
+          handlers.onMeasurementChange,
+          handlers.onAddRow,
+          handlers.onRemoveRow,
+        )}
+      </div>
+
+      <div className="space-y-2">
+        <label className="text-sm font-medium">Veredito</label>
+        <select
+          value={draft.verdict}
+          onChange={(e) => handlers.onVerdictChange(e.target.value)}
+          className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm md:w-64"
+        >
+          <option value="">Sem veredito ainda</option>
+          <option value="approved">Aprovado</option>
+          <option value="failed">Reprovado</option>
+          <option value="inconclusive">Inconclusivo</option>
+        </select>
+      </div>
+
+      <div className="space-y-2">
+        <label className="text-sm font-medium">Observações</label>
+        <textarea
+          value={draft.notes}
+          onChange={(e) => handlers.onNotesChange(e.target.value)}
+          placeholder="Explique o que foi analisado neste teste..."
+          className="min-h-[100px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none"
+        />
+      </div>
+
+      <div className="flex gap-2">
+        <Button
+          className="bg-lime-400 text-black hover:bg-lime-500"
+          onClick={onSave}
+          disabled={saving}
+        >
+          {saving ? "Salvando..." : "Salvar teste"}
+        </Button>
+
+        <Button variant="outline" onClick={onCancel}>
+          Cancelar
+        </Button>
+      </div>
+    </div>
+  );
 
   if (loading) {
     return (
@@ -644,7 +1271,44 @@ export function OsWorkPage() {
                   : "Adicionar etapa"}
               </Button>
 
-              <Button variant="outline">Finalizar OS</Button>
+              <Button
+                variant="outline"
+                onClick={() => navigate(`/os/${data.service_order_id}/finalizar`)}
+              >
+                Finalizar OS
+              </Button>
+
+              <Button
+                variant="outline"
+                onClick={handleDownloadReport}
+                disabled={downloadingReport}
+              >
+                {downloadingReport ? "Gerando PDF..." : "Baixar laudo PDF"}
+              </Button>
+
+              {data.promo_video_status === "ready" && promoVideoMedia?.url ? (
+                <Button
+                  className="bg-lime-400 text-black hover:bg-lime-500"
+                  onClick={() => window.open(promoVideoMedia.url, "_blank")}
+                >
+                  Baixar vídeo de divulgação
+                </Button>
+              ) : (
+                <Button
+                  variant="outline"
+                  onClick={handleGeneratePromoVideo}
+                  disabled={
+                    triggeringPromoVideo ||
+                    data.promo_video_status === "processing"
+                  }
+                >
+                  {data.promo_video_status === "processing"
+                    ? "Gerando vídeo..."
+                    : data.promo_video_status === "failed"
+                    ? "Falha ao gerar — tentar de novo"
+                    : "Gerar vídeo de divulgação"}
+                </Button>
+              )}
             </div>
           </CardHeader>
 
@@ -782,6 +1446,229 @@ export function OsWorkPage() {
                     </div>
                   )}
 
+                  <div className="space-y-4">
+                    <Separator />
+                    <div>
+                      <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                        Testes realizados
+                      </h3>
+
+                      {section.tests.length === 0 && (
+                        <p className="mt-2 text-sm text-muted-foreground">
+                          Nenhum teste registrado nesta etapa ainda.
+                        </p>
+                      )}
+
+                      <div className="mt-4 space-y-4">
+                        {section.tests.map((test) => (
+                          <div key={test.test_id} className="space-y-3 rounded-2xl border p-4">
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                              <h4 className="font-medium">{test.title}</h4>
+                              <span
+                                className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${getVerdictPillClass(
+                                  test.verdict
+                                )}`}
+                              >
+                                {test.verdict ? verdictLabels[test.verdict] : "Sem veredito"}
+                              </span>
+                            </div>
+
+                            {test.test_type === "bateria" && test.data && (
+                              <BateriaCard data={test.data as unknown as BateriaData} />
+                            )}
+
+                            {test.test_type === "leitura_dtc" && test.data && (
+                              <LeituraDtcCard data={test.data as unknown as LeituraDtcData} />
+                            )}
+
+                            {test.test_type === "compressao_mecanica" && test.data && (
+                              <CompressaoMecanicaCard
+                                data={test.data as unknown as CompressaoMecanicaData}
+                                sectionMedias={section.medias}
+                              />
+                            )}
+
+                            {test.test_type === "injetores_banco" && test.data && (
+                              <InjetoresBancoCard
+                                data={test.data as unknown as InjetoresBancoData}
+                                sectionMedias={section.medias}
+                              />
+                            )}
+
+                            {!test.test_type && test.measurements && test.measurements.length > 0 && (
+                              <table className="w-full text-sm">
+                                <thead>
+                                  <tr className="text-left text-muted-foreground">
+                                    <th className="pb-1 pr-2 font-medium">Item</th>
+                                    <th className="pb-1 pr-2 font-medium">Esperado</th>
+                                    <th className="pb-1 font-medium">Obtido</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {test.measurements.map((measurement, index) => (
+                                    <tr key={index} className="border-t">
+                                      <td className="py-1 pr-2">{measurement.label}</td>
+                                      <td className="py-1 pr-2 text-muted-foreground">
+                                        {measurement.expected || "-"}
+                                      </td>
+                                      <td className="py-1">{measurement.actual}</td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            )}
+
+                            {test.notes && (
+                              <p className="whitespace-pre-line text-sm text-muted-foreground">
+                                {test.notes}
+                              </p>
+                            )}
+
+                            <div className="flex gap-2">
+                              {!test.test_type && (
+                                <Button variant="outline" onClick={() => handleOpenEditTest(test)}>
+                                  {editingTestId === test.test_id ? "Fechar edição" : "Editar teste"}
+                                </Button>
+                              )}
+
+                              <Button
+                                variant="outline"
+                                onClick={() => handleDeleteTest(test.test_id)}
+                                disabled={deletingTestId === test.test_id}
+                              >
+                                {deletingTestId === test.test_id ? "Excluindo..." : "Excluir teste"}
+                              </Button>
+                            </div>
+
+                            {editingTestId === test.test_id && editingTestDraft && (
+                              <div className="rounded-2xl border bg-background p-4">
+                                {renderTestFormBody(
+                                  editingTestDraft,
+                                  {
+                                    onTitleChange: (value) => updateEditTestField("title", value),
+                                    onVerdictChange: (value) => updateEditTestField("verdict", value),
+                                    onNotesChange: (value) => updateEditTestField("notes", value),
+                                    onMeasurementChange: updateEditTestMeasurement,
+                                    onAddRow: addEditTestMeasurementRow,
+                                    onRemoveRow: removeEditTestMeasurementRow,
+                                  },
+                                  () => handleUpdateTest(test.test_id),
+                                  () => {
+                                    setEditingTestId(null);
+                                    setEditingTestDraft(null);
+                                  },
+                                  savingEditTestId === test.test_id
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+
+                      {openTestSectionId === section.section_id &&
+                        !newTestTypeBySection[section.section_id] && (
+                          <div className="mt-4">
+                            <TestTypeSelector
+                              onSelect={(type) =>
+                                setNewTestTypeBySection((prev) => ({
+                                  ...prev,
+                                  [section.section_id]: type,
+                                }))
+                              }
+                            />
+                          </div>
+                        )}
+
+                      {openTestSectionId === section.section_id &&
+                        newTestTypeBySection[section.section_id] === "generic" && (
+                          <div className="mt-4 rounded-2xl border bg-background p-4">
+                            <h4 className="mb-4 font-medium">Novo teste</h4>
+                            {renderTestFormBody(
+                              testDraftBySection[section.section_id] ?? emptyTestDraft(),
+                              {
+                                onTitleChange: (value) =>
+                                  updateNewTestField(section.section_id, "title", value),
+                                onVerdictChange: (value) =>
+                                  updateNewTestField(section.section_id, "verdict", value),
+                                onNotesChange: (value) =>
+                                  updateNewTestField(section.section_id, "notes", value),
+                                onMeasurementChange: (index, field, value) =>
+                                  updateNewTestMeasurement(section.section_id, index, field, value),
+                                onAddRow: () => addNewTestMeasurementRow(section.section_id),
+                                onRemoveRow: (index) =>
+                                  removeNewTestMeasurementRow(section.section_id, index),
+                              },
+                              () => handleCreateTest(section.section_id),
+                              () => setOpenTestSectionId(null),
+                              savingTestSectionId === section.section_id
+                            )}
+                          </div>
+                        )}
+
+                      {openTestSectionId === section.section_id &&
+                        newTestTypeBySection[section.section_id] === "bateria" && (
+                          <div className="mt-4 rounded-2xl border bg-background p-4">
+                            <BateriaForm
+                              saving={savingTestSectionId === section.section_id}
+                              onCancel={() => setOpenTestSectionId(null)}
+                              onSave={(payload) =>
+                                handleSaveSpecializedTest(section.section_id, "bateria", payload)
+                              }
+                            />
+                          </div>
+                        )}
+
+                      {openTestSectionId === section.section_id &&
+                        newTestTypeBySection[section.section_id] === "leitura_dtc" && (
+                          <div className="mt-4 rounded-2xl border bg-background p-4">
+                            <LeituraDtcForm
+                              saving={savingTestSectionId === section.section_id}
+                              onCancel={() => setOpenTestSectionId(null)}
+                              onSave={(payload) =>
+                                handleSaveSpecializedTest(section.section_id, "leitura_dtc", payload)
+                              }
+                            />
+                          </div>
+                        )}
+
+                      {openTestSectionId === section.section_id &&
+                        newTestTypeBySection[section.section_id] === "compressao_mecanica" && (
+                          <div className="mt-4 rounded-2xl border bg-background p-4">
+                            <CompressaoMecanicaForm
+                              sectionId={section.section_id}
+                              saving={savingTestSectionId === section.section_id}
+                              onCancel={() => setOpenTestSectionId(null)}
+                              onSave={(payload) =>
+                                handleSaveSpecializedTest(
+                                  section.section_id,
+                                  "compressao_mecanica",
+                                  payload
+                                )
+                              }
+                            />
+                          </div>
+                        )}
+
+                      {openTestSectionId === section.section_id &&
+                        newTestTypeBySection[section.section_id] === "injetores_banco" && (
+                          <div className="mt-4 rounded-2xl border bg-background p-4">
+                            <InjetoresBancoForm
+                              sectionId={section.section_id}
+                              saving={savingTestSectionId === section.section_id}
+                              onCancel={() => setOpenTestSectionId(null)}
+                              onSave={(payload) =>
+                                handleSaveSpecializedTest(
+                                  section.section_id,
+                                  "injetores_banco",
+                                  payload
+                                )
+                              }
+                            />
+                          </div>
+                        )}
+                    </div>
+                  </div>
+
                   {openMediaSectionId === section.section_id && (
                     <div className="rounded-2xl border bg-background p-4 space-y-4">
                       <div>
@@ -913,6 +1800,15 @@ export function OsWorkPage() {
                       {editingSectionId === section.section_id
                         ? "Fechar edição"
                         : "Editar texto"}
+                    </Button>
+
+                    <Button
+                      variant="outline"
+                      onClick={() => handleOpenTestForm(section.section_id)}
+                    >
+                      {openTestSectionId === section.section_id
+                        ? "Fechar teste"
+                        : "Adicionar teste"}
                     </Button>
 
                     <Button

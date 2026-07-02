@@ -13,6 +13,7 @@ import { Users } from '../users/users.entity';
 import { SectionStatus } from './statusSection.enum';
 import { SectionType } from './typeSection.enum';
 import { Media } from '../medias/media.entity';
+import { Tests } from '../tests/test.entity';
 
 @Entity('sections')
 @Check(
@@ -67,4 +68,7 @@ export class Sections {
 
   @OneToMany(() => Media, (media) => media.section)
   medias: Media[];
+
+  @OneToMany(() => Tests, (test) => test.section)
+  tests: Tests[];
 }

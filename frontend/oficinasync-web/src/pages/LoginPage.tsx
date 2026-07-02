@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "../components/ui/separator";
 import { useNavigate } from "react-router-dom";
 import logoOficinaSync from "@/assets/logoOficinaSync.png"
+import { API_URL } from "@/lib/api";
 
 
 export function LoginPage() {
@@ -20,7 +21,7 @@ export function LoginPage() {
         };
 
         try {
-            const response = await fetch("http://localhost:3000/auth/login", {
+            const response = await fetch(`${API_URL}/auth/login`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",

@@ -13,6 +13,8 @@ import { randomBytes } from 'crypto';
 import { Repository } from 'typeorm';
 import { ServiceOrders } from './serviceOrder.entity';
 import { CreateServiceOrderDto } from './dto/create-serviceOrder-dto';
+import { FinishServiceOrderDto } from './dto/finish-serviceOrder-dto';
+import { PromoVideoStatus } from './promoVideoStatus.enum';
 import { UsersService } from '../users/users.service';
 import { CarsService } from '../cars/cars.service';
 import { MinioService } from '../minio/minio.service';
@@ -63,6 +65,7 @@ export class ServiceOrdersService {
         },
         sections: {
           medias: true,
+          tests: true,
         },
       },
     });
@@ -84,6 +87,11 @@ export class ServiceOrdersService {
       status: serviceOrder.status,
       client_complaint: serviceOrder.client_complaint,
       created_at: serviceOrder.created_at,
+      finished_at: serviceOrder.finished_at,
+      root_cause: serviceOrder.root_cause,
+      conclusion: serviceOrder.conclusion,
+      final_verdict: serviceOrder.final_verdict,
+      promo_video_status: serviceOrder.promo_video_status,
       public_token: serviceOrder.public_token,
       public_url: `${frontendUrl}/servico/${serviceOrder.public_token}`,
 
@@ -136,6 +144,16 @@ export class ServiceOrdersService {
               url: await this.minioService.getPresignedUrl(media.object_name),
             })),
           ),
+          tests: (section.tests ?? []).map((test) => ({
+            test_id: test.test_id,
+            title: test.title,
+            measurements: test.measurements,
+            test_type: test.test_type,
+            data: test.data,
+            verdict: test.verdict,
+            notes: test.notes,
+            created_at: test.created_at,
+          })),
         })),
       ),
     };
@@ -153,6 +171,7 @@ export class ServiceOrdersService {
         },
         sections: {
           medias: true,
+          tests: true,
         },
       },
     });
@@ -170,6 +189,7 @@ export class ServiceOrdersService {
           published_at: section.published_at,
           medias: await Promise.all(
             (section.medias ?? []).map(async (media) => ({
+              media_id: media.media_id,
               type: media.type,
               object_name: media.object_name,
               label: media.label,
@@ -177,6 +197,14 @@ export class ServiceOrdersService {
               url: await this.minioService.getPresignedUrl(media.object_name),
             })),
           ),
+          tests: (section.tests ?? []).map((test) => ({
+            title: test.title,
+            measurements: test.measurements,
+            test_type: test.test_type,
+            data: test.data,
+            verdict: test.verdict,
+            notes: test.notes,
+          })),
         })),
     );
 
@@ -184,6 +212,10 @@ export class ServiceOrdersService {
       status: serviceOrder.status,
       client_complaint: serviceOrder.client_complaint,
       created_at: serviceOrder.created_at,
+      finished_at: serviceOrder.finished_at,
+      root_cause: serviceOrder.root_cause,
+      conclusion: serviceOrder.conclusion,
+      final_verdict: serviceOrder.final_verdict,
       tenant: {
         name: serviceOrder.tenant.name,
       },
@@ -257,8 +289,12 @@ export class ServiceOrdersService {
     }));
   }
 
-  async finish(orderId: number, userId: number) {
-    const order = await this.findById(orderId);
+  async finish(
+    orderId: number,
+    finishServiceOrderDto: FinishServiceOrderDto,
+    userId: number,
+  ) {
+    const order = await this.findEntityById(orderId);
     const user = await this.usersService.findById(userId);
 
     if (order.tenant.id !== user.tenant?.id) {
@@ -270,8 +306,29 @@ export class ServiceOrdersService {
     order.status = Status.DONE;
     order.finished_at = new Date();
 
+    if (finishServiceOrderDto.root_cause !== undefined) {
+      order.root_cause = finishServiceOrderDto.root_cause;
+    }
+
+    if (finishServiceOrderDto.conclusion !== undefined) {
+      order.conclusion = finishServiceOrderDto.conclusion;
+    }
+
+    if (finishServiceOrderDto.final_verdict !== undefined) {
+      order.final_verdict = finishServiceOrderDto.final_verdict;
+    }
+
     const saved = await this.serviceOrdersRepository.save(order);
 
     return saved;
+  }
+
+  async setPromoVideoStatus(
+    orderId: number,
+    status: PromoVideoStatus,
+  ): Promise<void> {
+    await this.serviceOrdersRepository.update(orderId, {
+      promo_video_status: status,
+    });
   }
 }

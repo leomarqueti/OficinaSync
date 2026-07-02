@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
+import { API_URL } from "@/lib/api";
 
 export function OsVehicleEntryPhotosPage() {
   const navigate = useNavigate();
@@ -32,7 +33,7 @@ export function OsVehicleEntryPhotosPage() {
     formData.append("type", "photo");
     formData.append("label", label);
 
-    const response = await fetch("http://localhost:3000/medias", {
+    const response = await fetch(`${API_URL}/medias`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,
@@ -54,7 +55,7 @@ export function OsVehicleEntryPhotosPage() {
 
   const publishSection = async (sectionId: number, token: string) => {
     const response = await fetch(
-      `http://localhost:3000/sections/${sectionId}/publish`,
+      `${API_URL}/sections/${sectionId}/publish`,
       {
         method: "PATCH",
         headers: {
@@ -99,7 +100,7 @@ export function OsVehicleEntryPhotosPage() {
     try {
       setLoading(true);
 
-      const sectionResponse = await fetch("http://localhost:3000/sections", {
+      const sectionResponse = await fetch(`${API_URL}/sections`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

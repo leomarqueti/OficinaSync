@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { useState } from "react";
+import { API_URL } from "@/lib/api";
 
 export function OsCreateClientPage() {
   const navigate = useNavigate();
@@ -32,7 +33,7 @@ export function OsCreateClientPage() {
     };
 
     try {
-      const response = await fetch("http://localhost:3000/clients", {
+      const response = await fetch(`${API_URL}/clients`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

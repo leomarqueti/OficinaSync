@@ -17,6 +17,7 @@ import {
   User,
 } from "lucide-react";
 import { DashboardSidebar } from "@/components/DashboardSidebar";
+import { API_URL } from "@/lib/api";
 
 type OpenServiceOrder = {
   service_order_id: number;
@@ -127,7 +128,7 @@ export function DashboardPage() {
         setLoading(true);
         setError("");
 
-        const response = await fetch("http://localhost:3000/service_orders/orders", {
+        const response = await fetch(`${API_URL}/service_orders/orders`, {
           method: "GET",
           headers: {
             Authorization: `Bearer ${token}`,
@@ -362,7 +363,7 @@ export function DashboardPage() {
 
                                   if (order.public_token) {
                                     window.open(
-                                      `http://localhost:5173/servico/${order.public_token}`,
+                                      `${window.location.origin}/servico/${order.public_token}`,
                                       "_blank"
                                     );
                                   }

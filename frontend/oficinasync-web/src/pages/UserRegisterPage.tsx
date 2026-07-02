@@ -6,6 +6,7 @@
     import { Label } from "@/components/ui/label";
     import { Progress } from "@/components/ui/progress";
     import { useNavigate } from "react-router-dom";
+    import { API_URL } from "@/lib/api";
 
     //oficinasyncemailteste@gmail.com
     //72547623000190
@@ -36,7 +37,7 @@
 
             try {
             
-                const response = await fetch('http://localhost:3000/auth/register', {
+                const response = await fetch(`${API_URL}/auth/register`, {
                     method: 'POST',
                     headers: {
                     

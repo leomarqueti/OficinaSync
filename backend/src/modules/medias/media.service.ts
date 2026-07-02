@@ -76,4 +76,43 @@ export class MediaService {
       section_id: mediaSaved.section?.section_id ?? null,
     } as any;
   }
+
+  async createFromUploadedObject(
+    sectionId: number,
+    type: string,
+    label: string | null,
+    uploaded: {
+      bucket: string;
+      object_name: string;
+      mime_type: string;
+      size: number;
+    },
+    userId: number,
+  ): Promise<Media> {
+    const user = await this.usersService.findById(userId);
+
+    if (!user.tenant) {
+      throw new UnauthorizedException();
+    }
+
+    const section = await this.sectionsService.findById(sectionId);
+
+    if (section.serviceOrder.tenant.id !== user.tenant.id) {
+      throw new ForbiddenException(
+        'Essa section não pertence ao tenant do usuário.',
+      );
+    }
+
+    const media = this.mediaRepository.create({
+      type,
+      bucket: uploaded.bucket,
+      object_name: uploaded.object_name,
+      mime_type: uploaded.mime_type,
+      size: uploaded.size,
+      label,
+      section,
+    });
+
+    return this.mediaRepository.save(media);
+  }
 }

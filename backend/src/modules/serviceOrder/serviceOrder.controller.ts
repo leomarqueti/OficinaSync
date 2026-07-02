@@ -15,6 +15,7 @@ import {
 } from '@nestjs/common';
 import { ServiceOrdersService } from './serviceOrder.service';
 import { CreateServiceOrderDto } from './dto/create-serviceOrder-dto';
+import { FinishServiceOrderDto } from './dto/finish-serviceOrder-dto';
 import { JwtAuthGuard } from '../AuthModule/jwt-auth.guard';
 import { ResponseServiceOrderDto } from './dto/response-serviceOrder-dto';
 import { plainToInstance } from 'class-transformer';
@@ -63,9 +64,13 @@ export class ServiceOrdersController {
   @Patch('/:id/finish')
   @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.OK)
-  async finish(@Req() req: any, @Param('id', ParseIntPipe) id: number) {
+  async finish(
+    @Req() req: any,
+    @Param('id', ParseIntPipe) id: number,
+    @Body() finishServiceOrderDto: FinishServiceOrderDto,
+  ) {
     const userId = req.user.sub;
 
-    return this.serviceOrdersService.finish(id, userId);
+    return this.serviceOrdersService.finish(id, finishServiceOrderDto, userId);
   }
 }

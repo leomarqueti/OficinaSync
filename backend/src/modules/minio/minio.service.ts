@@ -110,4 +110,40 @@ export class MinioService implements OnModuleInit {
       expiresInSeconds,
     );
   }
+
+  async uploadBuffer(
+    buffer: Buffer,
+    mimeType: string,
+    extension: string,
+  ): Promise<{
+    bucket: string;
+    object_name: string;
+    mime_type: string;
+    size: number;
+  }> {
+    const objectName = `orders/${randomUUID()}.${extension}`;
+
+    await this.client.putObject(this.bucketName, objectName, buffer, buffer.length, {
+      'Content-Type': mimeType,
+    });
+
+    return {
+      bucket: this.bucketName,
+      object_name: objectName,
+      mime_type: mimeType,
+      size: buffer.length,
+    };
+  }
+
+  async getObjectBuffer(objectName: string): Promise<Buffer> {
+    const stream = await this.client.getObject(this.bucketName, objectName);
+
+    const chunks: Buffer[] = [];
+
+    return new Promise((resolve, reject) => {
+      stream.on('data', (chunk: Buffer) => chunks.push(chunk));
+      stream.on('end', () => resolve(Buffer.concat(chunks)));
+      stream.on('error', reject);
+    });
+  }
 }

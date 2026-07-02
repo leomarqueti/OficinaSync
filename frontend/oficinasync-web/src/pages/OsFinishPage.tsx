@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { API_URL } from "@/lib/api";
 
 type SectionItem = {
   section_id: number;
@@ -33,6 +34,11 @@ export function OsFinishPage() {
 
   const [finalNotes, setFinalNotes] = useState("");
 
+  const [rootCause, setRootCause] = useState("");
+  const [conclusion, setConclusion] = useState("");
+  const [finalVerdict, setFinalVerdict] = useState("");
+  const [downloadingReport, setDownloadingReport] = useState(false);
+
   const [frontPhoto, setFrontPhoto] = useState<File | null>(null);
   const [rearPhoto, setRearPhoto] = useState<File | null>(null);
   const [leftPhoto, setLeftPhoto] = useState<File | null>(null);
@@ -52,7 +58,7 @@ export function OsFinishPage() {
       setError("");
 
       const response = await fetch(
-        `http://localhost:3000/service_orders/${id}`,
+        `${API_URL}/service_orders/${id}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -91,7 +97,7 @@ export function OsFinishPage() {
     formData.append("type", "photo");
     formData.append("label", label);
 
-    const response = await fetch("http://localhost:3000/medias", {
+    const response = await fetch(`${API_URL}/medias`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,
@@ -133,7 +139,7 @@ export function OsFinishPage() {
         finalSectionId = existingFinalSection.section_id;
       } else {
         const createSectionResponse = await fetch(
-          "http://localhost:3000/sections",
+          `${API_URL}/sections`,
           {
             method: "POST",
             headers: {
@@ -171,7 +177,7 @@ export function OsFinishPage() {
         existingFinalSection.status !== "published"
       ) {
         const publishResponse = await fetch(
-          `http://localhost:3000/sections/${finalSectionId}/publish`,
+          `${API_URL}/sections/${finalSectionId}/publish`,
           {
             method: "PATCH",
             headers: {
@@ -190,12 +196,18 @@ export function OsFinishPage() {
       }
 
       const finishResponse = await fetch(
-        `http://localhost:3000/service_orders/${id}/finish`,
+        `${API_URL}/service_orders/${id}/finish`,
         {
           method: "PATCH",
           headers: {
+            "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
           },
+          body: JSON.stringify({
+            root_cause: rootCause || undefined,
+            conclusion: conclusion || undefined,
+            final_verdict: finalVerdict || undefined,
+          }),
         },
       );
 
@@ -211,6 +223,47 @@ export function OsFinishPage() {
       alert(err instanceof Error ? err.message : "Erro ao finalizar a OS.");
     } finally {
       setFinishing(false);
+    }
+  };
+
+  const handleDownloadReport = async () => {
+    const token = localStorage.getItem("token");
+
+    if (!token || !id) {
+      alert("Token não encontrado.");
+      return;
+    }
+
+    try {
+      setDownloadingReport(true);
+
+      const response = await fetch(
+        `${API_URL}/service_orders/${id}/report.pdf`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      if (!response.ok) {
+        const result = await response.json().catch(() => null);
+        alert(result?.message ?? "Erro ao gerar o laudo em PDF.");
+        return;
+      }
+
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `laudo-os-${id}.pdf`;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error(error);
+      alert("Erro ao gerar o laudo em PDF.");
+    } finally {
+      setDownloadingReport(false);
     }
   };
 
@@ -301,6 +354,58 @@ export function OsFinishPage() {
               placeholder="Ex: veículo entregue funcionando normalmente, sistema testado e sem falhas."
               className="min-h-[140px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none"
             />
+          </CardContent>
+        </Card>
+
+        <Card className="rounded-3xl">
+          <CardHeader>
+            <CardTitle>Fechamento do laudo</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Essas informações entram no PDF do laudo técnico gerado para o cliente.
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Causa raiz identificada</label>
+              <textarea
+                value={rootCause}
+                onChange={(e) => setRootCause(e.target.value)}
+                placeholder="Ex: contaminação por goma decorrente de degradação do combustível."
+                className="min-h-[100px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Conclusão</label>
+              <textarea
+                value={conclusion}
+                onChange={(e) => setConclusion(e.target.value)}
+                placeholder="Ex: após a substituição das peças, o motor voltou a operar normalmente."
+                className="min-h-[100px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Veredito final</label>
+              <select
+                value={finalVerdict}
+                onChange={(e) => setFinalVerdict(e.target.value)}
+                className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm md:w-64"
+              >
+                <option value="">Sem veredito ainda</option>
+                <option value="resolved">Falha sanada / serviço concluído</option>
+                <option value="not_resolved">Não sanado / requer nova avaliação</option>
+                <option value="partial">Resolução parcial</option>
+              </select>
+            </div>
+
+            <Button
+              variant="outline"
+              onClick={handleDownloadReport}
+              disabled={downloadingReport}
+            >
+              {downloadingReport ? "Gerando PDF..." : "Baixar laudo em PDF"}
+            </Button>
           </CardContent>
         </Card>
 

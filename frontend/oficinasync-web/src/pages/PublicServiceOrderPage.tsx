@@ -2,8 +2,21 @@ import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { BateriaCard } from "@/components/tests/BateriaCard";
+import { LeituraDtcCard } from "@/components/tests/LeituraDtcCard";
+import { CompressaoMecanicaCard } from "@/components/tests/CompressaoMecanicaCard";
+import { InjetoresBancoCard } from "@/components/tests/InjetoresBancoCard";
+import type {
+  BateriaData,
+  CompressaoMecanicaData,
+  InjetoresBancoData,
+  LeituraDtcData,
+  TestTypeCategory,
+} from "@/components/tests/testTypes";
+import { API_URL } from "@/lib/api";
 
 type MediaItem = {
+  media_id: number;
   type: "photo" | "video" | "audio" | string;
   object_name: string;
   label: string | null;
@@ -11,11 +24,27 @@ type MediaItem = {
   url?: string;
 };
 
+type TestMeasurement = {
+  label: string;
+  expected?: string;
+  actual: string;
+};
+
+type TestItem = {
+  title: string;
+  measurements: TestMeasurement[] | null;
+  test_type: TestTypeCategory | null;
+  data: Record<string, unknown> | null;
+  verdict: "approved" | "failed" | "inconclusive" | null;
+  notes: string | null;
+};
+
 type SectionItem = {
   type: string;
   notes: string | null;
   published_at: string | null;
   medias: MediaItem[];
+  tests: TestItem[];
 };
 
 type PublicServiceOrder = {
@@ -56,6 +85,94 @@ const statusLabels: Record<string, string> = {
   done: "Concluído",
   cancelled: "Cancelado",
 };
+
+const verdictLabels: Record<string, string> = {
+  approved: "Aprovado",
+  failed: "Reprovado",
+  inconclusive: "Inconclusivo",
+};
+
+function getVerdictPillClass(verdict: string | null) {
+  const map: Record<string, string> = {
+    approved: "bg-emerald-100 text-emerald-700",
+    failed: "bg-red-100 text-red-700",
+    inconclusive: "bg-amber-100 text-amber-700",
+  };
+
+  return verdict ? map[verdict] ?? "bg-muted text-foreground" : "bg-muted text-foreground";
+}
+
+function TestCard({
+  test,
+  sectionMedias = [],
+}: {
+  test: TestItem;
+  sectionMedias?: MediaItem[];
+}) {
+  return (
+    <div className="space-y-3 rounded-2xl border p-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h4 className="text-sm font-semibold">{test.title}</h4>
+        <span
+          className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${getVerdictPillClass(
+            test.verdict
+          )}`}
+        >
+          {test.verdict ? verdictLabels[test.verdict] : "Sem veredito"}
+        </span>
+      </div>
+
+      {test.test_type === "bateria" && test.data && (
+        <BateriaCard data={test.data as unknown as BateriaData} />
+      )}
+
+      {test.test_type === "leitura_dtc" && test.data && (
+        <LeituraDtcCard data={test.data as unknown as LeituraDtcData} />
+      )}
+
+      {test.test_type === "compressao_mecanica" && test.data && (
+        <CompressaoMecanicaCard
+          data={test.data as unknown as CompressaoMecanicaData}
+          sectionMedias={sectionMedias}
+        />
+      )}
+
+      {test.test_type === "injetores_banco" && test.data && (
+        <InjetoresBancoCard
+          data={test.data as unknown as InjetoresBancoData}
+          sectionMedias={sectionMedias}
+        />
+      )}
+
+      {!test.test_type && test.measurements && test.measurements.length > 0 && (
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="text-left text-muted-foreground">
+              <th className="pb-1 pr-2 font-medium">Item</th>
+              <th className="pb-1 pr-2 font-medium">Esperado</th>
+              <th className="pb-1 font-medium">Obtido</th>
+            </tr>
+          </thead>
+          <tbody>
+            {test.measurements.map((measurement, index) => (
+              <tr key={index} className="border-t">
+                <td className="py-1 pr-2">{measurement.label}</td>
+                <td className="py-1 pr-2 text-muted-foreground">
+                  {measurement.expected || "-"}
+                </td>
+                <td className="py-1">{measurement.actual}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+
+      {test.notes && (
+        <p className="whitespace-pre-line text-sm text-muted-foreground">{test.notes}</p>
+      )}
+    </div>
+  );
+}
 
 const visualOrder: Record<string, number> = {
   checkin: 1,
@@ -150,7 +267,7 @@ export function PublicServiceOrderPage() {
         setError("");
 
         const response = await fetch(
-          `http://localhost:3000/service_orders/public/${token}`
+          `${API_URL}/service_orders/public/${token}`
         );
 
         const result = await response.json();
@@ -330,6 +447,18 @@ export function PublicServiceOrderPage() {
                   </div>
                 )}
 
+                {checkinSection.tests?.length > 0 && (
+                  <div className="space-y-4">
+                    {checkinSection.tests.map((test, index) => (
+                      <TestCard
+                        key={`${test.title}-${index}`}
+                        test={test}
+                        sectionMedias={checkinSection.medias}
+                      />
+                    ))}
+                  </div>
+                )}
+
                 {checkinSection.medias?.length > 0 && (
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     {checkinSection.medias.map((media, index) => (
@@ -383,6 +512,27 @@ export function PublicServiceOrderPage() {
                         <p className="whitespace-pre-line text-sm leading-6 text-muted-foreground">
                           {section.notes}
                         </p>
+                      </div>
+                    )}
+
+                    {section.tests?.length > 0 && (
+                      <div className="space-y-4">
+                        <Separator />
+                        <div>
+                          <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                            Testes realizados
+                          </h3>
+
+                          <div className="mt-4 space-y-4">
+                            {section.tests.map((test, testIndex) => (
+                              <TestCard
+                                key={`${test.title}-${testIndex}`}
+                                test={test}
+                                sectionMedias={section.medias}
+                              />
+                            ))}
+                          </div>
+                        </div>
                       </div>
                     )}
 

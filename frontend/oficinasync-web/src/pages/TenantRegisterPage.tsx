@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { useNavigate } from "react-router-dom";
+import { API_URL } from "@/lib/api";
 
 
 export function TenantRegisterPage(){
@@ -23,7 +24,7 @@ export function TenantRegisterPage(){
     }
 
     try {
-        const response = await fetch("http://localhost:3000/tenants", {
+        const response = await fetch(`${API_URL}/tenants`, {
         method: "POST",
         headers: {
             "Content-Type": "application/json",

@@ -10,6 +10,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
+import { API_URL } from "@/lib/api";
 
 export function OsMediaDefectPage() {
   const navigate = useNavigate();
@@ -44,7 +45,7 @@ export function OsMediaDefectPage() {
     formData.append("label", label);
 
     try {
-      const response = await fetch("http://localhost:3000/medias", {
+      const response = await fetch(`${API_URL}/medias`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,

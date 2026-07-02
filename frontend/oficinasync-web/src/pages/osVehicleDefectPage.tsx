@@ -9,6 +9,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { useState } from "react";
+import { API_URL } from "@/lib/api";
 
 export function OsVehicleDefectPage() {
   const navigate = useNavigate();
@@ -34,7 +35,7 @@ export function OsVehicleDefectPage() {
     };
 
     try {
-      const serviceOrderResponse = await fetch("http://localhost:3000/service_orders", {
+      const serviceOrderResponse = await fetch(`${API_URL}/service_orders`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -66,7 +67,7 @@ export function OsVehicleDefectPage() {
         notes: clientComplaint,
       };
 
-      const sectionResponse = await fetch("http://localhost:3000/sections", {
+      const sectionResponse = await fetch(`${API_URL}/sections`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

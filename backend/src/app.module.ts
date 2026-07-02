@@ -16,6 +16,9 @@ import { Media } from './modules/medias/media.entity';
 import { SectionsModule } from './modules/sections/section.module';
 import { MediaModule } from './modules/medias/media.module';
 import { MinioModule } from './modules/minio/minio.module';
+import { TestsModule } from './modules/tests/test.module';
+import { ReportModule } from './modules/report/report.module';
+import { VideoModule } from './modules/video/video.module';
 
 export const PASSWORD_PEPPER = 'PASSWORD_PEPPER';
 
@@ -56,6 +59,9 @@ export const PASSWORD_PEPPER = 'PASSWORD_PEPPER';
     SectionsModule,
     MediaModule,
     MinioModule,
+    TestsModule,
+    ReportModule,
+    VideoModule,
   ],
   controllers: [],
   providers: [
