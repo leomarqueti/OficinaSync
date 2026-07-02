@@ -777,7 +777,7 @@ export function OsWorkPage() {
   const handleSaveSpecializedTest = async (
     sectionId: number,
     testType: TestTypeCategory,
-    payload: { title: string; data: Record<string, unknown>; verdict: string; notes: string },
+    payload: { title: string; data: object; verdict: string; notes: string },
   ) => {
     const token = localStorage.getItem("token");
 

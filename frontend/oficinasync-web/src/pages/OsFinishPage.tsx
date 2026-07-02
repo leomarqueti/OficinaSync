@@ -165,6 +165,10 @@ export function OsFinishPage() {
         finalSectionId = createSectionResult.section_id;
       }
 
+      if (!finalSectionId) {
+        throw new Error("Não foi possível determinar a etapa final.");
+      }
+
       await Promise.all([
         uploadMedia(finalSectionId, frontPhoto, "Frente na saída", token),
         uploadMedia(finalSectionId, rearPhoto, "Traseira na saída", token),
