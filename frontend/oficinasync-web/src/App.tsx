@@ -1,5 +1,6 @@
 
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
+import { Toaster } from 'sonner'
 import './App.css'
 import { LoginPage } from './pages/LoginPage'
 import { UserRegisterPage } from './pages/UserRegisterPage'
@@ -20,6 +21,7 @@ import { OsFinishPage } from './pages/OsFinishPage'
 function App() {
   return (
     <BrowserRouter>
+      <Toaster position="top-center" richColors closeButton theme="dark" />
       <Routes>
         <Route path="/register" element={<UserRegisterPage />} />
         <Route path="/tenant-register" element={<TenantRegisterPage />} />

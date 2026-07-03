@@ -153,8 +153,16 @@ Dono do projeto: Leonardo (mecânico há 11 anos, formado em ADS). Objetivo atua
 - `OsCreateClientPage`, `OsCreateCarPage`, `OsVehicleDefectPage`, `OsMediaDefectPage`, `OsVehicleEntryPhotosPage` — fluxo guiado de abertura de OS (5 passos)
 - `OsWorkPage` — tela do mecânico: gerencia sections, mídias, testes (genéricos + 4 especializados), publica, finaliza OS, gera laudo PDF e vídeo de divulgação
 - `OsFinishPage` — fechamento da OS: causa raiz, conclusão, veredito final, fotos de saída, baixar laudo PDF
-- `PublicServiceOrderPage` (`/servico/:token`) — página pública do cliente com storytelling, incluindo os cards de teste (genéricos e especializados)
+- `PublicServiceOrderPage` (`/servico/:token`) — página pública do cliente, **reescrita como scrollytelling "Cinema Escuro"** (Fase 1 da reforma visual): hero full-screen animado, capítulos numerados revelados por scroll (relato → check-in → investigação → reparo → veredito → vídeo → fechamento com métricas), lightbox de mídia, mobile-first, `prefers-reduced-motion` respeitado
 - `frontend/oficinasync-web/src/components/tests/` — módulo de testes especializados: `testTypes.ts` (schemas TS + labels/cores), `TestTypeSelector.tsx`, `TestFormShell.tsx` (wrapper compartilhado título/veredito/notas/salvar), `PhotoCaptureButton.tsx` (`capture="environment"` — abre câmera no celular, upload inline pro `/medias`), e um par Form+Card por tipo (`BateriaForm/Card`, `LeituraDtcForm/Card`, `CompressaoMecanicaForm/Card`, `InjetoresBancoForm/Card`)
+
+### Reforma visual "Cinema Escuro" (em andamento, faseada)
+
+Direção escolhida pelo Leonardo: fundo quase preto `#0a0a0a`, verde-limão `#A3E635` como assinatura, tipografia grande, storytelling por scroll. Plano completo em 5 fases (`~/.claude/plans/happy-sprouting-panda.md`).
+
+- **Fundação (feita)**: tokens no `src/index.css` — o bloco `.dark` É a paleta Cinema Escuro (`--brand`, `--surface`, lime como `--primary`); páginas ativam com classe `dark` no root. Deps novas: `motion`, `sonner`, `react-hook-form`, `zod`. `src/lib/api.ts` agora exporta `apiFetch()` (Bearer automático + erro → toast sonner; `silent: true` pra tratar manualmente). `<Toaster />` montado no `App.tsx`. Primitivas em `src/components/motion/` (`Reveal`, `Stagger`/`StaggerItem`, `CountUp`, `Parallax`) e `src/components/media/Lightbox.tsx` — todas respeitam `prefers-reduced-motion`.
+- **Fase 1 (feita)**: página do cliente reescrita (acima). Blocos de teste dark em `src/components/story/` (`StoryTestBlock` despacha por `test_type` → `StoryBateria`/`StoryCompressao`/`StoryDtc`/`StoryInjetores`, + tabela genérica; chips em `chips.tsx`/`statusMaps.ts`). Fotos com `onError` → somem em vez de mostrar ícone quebrado.
+- **Fases pendentes**: 2 (OsWorkPage em componentes + sheets + toasts), 3 (wizard de criação de OS com máscaras CPF/telefone — dor explícita do Leonardo: telefone formata sozinho sem digitar +55, CPF avisa erro na hora), 4 (auth/dashboard sem dados fake + erro de login visível), 5 (PDF premium com QR code). As páginas antigas continuam claras até suas fases migrarem.
 
 ## Configuração (.env do backend)
 
