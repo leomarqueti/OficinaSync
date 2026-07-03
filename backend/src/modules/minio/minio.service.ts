@@ -12,6 +12,7 @@ import { randomUUID } from 'crypto';
 @Injectable()
 export class MinioService implements OnModuleInit {
   private readonly client: Minio.Client;
+  private readonly presignClient: Minio.Client;
   private readonly bucketName: string;
 
   private readonly allowedMimeTypes = [
@@ -50,6 +51,31 @@ export class MinioService implements OnModuleInit {
       accessKey,
       secretKey,
     });
+
+    // Em produção o MINIO_ENDPOINT é o hostname interno do Docker (ex: "minio"),
+    // que o navegador do usuário não resolve. As URLs assinadas precisam ser
+    // geradas contra o endereço público (ex: https://storage.oficinasync.com.br),
+    // senão as fotos quebram fora do servidor. Sem MINIO_PUBLIC_URL (dev local),
+    // assina com o mesmo client interno, como antes.
+    const publicUrl = this.configService.get<string>('MINIO_PUBLIC_URL');
+
+    if (publicUrl) {
+      const parsed = new URL(publicUrl);
+
+      this.presignClient = new Minio.Client({
+        endPoint: parsed.hostname,
+        port: parsed.port
+          ? Number(parsed.port)
+          : parsed.protocol === 'https:'
+            ? 443
+            : 80,
+        useSSL: parsed.protocol === 'https:',
+        accessKey,
+        secretKey,
+      });
+    } else {
+      this.presignClient = this.client;
+    }
   }
 
   async onModuleInit() {
@@ -104,7 +130,7 @@ export class MinioService implements OnModuleInit {
     objectName: string,
     expiresInSeconds = 60 * 60,
   ): Promise<string> {
-    return this.client.presignedGetObject(
+    return this.presignClient.presignedGetObject(
       this.bucketName,
       objectName,
       expiresInSeconds,

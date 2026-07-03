@@ -467,6 +467,8 @@ export function buildReportHtml(data: ReportData): string {
     <p>${data.clientComplaint || 'Sem relato informado.'}</p>
   </section>
 
+  ${renderPhotos(data.photos)}
+
   <section>
     <h2>Procedimento realizado</h2>
     ${renderProcedureSteps(data.procedureSteps, data.photoLookup)}
@@ -477,8 +479,6 @@ export function buildReportHtml(data: ReportData): string {
       ? `<section><h2>Causa raiz identificada</h2><p>${data.rootCause}</p></section>`
       : ''
   }
-
-  ${renderPhotos(data.photos)}
 
   <section>
     <h2>Conclusão</h2>

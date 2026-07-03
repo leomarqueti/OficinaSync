@@ -34,6 +34,10 @@ No painel de DNS do seu domínio (registro.br ou o revendedor), crie 2 registros
 |---|---|---|
 | A | `@` (ou `oficinasync.com.br`) | IP da VPS |
 | A | `api` (vira `api.oficinasync.com.br`) | IP da VPS |
+| A | `storage` (vira `storage.oficinasync.com.br`) | IP da VPS |
+
+O subdomínio `storage` serve as fotos/vídeos do MinIO — sem ele, as mídias não carregam no navegador
+(as URLs assinadas são geradas contra esse endereço público, ver `MINIO_PUBLIC_URL`).
 
 Propagação de DNS pode levar de alguns minutos a algumas horas.
 

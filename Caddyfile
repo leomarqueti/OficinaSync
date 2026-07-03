@@ -8,3 +8,7 @@
 api.{$DOMAIN} {
 	reverse_proxy backend:3000
 }
+
+storage.{$DOMAIN} {
+	reverse_proxy minio:9000
+}
