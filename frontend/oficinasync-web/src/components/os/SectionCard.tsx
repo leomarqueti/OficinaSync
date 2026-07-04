@@ -1,4 +1,4 @@
-import { Camera, FilePenLine, FlaskConical, Loader2, Send, Trash2 } from "lucide-react";
+import { AlertTriangle, Camera, FilePenLine, FlaskConical, Loader2, Send, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StoryTestBlock } from "@/components/story/StoryTestBlock";
 import type { LightboxMedia } from "@/components/media/Lightbox";
@@ -15,6 +15,7 @@ type SectionCardProps = {
   publishing: boolean;
   onAddMedia: () => void;
   onAddTest: () => void;
+  onAddFinding: () => void;
   onEditNotes: () => void;
   onEditTest: (test: TestItem) => void;
   onDeleteTest: (test: TestItem) => void;
@@ -88,6 +89,7 @@ export function SectionCard({
   publishing,
   onAddMedia,
   onAddTest,
+  onAddFinding,
   onEditNotes,
   onEditTest,
   onDeleteTest,
@@ -184,7 +186,7 @@ export function SectionCard({
       )}
 
       {/* ações */}
-      <div className="grid grid-cols-2 gap-2 border-t border-border pt-4 sm:flex sm:flex-wrap">
+      <div className="grid grid-cols-3 gap-2 border-t border-border pt-4 sm:flex sm:flex-wrap">
         <Button variant="outline" className="h-11" onClick={onAddMedia}>
           <Camera className="mr-1.5 h-4 w-4" />
           Mídia
@@ -193,8 +195,12 @@ export function SectionCard({
           <FlaskConical className="mr-1.5 h-4 w-4" />
           Teste
         </Button>
+        <Button variant="outline" className="h-11" onClick={onAddFinding}>
+          <AlertTriangle className="mr-1.5 h-4 w-4" />
+          Achado
+        </Button>
         <Button
-          className="col-span-2 h-11 bg-brand text-brand-foreground hover:bg-brand/90 disabled:opacity-60 sm:ml-auto"
+          className="col-span-3 h-11 bg-brand text-brand-foreground hover:bg-brand/90 disabled:opacity-60 sm:ml-auto sm:col-span-1"
           onClick={onPublish}
           disabled={publishing || published}
         >

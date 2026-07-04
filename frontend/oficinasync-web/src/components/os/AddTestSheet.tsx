@@ -12,6 +12,7 @@ import { BateriaForm } from "@/components/tests/BateriaForm";
 import { LeituraDtcForm } from "@/components/tests/LeituraDtcForm";
 import { CompressaoMecanicaForm } from "@/components/tests/CompressaoMecanicaForm";
 import { InjetoresBancoForm } from "@/components/tests/InjetoresBancoForm";
+import { AntesDepoisForm } from "@/components/tests/AntesDepoisForm";
 import type { TestTypeCategory } from "@/components/tests/testTypes";
 import { testTypeLabels } from "@/components/tests/testTypes";
 import { apiFetch } from "@/lib/api";
@@ -143,6 +144,15 @@ export function AddTestSheet({ sectionId, onClose, onSaved }: AddTestSheetProps)
               saving={saving}
               onCancel={close}
               onSave={saveSpecialized("injetores_banco")}
+            />
+          )}
+
+          {chosen === "antes_depois" && sectionId !== null && (
+            <AntesDepoisForm
+              sectionId={sectionId}
+              saving={saving}
+              onCancel={close}
+              onSave={saveSpecialized("antes_depois")}
             />
           )}
         </div>

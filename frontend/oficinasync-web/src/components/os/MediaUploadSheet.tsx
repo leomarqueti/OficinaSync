@@ -9,6 +9,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
+import { MediaCaptureField, type MediaCaptureType } from "@/components/media/MediaCaptureField";
 import { apiFetch } from "@/lib/api";
 
 type MediaUploadSheetProps = {
@@ -17,18 +18,11 @@ type MediaUploadSheetProps = {
   onSaved: () => Promise<void> | void;
 };
 
-const acceptByType: Record<string, string> = {
-  photo: "image/*",
-  video: "video/*",
-  audio: "audio/*",
-};
-
-/** Upload de foto/vídeo/áudio numa etapa, com preview antes de enviar. */
+/** Upload de foto/vídeo/áudio numa etapa — câmera ou arquivo, áudio gravado no navegador. */
 export function MediaUploadSheet({ sectionId, onClose, onSaved }: MediaUploadSheetProps) {
-  const [type, setType] = useState("photo");
+  const [type, setType] = useState<MediaCaptureType>("photo");
   const [label, setLabel] = useState("");
   const [file, setFile] = useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
   const open = sectionId !== null;
@@ -37,17 +31,11 @@ export function MediaUploadSheet({ sectionId, onClose, onSaved }: MediaUploadShe
     setType("photo");
     setLabel("");
     setFile(null);
-    setPreviewUrl(null);
   };
 
   const close = () => {
     reset();
     onClose();
-  };
-
-  const handleFile = (selected: File | null) => {
-    setFile(selected);
-    setPreviewUrl(selected && selected.type.startsWith("image/") ? URL.createObjectURL(selected) : null);
   };
 
   const submit = async () => {
@@ -93,7 +81,7 @@ export function MediaUploadSheet({ sectionId, onClose, onSaved }: MediaUploadShe
                 type="button"
                 onClick={() => {
                   setType(option);
-                  handleFile(null);
+                  setFile(null);
                 }}
                 className={`h-11 rounded-xl border text-sm font-medium transition-colors ${
                   type === option
@@ -119,23 +107,7 @@ export function MediaUploadSheet({ sectionId, onClose, onSaved }: MediaUploadShe
 
           <div className="space-y-2">
             <label className="text-sm font-medium">Arquivo</label>
-            <input
-              type="file"
-              accept={acceptByType[type]}
-              capture={type === "photo" ? "environment" : undefined}
-              onChange={(e) => handleFile(e.target.files?.[0] ?? null)}
-              className="h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-sm file:mr-3 file:rounded-md file:border-0 file:bg-brand/15 file:px-3 file:py-1 file:text-brand"
-            />
-            {previewUrl && (
-              <img
-                src={previewUrl}
-                alt="Prévia"
-                className="h-40 w-full rounded-xl border border-border object-cover"
-              />
-            )}
-            {file && !previewUrl && (
-              <p className="text-xs text-muted-foreground">Selecionado: {file.name}</p>
-            )}
+            <MediaCaptureField type={type} value={file} onChange={setFile} />
           </div>
 
           <div className="flex gap-2 pt-2">

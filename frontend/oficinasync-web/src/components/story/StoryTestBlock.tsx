@@ -1,5 +1,7 @@
 import { FlaskConical } from "lucide-react";
 import type {
+  AchadoAdicionalData,
+  AntesDepoisData,
   BateriaData,
   CompressaoMecanicaData,
   InjetoresBancoData,
@@ -8,6 +10,8 @@ import type {
 } from "@/components/tests/testTypes";
 import type { LightboxMedia } from "@/components/media/Lightbox";
 import { Reveal } from "@/components/motion/Reveal";
+import { StoryAchado } from "./StoryAchado";
+import { StoryAntesDepois } from "./StoryAntesDepois";
 import { StoryBateria } from "./StoryBateria";
 import { StoryCompressao } from "./StoryCompressao";
 import { StoryDtc } from "./StoryDtc";
@@ -95,6 +99,22 @@ export function StoryTestBlock({ test, sectionMedias, onOpenMedia }: StoryTestBl
         {test.test_type === "injetores_banco" && test.data && (
           <StoryInjetores
             data={test.data as unknown as InjetoresBancoData}
+            sectionMedias={sectionMedias}
+            onOpenMedia={onOpenMedia}
+          />
+        )}
+
+        {test.test_type === "antes_depois" && test.data && (
+          <StoryAntesDepois
+            data={test.data as unknown as AntesDepoisData}
+            sectionMedias={sectionMedias}
+            onOpenMedia={onOpenMedia}
+          />
+        )}
+
+        {test.test_type === "achado_adicional" && test.data && (
+          <StoryAchado
+            data={test.data as unknown as AchadoAdicionalData}
             sectionMedias={sectionMedias}
             onOpenMedia={onOpenMedia}
           />

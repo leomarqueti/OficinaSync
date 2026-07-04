@@ -11,6 +11,7 @@ const specializedTypes: TestTypeCategory[] = [
   "leitura_dtc",
   "bateria",
   "injetores_banco",
+  "antes_depois",
 ];
 
 export function TestTypeSelector({ onSelect }: TestTypeSelectorProps) {

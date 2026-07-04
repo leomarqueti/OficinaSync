@@ -2,13 +2,17 @@ export type TestTypeCategory =
   | "compressao_mecanica"
   | "leitura_dtc"
   | "bateria"
-  | "injetores_banco";
+  | "injetores_banco"
+  | "antes_depois"
+  | "achado_adicional";
 
 export const testTypeLabels: Record<TestTypeCategory, string> = {
   compressao_mecanica: "Compressão Mecânica",
   leitura_dtc: "Leitura de DTC",
   bateria: "Bateria",
   injetores_banco: "Injetores no Banco",
+  antes_depois: "Antes e Depois",
+  achado_adicional: "Achado Adicional",
 };
 
 export const testTypeIcons: Record<TestTypeCategory, string> = {
@@ -16,6 +20,8 @@ export const testTypeIcons: Record<TestTypeCategory, string> = {
   leitura_dtc: "🔍",
   bateria: "🔋",
   injetores_banco: "💉",
+  antes_depois: "📸",
+  achado_adicional: "⚠️",
 };
 
 // Status por item (cilindro/injetor) reaproveita o mesmo vocabulário do veredito geral.
@@ -188,4 +194,54 @@ export function resolveMediaUrl(
 ): string | null {
   if (!mediaId) return null;
   return sectionMedias.find((m) => m.media_id === mediaId)?.url ?? null;
+}
+
+// --- Antes e Depois (genérico) ---
+
+export interface AntesDepoisData {
+  fotoAntesMediaId: number | null;
+  fotoAntesPreviewUrl: string | null;
+  fotoDepoisMediaId: number | null;
+  fotoDepoisPreviewUrl: string | null;
+  description: string;
+}
+
+export function emptyAntesDepoisData(): AntesDepoisData {
+  return {
+    fotoAntesMediaId: null,
+    fotoAntesPreviewUrl: null,
+    fotoDepoisMediaId: null,
+    fotoDepoisPreviewUrl: null,
+    description: "",
+  };
+}
+
+// --- Achado Adicional ---
+
+export type AchadoSeverity = "baixa" | "media" | "alta";
+
+export const achadoSeverityLabels: Record<AchadoSeverity, string> = {
+  baixa: "Baixa",
+  media: "Média",
+  alta: "Alta",
+};
+
+export function getAchadoSeverityPillClass(severity: AchadoSeverity) {
+  const map: Record<AchadoSeverity, string> = {
+    baixa: "bg-blue-100 text-blue-700",
+    media: "bg-amber-100 text-amber-700",
+    alta: "bg-red-100 text-red-700",
+  };
+  return map[severity] ?? "bg-muted text-foreground";
+}
+
+export interface AchadoAdicionalData {
+  severity: AchadoSeverity;
+  description: string;
+  media_id: number | null;
+  previewUrl: string | null;
+}
+
+export function emptyAchadoAdicionalData(): AchadoAdicionalData {
+  return { severity: "media", description: "", media_id: null, previewUrl: null };
 }
