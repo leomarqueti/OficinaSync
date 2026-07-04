@@ -9,6 +9,7 @@ import {
   Param,
   ParseIntPipe,
   Post,
+  Query,
   Req,
   UseGuards,
   Patch,
@@ -19,6 +20,7 @@ import { FinishServiceOrderDto } from './dto/finish-serviceOrder-dto';
 import { JwtAuthGuard } from '../AuthModule/jwt-auth.guard';
 import { ResponseServiceOrderDto } from './dto/response-serviceOrder-dto';
 import { plainToInstance } from 'class-transformer';
+import { Status } from './status.enum';
 
 @Controller('service_orders')
 export class ServiceOrdersController {
@@ -48,10 +50,13 @@ export class ServiceOrdersController {
   @Get('/orders')
   @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.OK)
-  async findAll(@Req() req: any) {
+  async findAll(@Req() req: any, @Query('status') status?: string) {
     const userId = req.user.sub;
+    const validStatus = Object.values(Status).includes(status as Status)
+      ? (status as Status)
+      : undefined;
 
-    return this.serviceOrdersService.findAll(userId);
+    return this.serviceOrdersService.findAll(userId, validStatus);
   }
 
   @Get(':id')

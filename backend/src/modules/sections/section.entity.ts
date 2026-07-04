@@ -18,7 +18,7 @@ import { Tests } from '../tests/test.entity';
 @Entity('sections')
 @Check(
   'check_values_section_type',
-  `"type" IN ('checkin','obd_scan','diagnosis','repair','preventive','final')`,
+  `"type" IN ('intake','checkin','obd_scan','diagnosis','repair','preventive','final')`,
 )
 @Check('check_values_section_status', `"status" IN ('draft','published')`)
 export class Sections {

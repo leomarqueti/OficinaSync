@@ -19,7 +19,7 @@ import { TestTypeCategory } from './testType.enum';
 )
 @Check(
   'check_values_test_type',
-  `"test_type" IN ('compressao_mecanica','leitura_dtc','bateria','injetores_banco')`,
+  `"test_type" IN ('compressao_mecanica','leitura_dtc','bateria','injetores_banco','achado_adicional','antes_depois')`,
 )
 export class Tests {
   @PrimaryGeneratedColumn()

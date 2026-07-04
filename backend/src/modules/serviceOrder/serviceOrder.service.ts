@@ -236,7 +236,7 @@ export class ServiceOrdersService {
     };
   }
 
-  async findAll(userId: number) {
+  async findAll(userId: number, status?: Status) {
     const user = await this.usersService.findById(userId);
 
     if (!user.tenant) {
@@ -250,7 +250,7 @@ export class ServiceOrdersService {
         tenant: {
           id: user.tenant.id,
         },
-        status: Status.OPEN,
+        ...(status ? { status } : {}),
       },
       relations: {
         tenant: true,
