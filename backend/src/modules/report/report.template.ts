@@ -1,3 +1,5 @@
+const BRAND = '#7cb928';
+
 const verdictLabels: Record<string, string> = {
   approved: 'Aprovado',
   failed: 'Reprovado',
@@ -47,6 +49,14 @@ export interface ReportPhoto {
   dataUri: string;
 }
 
+export interface ReportChapter {
+  type: string;
+  label: string;
+  notes: string | null;
+  photos: ReportPhoto[];
+  tests: ReportProcedureStep[];
+}
+
 export interface ReportData {
   tenantName: string;
   tenantCnpj: string;
@@ -59,15 +69,18 @@ export interface ReportData {
     fuel_type: string;
     mileage_in: number;
   };
+  clientName: string | null;
   clientComplaint: string | null;
   createdAt: Date;
   finishedAt: Date | null;
-  procedureSteps: ReportProcedureStep[];
-  photos: ReportPhoto[];
+  chapters: ReportChapter[];
   photoLookup: Map<number, string>;
   rootCause: string | null;
   conclusion: string | null;
   finalVerdict: string | null;
+  responsavelTecnico: string | null;
+  publicUrl: string;
+  qrCodeDataUri: string;
 }
 
 function formatDate(value: Date | null) {
@@ -227,57 +240,46 @@ function renderInjetoresBlock(
   return `${infoLine}${photosBlock}${table}`;
 }
 
-function renderProcedureSteps(
-  steps: ReportProcedureStep[],
-  photoLookup: Map<number, string>,
-) {
-  if (steps.length === 0) {
-    return '<p class="muted">Nenhum teste estruturado registrado nesta OS.</p>';
+function renderTest(step: ReportProcedureStep, number: number, photoLookup: Map<number, string>) {
+  let body: string;
+
+  switch (step.test_type) {
+    case 'compressao_mecanica':
+      body = renderCompressaoBlock(step.data ?? {}, photoLookup);
+      break;
+    case 'leitura_dtc':
+      body = renderDtcBlock(step.data ?? {});
+      break;
+    case 'bateria':
+      body = renderBateriaBlock(step.data ?? {});
+      break;
+    case 'injetores_banco':
+      body = renderInjetoresBlock(step.data ?? {}, photoLookup);
+      break;
+    default:
+      body = renderMeasurementsTable(step.measurements);
   }
 
-  return steps
-    .map((step, index) => {
-      let body: string;
-
-      switch (step.test_type) {
-        case 'compressao_mecanica':
-          body = renderCompressaoBlock(step.data ?? {}, photoLookup);
-          break;
-        case 'leitura_dtc':
-          body = renderDtcBlock(step.data ?? {});
-          break;
-        case 'bateria':
-          body = renderBateriaBlock(step.data ?? {});
-          break;
-        case 'injetores_banco':
-          body = renderInjetoresBlock(step.data ?? {}, photoLookup);
-          break;
-        default:
-          body = renderMeasurementsTable(step.measurements);
+  return `
+  <div class="step">
+    <div class="step-header">
+      <span class="step-number">${number}.</span>
+      <span class="step-title">${step.title}</span>
+      ${
+        step.verdict
+          ? `<span class="badge badge-${step.verdict}">${verdictLabels[step.verdict] ?? step.verdict}</span>`
+          : ''
       }
-
-      return `
-      <div class="step">
-        <div class="step-header">
-          <span class="step-number">${index + 1}.</span>
-          <span class="step-title">${step.title}</span>
-          ${
-            step.verdict
-              ? `<span class="badge badge-${step.verdict}">${verdictLabels[step.verdict] ?? step.verdict}</span>`
-              : ''
-          }
-        </div>
-        ${body}
-        ${step.notes ? `<p class="step-notes">${step.notes}</p>` : ''}
-      </div>`;
-    })
-    .join('');
+    </div>
+    ${body}
+    ${step.notes ? `<p class="step-notes">${step.notes}</p>` : ''}
+  </div>`;
 }
 
-function renderPhotos(photos: ReportPhoto[]) {
+function renderChapterPhotos(photos: ReportPhoto[]) {
   if (photos.length === 0) return '';
 
-  const pairs = photos
+  const tiles = photos
     .map(
       (photo) => `
       <div class="photo">
@@ -287,17 +289,42 @@ function renderPhotos(photos: ReportPhoto[]) {
     )
     .join('');
 
+  return `<div class="photo-grid">${tiles}</div>`;
+}
+
+function renderChapter(
+  chapter: ReportChapter,
+  chapterNumber: number,
+  stepCounter: { value: number },
+  photoLookup: Map<number, string>,
+) {
+  const hasContent = chapter.notes || chapter.photos.length > 0 || chapter.tests.length > 0;
+  if (!hasContent) return '';
+
+  const testsHtml = chapter.tests
+    .map((test) => {
+      stepCounter.value += 1;
+      return renderTest(test, stepCounter.value, photoLookup);
+    })
+    .join('');
+
   return `
-    <section>
-      <h2>Registro fotográfico</h2>
-      <div class="photo-grid">${pairs}</div>
+    <section class="chapter">
+      <div class="chapter-header">
+        <span class="chapter-number">${chapterNumber}</span>
+        <h2>${chapter.label}</h2>
+      </div>
+      ${chapter.notes ? `<p class="chapter-notes">${chapter.notes}</p>` : ''}
+      ${renderChapterPhotos(chapter.photos)}
+      ${testsHtml}
     </section>`;
 }
 
-function renderSummary(steps: ReportProcedureStep[]) {
-  if (steps.length === 0) return '';
+function renderSummary(chapters: ReportChapter[]) {
+  const allTests = chapters.flatMap((c) => c.tests);
+  if (allTests.length === 0) return '';
 
-  const items = steps
+  const items = allTests
     .map((step) => {
       const verdict = step.verdict ? ` — ${verdictLabels[step.verdict] ?? step.verdict}` : '';
       return `<li>${step.title}${verdict}</li>`;
@@ -313,6 +340,11 @@ function renderSummary(steps: ReportProcedureStep[]) {
 
 export function buildReportHtml(data: ReportData): string {
   const banner = data.finalVerdict ? finalVerdictBanner[data.finalVerdict] : null;
+  const stepCounter = { value: 0 };
+
+  const chaptersHtml = data.chapters
+    .map((chapter, index) => renderChapter(chapter, index + 1, stepCounter, data.photoLookup))
+    .join('');
 
   return `
 <!DOCTYPE html>
@@ -327,18 +359,24 @@ export function buildReportHtml(data: ReportData): string {
     font-size: 12px;
     margin: 0;
   }
-  h1 { font-size: 20px; margin: 0 0 4px; }
+  h1 { font-size: 22px; margin: 0 0 4px; letter-spacing: -0.01em; }
   h2 {
     font-size: 13px;
     text-transform: uppercase;
     letter-spacing: 0.04em;
     color: #374151;
-    border-bottom: 1px solid #e5e7eb;
-    padding-bottom: 4px;
-    margin: 20px 0 10px;
+    margin: 0 0 10px;
   }
-  section { margin-bottom: 12px; }
+  section { margin-bottom: 14px; }
   .muted { color: #6b7280; }
+  .accent-rule {
+    height: 3px;
+    width: 56px;
+    background: ${BRAND};
+    border-radius: 999px;
+    margin: 8px 0 16px;
+  }
+  .cover-meta { display: flex; justify-content: space-between; align-items: flex-start; }
   .grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
@@ -348,14 +386,54 @@ export function buildReportHtml(data: ReportData): string {
     background: #f9fafb;
     border-radius: 8px;
     padding: 8px 10px;
+    border-left: 3px solid ${BRAND};
   }
   .field-label { font-size: 9px; text-transform: uppercase; color: #6b7280; }
   .field-value { font-size: 13px; font-weight: bold; }
+  .complaint {
+    background: #f9fafb;
+    border-radius: 8px;
+    padding: 12px 14px;
+    font-style: italic;
+    color: #374151;
+    border-left: 3px solid #d1d5db;
+  }
+  .chapter {
+    page-break-inside: avoid;
+    padding-top: 14px;
+    border-top: 1px solid #e5e7eb;
+  }
+  .chapter-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+  .chapter-header h2 { margin: 0; }
+  .chapter-number {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    border-radius: 999px;
+    background: ${BRAND};
+    color: #14210a;
+    font-size: 11px;
+    font-weight: bold;
+    flex-shrink: 0;
+  }
+  .chapter-notes {
+    margin: 0 0 10px;
+    color: #374151;
+    line-height: 1.5;
+  }
   .step {
     border: 1px solid #e5e7eb;
     border-radius: 8px;
     padding: 10px 12px;
     margin-bottom: 10px;
+    page-break-inside: avoid;
   }
   .step-header {
     display: flex;
@@ -363,7 +441,7 @@ export function buildReportHtml(data: ReportData): string {
     gap: 8px;
     margin-bottom: 6px;
   }
-  .step-number { font-weight: bold; }
+  .step-number { font-weight: bold; color: #6b7280; }
   .step-title { font-weight: bold; flex: 1; }
   .badge {
     font-size: 10px;
@@ -426,10 +504,11 @@ export function buildReportHtml(data: ReportData): string {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 10px;
+    margin-bottom: 10px;
   }
   .photo img {
     width: 100%;
-    height: 220px;
+    height: 200px;
     object-fit: cover;
     border-radius: 8px;
     border: 1px solid #e5e7eb;
@@ -445,13 +524,42 @@ export function buildReportHtml(data: ReportData): string {
     font-weight: bold;
     text-align: center;
   }
+  .closing {
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 2px solid ${BRAND};
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    page-break-inside: avoid;
+  }
+  .closing-text { max-width: 340px; }
+  .closing-text h2 { margin-bottom: 6px; }
+  .closing-url { font-size: 10px; color: ${BRAND}; word-break: break-all; margin-top: 4px; }
+  .closing-qr { text-align: center; }
+  .closing-qr img { width: 90px; height: 90px; }
+  .signature {
+    margin-top: 26px;
+    padding-top: 10px;
+    border-top: 1px solid #d1d5db;
+    font-size: 11px;
+    color: #374151;
+    display: flex;
+    justify-content: space-between;
+  }
 </style>
 </head>
 <body>
-  <h1>Laudo Técnico</h1>
-  <p class="muted">${data.tenantName}${data.tenantCnpj ? ` — CNPJ ${data.tenantCnpj}` : ''}</p>
+  <div class="cover-meta">
+    <div>
+      <h1>Laudo Técnico</h1>
+      <p class="muted">${data.tenantName}${data.tenantCnpj ? ` — CNPJ ${data.tenantCnpj}` : ''}</p>
+    </div>
+  </div>
+  <div class="accent-rule"></div>
 
   <section class="grid">
+    <div class="field"><div class="field-label">Cliente</div><div class="field-value">${data.clientName ?? '-'}</div></div>
     <div class="field"><div class="field-label">Veículo</div><div class="field-value">${data.car.brand} ${data.car.model}</div></div>
     <div class="field"><div class="field-label">Ano</div><div class="field-value">${data.car.year}</div></div>
     <div class="field"><div class="field-label">Placa</div><div class="field-value">${data.car.plate}</div></div>
@@ -464,15 +572,10 @@ export function buildReportHtml(data: ReportData): string {
 
   <section>
     <h2>Queixa relatada</h2>
-    <p>${data.clientComplaint || 'Sem relato informado.'}</p>
+    <p class="complaint">${data.clientComplaint || 'Sem relato informado.'}</p>
   </section>
 
-  ${renderPhotos(data.photos)}
-
-  <section>
-    <h2>Procedimento realizado</h2>
-    ${renderProcedureSteps(data.procedureSteps, data.photoLookup)}
-  </section>
+  ${chaptersHtml}
 
   ${
     data.rootCause
@@ -486,7 +589,23 @@ export function buildReportHtml(data: ReportData): string {
     ${banner ? `<div class="banner" style="background:${banner.color}">${banner.text}</div>` : ''}
   </section>
 
-  ${renderSummary(data.procedureSteps)}
+  ${renderSummary(data.chapters)}
+
+  <div class="closing">
+    <div class="closing-text">
+      <h2>Acompanhe esse serviço online</h2>
+      <p class="muted">Fotos, vídeos e testes técnicos completos, atualizados em tempo real durante o serviço.</p>
+      <p class="closing-url">${data.publicUrl}</p>
+    </div>
+    <div class="closing-qr">
+      <img src="${data.qrCodeDataUri}" />
+    </div>
+  </div>
+
+  <div class="signature">
+    <span>Responsável técnico: <strong>${data.responsavelTecnico ?? '-'}</strong></span>
+    <span>${data.tenantName}</span>
+  </div>
 </body>
 </html>`;
 }

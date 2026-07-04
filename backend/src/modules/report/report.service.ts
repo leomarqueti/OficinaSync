@@ -1,9 +1,11 @@
 import { ForbiddenException, Injectable } from '@nestjs/common';
 import puppeteer from 'puppeteer';
+import * as QRCode from 'qrcode';
 import { ServiceOrdersService } from '../serviceOrder/serviceOrder.service';
 import { UsersService } from '../users/users.service';
 import { MinioService } from '../minio/minio.service';
 import {
+  ReportChapter,
   ReportPhoto,
   ReportProcedureStep,
   buildFooterTemplate,
@@ -18,6 +20,15 @@ const sectionVisualOrder: Record<string, number> = {
   repair: 4,
   preventive: 5,
   final: 6,
+};
+
+const chapterLabels: Record<string, string> = {
+  checkin: 'Check-in',
+  obd_scan: 'Scanner / OBD',
+  diagnosis: 'Diagnóstico',
+  repair: 'Execução do serviço',
+  preventive: 'Inspeção geral',
+  final: 'Entrega final',
 };
 
 @Injectable()
@@ -38,45 +49,36 @@ export class ReportService {
       );
     }
 
-    const sections = [...(order.sections ?? [])]
-      .filter((section) => section.type !== 'obd_scan')
-      .sort(
-        (a, b) =>
-          (sectionVisualOrder[a.type] ?? 999) -
-          (sectionVisualOrder[b.type] ?? 999),
-      );
-
-    const procedureSteps: ReportProcedureStep[] = sections.flatMap(
-      (section) =>
-        (section.tests ?? []).map((test) => ({
-          title: test.title,
-          measurements: test.measurements ?? [],
-          test_type: test.test_type,
-          data: test.data,
-          verdict: test.verdict,
-          notes: test.notes,
-        })),
+    const sections = [...(order.sections ?? [])].sort(
+      (a, b) =>
+        (sectionVisualOrder[a.type] ?? 999) - (sectionVisualOrder[b.type] ?? 999),
     );
 
     // Fotos já usadas dentro de um bloco especializado (cilindro/injetor) não
-    // devem aparecer de novo na galeria genérica de "Registro fotográfico".
+    // devem aparecer de novo na galeria genérica da etapa.
     const claimedMediaIds = new Set<number>();
-    for (const step of procedureSteps) {
-      if (step.test_type === 'compressao_mecanica') {
-        for (const cyl of step.data?.cylinders ?? []) {
-          if (cyl.media_id) claimedMediaIds.add(cyl.media_id);
+    for (const section of sections) {
+      for (const test of section.tests ?? []) {
+        if (test.test_type === 'compressao_mecanica') {
+          for (const cyl of (test.data as any)?.cylinders ?? []) {
+            if (cyl.media_id) claimedMediaIds.add(cyl.media_id);
+          }
         }
-      }
-      if (step.test_type === 'injetores_banco') {
-        if (step.data?.fotoAntesMediaId) claimedMediaIds.add(step.data.fotoAntesMediaId);
-        if (step.data?.fotoDepoisMediaId) claimedMediaIds.add(step.data.fotoDepoisMediaId);
+        if (test.test_type === 'injetores_banco') {
+          const data = test.data as any;
+          if (data?.fotoAntesMediaId) claimedMediaIds.add(data.fotoAntesMediaId);
+          if (data?.fotoDepoisMediaId) claimedMediaIds.add(data.fotoDepoisMediaId);
+        }
       }
     }
 
-    const photos: ReportPhoto[] = [];
     const photoLookup = new Map<number, string>();
 
+    const chapters: ReportChapter[] = [];
+
     for (const section of sections) {
+      const photos: ReportPhoto[] = [];
+
       for (const media of section.medias ?? []) {
         if (media.type !== 'photo') continue;
 
@@ -98,7 +100,28 @@ export class ReportService {
           // Mídia ausente no storage (ex: dado órfão de testes antigos) — não deve derrubar o relatório inteiro.
         }
       }
+
+      const tests: ReportProcedureStep[] = (section.tests ?? []).map((test) => ({
+        title: test.title,
+        measurements: test.measurements ?? [],
+        test_type: test.test_type,
+        data: test.data,
+        verdict: test.verdict,
+        notes: test.notes,
+      }));
+
+      chapters.push({
+        type: section.type,
+        label: chapterLabels[section.type] ?? section.type,
+        notes: section.notes,
+        photos,
+        tests,
+      });
     }
+
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    const publicUrl = `${frontendUrl}/servico/${order.public_token}`;
+    const qrCodeDataUri = await QRCode.toDataURL(publicUrl, { margin: 1, width: 180 });
 
     const html = buildReportHtml({
       tenantName: order.tenant.name,
@@ -112,15 +135,18 @@ export class ReportService {
         fuel_type: order.car.fuel_type,
         mileage_in: order.car.mileage_in,
       },
+      clientName: order.car.client?.name ?? null,
       clientComplaint: order.client_complaint,
       createdAt: order.created_at,
       finishedAt: order.finished_at,
-      procedureSteps,
-      photos,
+      chapters,
       photoLookup,
       rootCause: order.root_cause,
       conclusion: order.conclusion,
       finalVerdict: order.final_verdict,
+      responsavelTecnico: order.user?.name ?? null,
+      publicUrl,
+      qrCodeDataUri,
     });
 
     const browser = await puppeteer.launch({
