@@ -49,13 +49,16 @@ export class ReportService {
       );
     }
 
-    const sections = [...(order.sections ?? [])].sort(
+    const allSections = [...(order.sections ?? [])].sort(
       (a, b) =>
         (sectionVisualOrder[a.type] ?? 999) - (sectionVisualOrder[b.type] ?? 999),
     );
 
-    // Fotos já usadas dentro de um bloco especializado (cilindro/injetor) não
-    // devem aparecer de novo na galeria genérica da etapa.
+    const intakeSection = allSections.find((s) => s.type === 'intake') ?? null;
+    const sections = allSections.filter((s) => s.type !== 'intake');
+
+    // Fotos já usadas dentro de um bloco especializado (cilindro/injetor/achado/
+    // antes-depois) não devem aparecer de novo na galeria genérica da etapa.
     const claimedMediaIds = new Set<number>();
     for (const section of sections) {
       for (const test of section.tests ?? []) {
@@ -64,15 +67,32 @@ export class ReportService {
             if (cyl.media_id) claimedMediaIds.add(cyl.media_id);
           }
         }
-        if (test.test_type === 'injetores_banco') {
+        if (test.test_type === 'injetores_banco' || test.test_type === 'antes_depois') {
           const data = test.data as any;
           if (data?.fotoAntesMediaId) claimedMediaIds.add(data.fotoAntesMediaId);
           if (data?.fotoDepoisMediaId) claimedMediaIds.add(data.fotoDepoisMediaId);
+        }
+        if (test.test_type === 'achado_adicional') {
+          const data = test.data as any;
+          if (data?.media_id) claimedMediaIds.add(data.media_id);
         }
       }
     }
 
     const photoLookup = new Map<number, string>();
+
+    const intakePhotos: ReportPhoto[] = [];
+    for (const media of intakeSection?.medias ?? []) {
+      if (media.type !== 'photo') continue;
+      try {
+        const buffer = await this.minioService.getObjectBuffer(media.object_name);
+        const dataUri = `data:${media.mime_type};base64,${buffer.toString('base64')}`;
+        photoLookup.set(media.media_id, dataUri);
+        intakePhotos.push({ label: media.label ?? 'Foto enviada pelo cliente', dataUri });
+      } catch {
+        // Mídia ausente no storage — não deve derrubar o relatório inteiro.
+      }
+    }
 
     const chapters: ReportChapter[] = [];
 
@@ -137,6 +157,7 @@ export class ReportService {
       },
       clientName: order.car.client?.name ?? null,
       clientComplaint: order.client_complaint,
+      intakePhotos,
       createdAt: order.created_at,
       finishedAt: order.finished_at,
       chapters,

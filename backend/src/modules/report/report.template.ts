@@ -29,6 +29,18 @@ const sprayLabels: Record<string, string> = {
   GOTEJANDO: 'Gotejando',
 };
 
+const achadoSeverityLabels: Record<string, string> = {
+  baixa: 'Baixa',
+  media: 'Média',
+  alta: 'Alta',
+};
+
+const achadoSeverityColors: Record<string, string> = {
+  baixa: '#2563eb',
+  media: '#d97706',
+  alta: '#dc2626',
+};
+
 export interface ReportMeasurement {
   label: string;
   expected?: string;
@@ -71,6 +83,7 @@ export interface ReportData {
   };
   clientName: string | null;
   clientComplaint: string | null;
+  intakePhotos: ReportPhoto[];
   createdAt: Date;
   finishedAt: Date | null;
   chapters: ReportChapter[];
@@ -240,12 +253,56 @@ function renderInjetoresBlock(
   return `${infoLine}${photosBlock}${table}`;
 }
 
+function renderAntesDepoisBlock(
+  data: Record<string, any>,
+  photoLookup: Map<number, string>,
+) {
+  const antes = data.fotoAntesMediaId ? photoLookup.get(data.fotoAntesMediaId) : null;
+  const depois = data.fotoDepoisMediaId ? photoLookup.get(data.fotoDepoisMediaId) : null;
+
+  const photosBlock =
+    antes || depois
+      ? `<div class="photo-grid">
+          ${antes ? `<div class="photo"><img src="${antes}" /><p class="photo-label">Antes</p></div>` : ''}
+          ${depois ? `<div class="photo"><img src="${depois}" /><p class="photo-label">Depois</p></div>` : ''}
+        </div>`
+      : '';
+
+  const description = data.description ? `<p>${data.description}</p>` : '';
+
+  return `${photosBlock}${description}`;
+}
+
+function renderAchadoBlock(data: Record<string, any>, photoLookup: Map<number, string>) {
+  const severity = data.severity ?? 'media';
+  const color = achadoSeverityColors[severity] ?? achadoSeverityColors.media;
+  const label = achadoSeverityLabels[severity] ?? severity;
+
+  const photo = data.media_id ? photoLookup.get(data.media_id) : null;
+  const photoBlock = photo
+    ? `<div class="photo achado-photo"><img src="${photo}" /></div>`
+    : '';
+
+  return `
+    <div class="achado-box" style="border-left-color:${color}">
+      <span class="badge" style="background:${color}22;color:${color}">Atenção ${label}</span>
+      ${data.description ? `<p class="achado-description">${data.description}</p>` : ''}
+      ${photoBlock}
+    </div>`;
+}
+
 function renderTest(step: ReportProcedureStep, number: number, photoLookup: Map<number, string>) {
   let body: string;
 
   switch (step.test_type) {
     case 'compressao_mecanica':
       body = renderCompressaoBlock(step.data ?? {}, photoLookup);
+      break;
+    case 'antes_depois':
+      body = renderAntesDepoisBlock(step.data ?? {}, photoLookup);
+      break;
+    case 'achado_adicional':
+      body = renderAchadoBlock(step.data ?? {}, photoLookup);
       break;
     case 'leitura_dtc':
       body = renderDtcBlock(step.data ?? {});
@@ -514,6 +571,16 @@ export function buildReportHtml(data: ReportData): string {
     border: 1px solid #e5e7eb;
   }
   .photo-label { font-size: 10px; color: #6b7280; margin: 4px 0 0; }
+  .achado-box {
+    border-left: 3px solid #d97706;
+    background: #fffbeb;
+    border-radius: 6px;
+    padding: 10px 12px;
+    margin-top: 4px;
+  }
+  .achado-description { margin: 6px 0 0; font-size: 11px; color: #374151; }
+  .achado-photo { margin-top: 8px; max-width: 200px; }
+  .achado-photo img { width: 100%; height: 130px; object-fit: cover; border-radius: 6px; border: 1px solid #e5e7eb; }
   .summary { margin: 0; padding-left: 18px; font-size: 11px; }
   .summary li { margin-bottom: 3px; }
   .banner {
@@ -573,6 +640,7 @@ export function buildReportHtml(data: ReportData): string {
   <section>
     <h2>Queixa relatada</h2>
     <p class="complaint">${data.clientComplaint || 'Sem relato informado.'}</p>
+    ${renderChapterPhotos(data.intakePhotos)}
   </section>
 
   ${chaptersHtml}

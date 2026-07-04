@@ -26,7 +26,9 @@ import { useDarkTheme } from "@/hooks/useDarkTheme";
 import { Lightbox, type LightboxMedia } from "@/components/media/Lightbox";
 import { SectionStepper } from "@/components/os/SectionStepper";
 import { SectionCard } from "@/components/os/SectionCard";
+import { IntakeCard } from "@/components/os/IntakeCard";
 import { AddTestSheet } from "@/components/os/AddTestSheet";
+import { AddFindingSheet } from "@/components/os/AddFindingSheet";
 import { MediaUploadSheet } from "@/components/os/MediaUploadSheet";
 import { EditNotesSheet } from "@/components/os/EditNotesSheet";
 import { EditTestSheet } from "@/components/os/EditTestSheet";
@@ -61,6 +63,7 @@ export function OsWorkPage() {
 
   // sheets (um por vez, cada um dono do próprio formulário)
   const [addTestSectionId, setAddTestSectionId] = useState<number | null>(null);
+  const [addFindingSectionId, setAddFindingSectionId] = useState<number | null>(null);
   const [addMediaSectionId, setAddMediaSectionId] = useState<number | null>(null);
   const [editNotesSection, setEditNotesSection] = useState<SectionItem | null>(null);
   const [editTest, setEditTest] = useState<TestItem | null>(null);
@@ -100,13 +103,20 @@ export function OsWorkPage() {
     return () => clearInterval(interval);
   }, [data?.promo_video_status, fetchOrder]);
 
+  const intakeSection = useMemo(
+    () => data?.sections.find((s) => s.type === "intake") ?? null,
+    [data],
+  );
+
   const orderedSections = useMemo(() => {
     if (!data?.sections) return [];
     const order = (type: string) => {
       const i = sectionOrder.indexOf(type as (typeof sectionOrder)[number]);
       return i === -1 ? 99 : i;
     };
-    return [...data.sections].sort((a, b) => order(a.type) - order(b.type));
+    return data.sections
+      .filter((s) => s.type !== "intake")
+      .sort((a, b) => order(a.type) - order(b.type));
   }, [data]);
 
   const promoVideoMedia = useMemo(
@@ -340,6 +350,11 @@ export function OsWorkPage() {
           </p>
         </div>
 
+        {/* ---------- relato do cliente (foto/vídeo/áudio/roteiro) ---------- */}
+        {intakeSection && (
+          <IntakeCard section={intakeSection} onOpenMedia={setLightboxMedia} />
+        )}
+
         {/* ---------- trilha das etapas ---------- */}
         <div className="space-y-2">
           <p className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
@@ -366,6 +381,7 @@ export function OsWorkPage() {
                 }
                 onAddMedia={() => setAddMediaSectionId(section.section_id)}
                 onAddTest={() => setAddTestSectionId(section.section_id)}
+                onAddFinding={() => setAddFindingSectionId(section.section_id)}
                 onEditNotes={() => setEditNotesSection(section)}
                 onEditTest={setEditTest}
                 onDeleteTest={(test) => setConfirm({ kind: "delete-test", test })}
@@ -381,6 +397,11 @@ export function OsWorkPage() {
       <AddTestSheet
         sectionId={addTestSectionId}
         onClose={() => setAddTestSectionId(null)}
+        onSaved={fetchOrder}
+      />
+      <AddFindingSheet
+        sectionId={addFindingSectionId}
+        onClose={() => setAddFindingSectionId(null)}
         onSaved={fetchOrder}
       />
       <MediaUploadSheet

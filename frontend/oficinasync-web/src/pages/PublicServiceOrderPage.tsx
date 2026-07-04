@@ -286,8 +286,11 @@ export function PublicServiceOrderPage() {
     );
   }, [data]);
 
+  const intakeSection = orderedSections.find((s) => s.type === "intake") ?? null;
   const checkinSection = orderedSections.find((s) => s.type === "checkin") ?? null;
-  const workSections = orderedSections.filter((s) => s.type !== "checkin");
+  const workSections = orderedSections.filter(
+    (s) => s.type !== "checkin" && s.type !== "intake",
+  );
 
   const promoVideo = useMemo(() => {
     for (const section of orderedSections) {
@@ -458,6 +461,12 @@ export function PublicServiceOrderPage() {
                 </p>
               </blockquote>
             </Reveal>
+
+            {intakeSection && intakeSection.medias.length > 0 && (
+              <div className="mt-6">
+                <MediaGallery medias={intakeSection.medias} onOpen={setLightboxMedia} />
+              </div>
+            )}
           </section>
         )}
 
