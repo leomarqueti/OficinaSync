@@ -109,6 +109,14 @@ function OrderSkeleton() {
   return <div className="h-40 animate-pulse rounded-3xl border border-border bg-card" />;
 }
 
+type StatusFilter = "open" | "done" | "all";
+
+const statusFilters: { value: StatusFilter; label: string }[] = [
+  { value: "open", label: "Abertas" },
+  { value: "done", label: "Concluídas" },
+  { value: "all", label: "Todas" },
+];
+
 export function DashboardPage() {
   useDarkTheme();
   const navigate = useNavigate();
@@ -117,6 +125,7 @@ export function DashboardPage() {
   const [me, setMe] = useState<Me | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("open");
 
   useEffect(() => {
     const load = async () => {
@@ -125,7 +134,9 @@ export function DashboardPage() {
         setError("");
 
         const [ordersResult, meResult] = await Promise.all([
-          apiFetch<OpenServiceOrder[]>("/service_orders/orders", { silent: true }),
+          apiFetch<OpenServiceOrder[]>(`/service_orders/orders?status=${statusFilter}`, {
+            silent: true,
+          }),
           apiFetch<Me>("/users/me", { silent: true }),
         ]);
 
@@ -141,7 +152,10 @@ export function DashboardPage() {
     };
 
     load();
-  }, []);
+  }, [statusFilter]);
+
+  const metricLabel =
+    statusFilter === "done" ? "OS concluídas" : statusFilter === "all" ? "Total de OS" : "Ordens abertas";
 
   const metrics = useMemo(() => {
     const uniqueClients = new Set(orders.map((o) => o.client.name)).size;
@@ -205,7 +219,7 @@ export function DashboardPage() {
               ) : (
                 <>
                   <DashboardMetricCard
-                    title="Ordens abertas"
+                    title={metricLabel}
                     value={metrics.open}
                     subtitle="Aguardando andamento"
                     icon={<Clock3 className="h-5 w-5 text-amber-400" />}
@@ -233,11 +247,30 @@ export function DashboardPage() {
             </div>
 
             <div className="mt-6 rounded-3xl border border-border bg-card">
-              <div className="p-6 pb-0">
-                <h2 className="text-2xl font-semibold">Ordens de Serviço</h2>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Visualize e continue trabalhando nas OS abertas
-                </p>
+              <div className="flex flex-wrap items-center justify-between gap-3 p-6 pb-0">
+                <div>
+                  <h2 className="text-2xl font-semibold">Ordens de Serviço</h2>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Visualize e continue trabalhando nas OS
+                  </p>
+                </div>
+
+                <div className="flex gap-2">
+                  {statusFilters.map((filter) => (
+                    <button
+                      key={filter.value}
+                      type="button"
+                      onClick={() => setStatusFilter(filter.value)}
+                      className={`h-9 rounded-full border px-4 text-xs font-semibold transition-colors ${
+                        statusFilter === filter.value
+                          ? "border-brand/40 bg-brand/10 text-brand"
+                          : "border-border text-muted-foreground hover:bg-muted/40"
+                      }`}
+                    >
+                      {filter.label}
+                    </button>
+                  ))}
+                </div>
               </div>
 
               <div className="space-y-4 p-6">
@@ -256,7 +289,11 @@ export function DashboardPage() {
 
                 {!loading && !error && orders.length === 0 && (
                   <div className="rounded-2xl border border-dashed border-border p-10 text-center text-sm text-muted-foreground">
-                    Nenhuma ordem de serviço aberta — crie a primeira acima.
+                    {statusFilter === "done"
+                      ? "Nenhuma OS concluída ainda."
+                      : statusFilter === "all"
+                        ? "Nenhuma ordem de serviço criada ainda."
+                        : "Nenhuma ordem de serviço aberta — crie a primeira acima."}
                   </div>
                 )}
 
