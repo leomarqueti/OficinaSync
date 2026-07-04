@@ -1,611 +1,167 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { toast } from "sonner";
+import {
+  ArrowLeft,
+  Clapperboard,
+  Copy,
+  ExternalLink,
+  FileText,
+  Flag,
+  Loader2,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
-import { TestTypeSelector } from "@/components/tests/TestTypeSelector";
-import { BateriaForm } from "@/components/tests/BateriaForm";
-import { BateriaCard } from "@/components/tests/BateriaCard";
-import { LeituraDtcForm } from "@/components/tests/LeituraDtcForm";
-import { LeituraDtcCard } from "@/components/tests/LeituraDtcCard";
-import { CompressaoMecanicaForm } from "@/components/tests/CompressaoMecanicaForm";
-import { CompressaoMecanicaCard } from "@/components/tests/CompressaoMecanicaCard";
-import { InjetoresBancoForm } from "@/components/tests/InjetoresBancoForm";
-import { InjetoresBancoCard } from "@/components/tests/InjetoresBancoCard";
-import type {
-  BateriaData,
-  CompressaoMecanicaData,
-  InjetoresBancoData,
-  LeituraDtcData,
-  TestTypeCategory,
-} from "@/components/tests/testTypes";
-import { API_URL } from "@/lib/api";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { API_URL, apiFetch } from "@/lib/api";
+import { useDarkTheme } from "@/hooks/useDarkTheme";
+import { Lightbox, type LightboxMedia } from "@/components/media/Lightbox";
+import { SectionStepper } from "@/components/os/SectionStepper";
+import { SectionCard } from "@/components/os/SectionCard";
+import { AddTestSheet } from "@/components/os/AddTestSheet";
+import { MediaUploadSheet } from "@/components/os/MediaUploadSheet";
+import { EditNotesSheet } from "@/components/os/EditNotesSheet";
+import { EditTestSheet } from "@/components/os/EditTestSheet";
+import { CreateSectionSheet } from "@/components/os/CreateSectionSheet";
+import {
+  sectionOrder,
+  type SectionItem,
+  type ServiceOrderData,
+  type TestItem,
+} from "@/components/os/types";
 
-type MediaItem = {
-  media_id: number;
-  type: string;
-  bucket: string;
-  object_name: string;
-  mime_type: string;
-  size: number;
-  label: string | null;
-  created_at: string;
-  url?: string;
+const statusChip: Record<string, { label: string; className: string }> = {
+  open: { label: "Em aberto", className: "border-amber-400/30 bg-amber-400/10 text-amber-300" },
+  in_progress: { label: "Em andamento", className: "border-blue-400/30 bg-blue-400/10 text-blue-300" },
+  done: { label: "Concluída", className: "border-brand/30 bg-brand/10 text-brand" },
+  cancelled: { label: "Cancelada", className: "border-red-400/30 bg-red-400/10 text-red-300" },
 };
 
-type TestMeasurement = {
-  label: string;
-  expected?: string;
-  actual: string;
-};
-
-type Verdict = "approved" | "failed" | "inconclusive";
-
-type TestItem = {
-  test_id: number;
-  title: string;
-  measurements: TestMeasurement[] | null;
-  test_type: TestTypeCategory | null;
-  data: Record<string, unknown> | null;
-  verdict: Verdict | null;
-  notes: string | null;
-  created_at: string;
-};
-
-type TestDraft = {
-  title: string;
-  measurements: TestMeasurement[];
-  verdict: Verdict | "";
-  notes: string;
-};
-
-type SectionItem = {
-  section_id: number;
-  type: string;
-  status: string;
-  notes: string | null;
-  published_at: string | null;
-  created_at: string;
-  medias: MediaItem[];
-  tests: TestItem[];
-};
-
-type ServiceOrderData = {
-  service_order_id: number;
-  status: string;
-  client_complaint: string;
-  created_at: string;
-  promo_video_status?: "none" | "processing" | "ready" | "failed";
-  public_token: string;
-  public_url: string;
-  tenant: {
-    name: string;
-  };
-  user: {
-    user_id: number;
-    name: string;
-    email: string;
-  };
-  car: {
-    car_id: number;
-    brand: string;
-    model: string;
-    year: number;
-    plate: string;
-    mileage_in: number;
-    color: string;
-    fuel_type: string;
-  };
-  client: {
-    name: string;
-    phone: string;
-    email: string;
-    cpf: string;
-  };
-  sections: SectionItem[];
-};
-
-const sectionLabels: Record<string, string> = {
-  checkin: "Check-in",
-  obd_scan: "Scanner / OBD",
-  diagnosis: "Diagnóstico",
-  repair: "Reparo",
-  preventive: "Inspeção Geral",
-  final: "Finalização",
-};
-
-const statusLabels: Record<string, string> = {
-  draft: "Rascunho",
-  published: "Publicado",
-  open: "Em aberto",
-  in_progress: "Em andamento",
-  done: "Concluída",
-  cancelled: "Cancelada",
-};
-
-const verdictLabels: Record<string, string> = {
-  approved: "Aprovado",
-  failed: "Reprovado",
-  inconclusive: "Inconclusivo",
-};
-
-const testTitleSuggestions = [
-  "Teste de bateria",
-  "Teste de compressão",
-  "Teste de vazão dos bicos injetores",
-  "Leitura de scanner",
-  "Teste de bomba de combustível",
-];
-
-function getVerdictPillClass(verdict: string | null) {
-  const map: Record<string, string> = {
-    approved: "bg-emerald-100 text-emerald-700",
-    failed: "bg-red-100 text-red-700",
-    inconclusive: "bg-amber-100 text-amber-700",
-  };
-
-  return verdict ? map[verdict] ?? "bg-muted text-foreground" : "bg-muted text-foreground";
-}
-
-function emptyTestDraft(): TestDraft {
-  return {
-    title: "",
-    measurements: [{ label: "", expected: "", actual: "" }],
-    verdict: "",
-    notes: "",
-  };
-}
-
-function cleanMeasurements(measurements: TestMeasurement[]) {
-  return measurements
-    .filter((m) => m.label.trim() !== "" || m.actual.trim() !== "")
-    .map((m) => ({
-      label: m.label.trim(),
-      actual: m.actual.trim(),
-      ...(m.expected?.trim() ? { expected: m.expected.trim() } : {}),
-    }));
-}
-
-const sectionTypeOptions = [
-  { value: "checkin", label: "Check-in" },
-  { value: "obd_scan", label: "Scanner / OBD" },
-  { value: "diagnosis", label: "Diagnóstico" },
-  { value: "repair", label: "Reparo" },
-  { value: "preventive", label: "Inspeção Geral" },
-  { value: "final", label: "Finalização" },
-];
-
-function formatDate(value?: string | null) {
-  if (!value) return "-";
-  return new Date(value).toLocaleString("pt-BR");
-}
-
-function formatStatus(status: string) {
-  return statusLabels[status] ?? status;
-}
-
-function getSectionTitle(type: string) {
-  return sectionLabels[type] ?? type;
-}
-
-function getPillClass(status: string) {
-  const map: Record<string, string> = {
-    draft: "bg-amber-100 text-amber-700",
-    published: "bg-emerald-100 text-emerald-700",
-    open: "bg-blue-100 text-blue-700",
-    in_progress: "bg-blue-100 text-blue-700",
-    done: "bg-emerald-100 text-emerald-700",
-    cancelled: "bg-red-100 text-red-700",
-  };
-
-  return map[status] ?? "bg-muted text-foreground";
-}
-
-function MediaPreview({ media }: { media: MediaItem }) {
-  if (!media.url) {
-    return (
-      <div className="rounded-xl border border-dashed p-4 text-sm text-muted-foreground">
-        URL da mídia não disponível.
-      </div>
-    );
-  }
-
-  if (media.mime_type.startsWith("image/")) {
-    return (
-      <img
-        src={media.url}
-        alt={media.label ?? "Imagem"}
-        className="h-56 w-full rounded-xl object-cover"
-      />
-    );
-  }
-
-  if (media.mime_type.startsWith("video/")) {
-    return (
-      <video controls className="w-full rounded-xl">
-        <source src={media.url} type={media.mime_type} />
-        Seu navegador não suporta vídeo.
-      </video>
-    );
-  }
-
-  if (media.mime_type.startsWith("audio/")) {
-    return (
-      <audio controls className="w-full">
-        <source src={media.url} type={media.mime_type} />
-        Seu navegador não suporta áudio.
-      </audio>
-    );
-  }
-
-  return (
-    <div className="rounded-xl border p-4 text-sm">
-      Arquivo anexado: {media.label ?? media.object_name}
-    </div>
-  );
-}
+type Confirm =
+  | { kind: "publish"; section: SectionItem }
+  | { kind: "delete-test"; test: TestItem }
+  | null;
 
 export function OsWorkPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  useDarkTheme();
 
   const [data, setData] = useState<ServiceOrderData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  const [showAddSectionBox, setShowAddSectionBox] = useState(false);
-  const [selectedSectionType, setSelectedSectionType] = useState("");
-  const [newSectionNotes, setNewSectionNotes] = useState("");
-  const [creatingSection, setCreatingSection] = useState(false);
+  // sheets (um por vez, cada um dono do próprio formulário)
+  const [addTestSectionId, setAddTestSectionId] = useState<number | null>(null);
+  const [addMediaSectionId, setAddMediaSectionId] = useState<number | null>(null);
+  const [editNotesSection, setEditNotesSection] = useState<SectionItem | null>(null);
+  const [editTest, setEditTest] = useState<TestItem | null>(null);
+  const [createSectionType, setCreateSectionType] = useState<string | null>(null);
 
-  const [openMediaSectionId, setOpenMediaSectionId] = useState<number | null>(null);
-  const [uploadingSectionId, setUploadingSectionId] = useState<number | null>(null);
-  const [mediaTypeBySection, setMediaTypeBySection] = useState<Record<number, string>>({});
-  const [mediaLabelBySection, setMediaLabelBySection] = useState<Record<number, string>>({});
-  const [mediaFileBySection, setMediaFileBySection] = useState<Record<number, File | null>>({});
-
-  const [publishingSectionId, setPublishingSectionId] = useState<number | null>(null);
-
-  const [editingSectionId, setEditingSectionId] = useState<number | null>(null);
-  const [editingNotesBySection, setEditingNotesBySection] = useState<Record<number, string>>({});
-  const [savingEditSectionId, setSavingEditSectionId] = useState<number | null>(null);
-
-  const [openTestSectionId, setOpenTestSectionId] = useState<number | null>(null);
-  const [testDraftBySection, setTestDraftBySection] = useState<Record<number, TestDraft>>({});
-  const [savingTestSectionId, setSavingTestSectionId] = useState<number | null>(null);
-  const [newTestTypeBySection, setNewTestTypeBySection] = useState<
-    Record<number, TestTypeCategory | "generic" | null>
-  >({});
-
-  const [editingTestId, setEditingTestId] = useState<number | null>(null);
-  const [editingTestDraft, setEditingTestDraft] = useState<TestDraft | null>(null);
-  const [savingEditTestId, setSavingEditTestId] = useState<number | null>(null);
-  const [deletingTestId, setDeletingTestId] = useState<number | null>(null);
-
+  // confirmações e ações longas
+  const [confirm, setConfirm] = useState<Confirm>(null);
+  const [confirmBusy, setConfirmBusy] = useState(false);
   const [downloadingReport, setDownloadingReport] = useState(false);
-  const [triggeringPromoVideo, setTriggeringPromoVideo] = useState(false);
+  const [triggeringVideo, setTriggeringVideo] = useState(false);
+  const [lightboxMedia, setLightboxMedia] = useState<LightboxMedia | null>(null);
 
-  const fetchServiceOrder = async () => {
-    const token = localStorage.getItem("token");
-
-    if (!token || !id) {
-      setError("Dados de acesso não encontrados.");
-      setLoading(false);
-      return;
-    }
+  const fetchOrder = useCallback(async () => {
+    if (!id) return;
 
     try {
-      setLoading(true);
-      setError("");
-
-      const response = await fetch(`${API_URL}/service_orders/${id}`, {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+      const result = await apiFetch<ServiceOrderData>(`/service_orders/${id}`, {
+        silent: true,
       });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        setError(result?.message ?? "Não foi possível carregar a ordem de serviço.");
-        return;
-      }
-
       setData(result);
-    } catch {
-      setError("Erro ao carregar ordem de serviço.");
+      setError("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Não foi possível carregar a OS.");
     } finally {
       setLoading(false);
     }
-  };
-
-  useEffect(() => {
-    fetchServiceOrder();
   }, [id]);
 
   useEffect(() => {
+    fetchOrder();
+  }, [fetchOrder]);
+
+  // polling do vídeo de divulgação enquanto processa
+  useEffect(() => {
     if (data?.promo_video_status !== "processing") return;
-
-    const interval = setInterval(() => {
-      fetchServiceOrder();
-    }, 4000);
-
+    const interval = setInterval(fetchOrder, 4000);
     return () => clearInterval(interval);
-  }, [data?.promo_video_status]);
+  }, [data?.promo_video_status, fetchOrder]);
 
   const orderedSections = useMemo(() => {
     if (!data?.sections) return [];
-
-    const visualOrder: Record<string, number> = {
-      checkin: 1,
-      obd_scan: 2,
-      diagnosis: 3,
-      repair: 4,
-      preventive: 5,
-      final: 6,
+    const order = (type: string) => {
+      const i = sectionOrder.indexOf(type as (typeof sectionOrder)[number]);
+      return i === -1 ? 99 : i;
     };
-
-    return [...data.sections].sort((a, b) => {
-      return (visualOrder[a.type] ?? 999) - (visualOrder[b.type] ?? 999);
-    });
+    return [...data.sections].sort((a, b) => order(a.type) - order(b.type));
   }, [data]);
 
-  const availableSectionTypes = useMemo(() => {
-    if (!data?.sections) return sectionTypeOptions;
+  const promoVideoMedia = useMemo(
+    () =>
+      data?.sections
+        .flatMap((s) => s.medias)
+        .find((m) => m.label === "Vídeo de divulgação" && m.url),
+    [data],
+  );
 
-    const existingTypes = data.sections.map((section) => section.type);
+  /* ------------------------- ações ------------------------- */
 
-    return sectionTypeOptions.filter(
-      (option) => !existingTypes.includes(option.value)
-    );
-  }, [data]);
-
-  useEffect(() => {
-    if (availableSectionTypes.length > 0) {
-      setSelectedSectionType(availableSectionTypes[0].value);
-    } else {
-      setSelectedSectionType("");
-    }
-  }, [availableSectionTypes]);
-
-  const handleCreateSection = async () => {
-    const token = localStorage.getItem("token");
-
-    if (!token || !data || !selectedSectionType) {
-      return;
-    }
+  const runConfirm = async () => {
+    if (!confirm) return;
 
     try {
-      setCreatingSection(true);
+      setConfirmBusy(true);
 
-      const response = await fetch(`${API_URL}/sections`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          service_order_id: data.service_order_id,
-          type: selectedSectionType,
-          notes: newSectionNotes || null,
-        }),
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        alert(result?.message ?? "Erro ao criar etapa.");
-        return;
-      }
-
-      setShowAddSectionBox(false);
-      setNewSectionNotes("");
-      await fetchServiceOrder();
-    } catch (error) {
-      console.error(error);
-      alert("Erro ao criar etapa.");
-    } finally {
-      setCreatingSection(false);
-    }
-  };
-
-  const handleOpenMediaForm = (sectionId: number) => {
-    setOpenMediaSectionId((current) => (current === sectionId ? null : sectionId));
-
-    setMediaTypeBySection((prev) => ({
-      ...prev,
-      [sectionId]: prev[sectionId] ?? "photo",
-    }));
-
-    setMediaLabelBySection((prev) => ({
-      ...prev,
-      [sectionId]: prev[sectionId] ?? "",
-    }));
-
-    setMediaFileBySection((prev) => ({
-      ...prev,
-      [sectionId]: prev[sectionId] ?? null,
-    }));
-  };
-
-  const handleMediaFileChange = (sectionId: number, file: File | null) => {
-    setMediaFileBySection((prev) => ({
-      ...prev,
-      [sectionId]: file,
-    }));
-  };
-
-  const handleUploadMedia = async (sectionId: number) => {
-    const token = localStorage.getItem("token");
-
-    if (!token) {
-      alert("Token não encontrado.");
-      return;
-    }
-
-    const selectedType = mediaTypeBySection[sectionId] ?? "photo";
-    const selectedLabel = mediaLabelBySection[sectionId] ?? "";
-    const selectedFile = mediaFileBySection[sectionId];
-
-    if (!selectedFile) {
-      alert("Selecione um arquivo.");
-      return;
-    }
-
-    try {
-      setUploadingSectionId(sectionId);
-
-      const formData = new FormData();
-      formData.append("file", selectedFile);
-      formData.append("section_id", String(sectionId));
-      formData.append("type", selectedType);
-      formData.append("label", selectedLabel);
-
-      const response = await fetch(`${API_URL}/medias`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-        body: formData,
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        alert(result?.message ?? "Erro ao enviar mídia.");
-        return;
-      }
-
-      setMediaLabelBySection((prev) => ({
-        ...prev,
-        [sectionId]: "",
-      }));
-
-      setMediaFileBySection((prev) => ({
-        ...prev,
-        [sectionId]: null,
-      }));
-
-      setOpenMediaSectionId(null);
-
-      await fetchServiceOrder();
-    } catch (error) {
-      console.error(error);
-      alert("Erro ao enviar mídia.");
-    } finally {
-      setUploadingSectionId(null);
-    }
-  };
-
-  const handlePublishSection = async (sectionId: number) => {
-    const token = localStorage.getItem("token");
-
-    if (!token) {
-      alert("Token não encontrado.");
-      return;
-    }
-
-    try {
-      setPublishingSectionId(sectionId);
-
-      const response = await fetch(
-        `${API_URL}/sections/${sectionId}/publish`,
-        {
+      if (confirm.kind === "publish") {
+        await apiFetch(`/sections/${confirm.section.section_id}/publish`, {
           method: "PATCH",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        alert(result?.message ?? "Erro ao publicar etapa.");
-        return;
+        });
+        toast.success("Etapa publicada — o cliente já pode ver!");
+      } else {
+        await apiFetch(`/tests/${confirm.test.test_id}`, { method: "DELETE" });
+        toast.success("Teste excluído.");
       }
 
-      await fetchServiceOrder();
-    } catch (error) {
-      console.error(error);
-      alert("Erro ao publicar etapa.");
+      setConfirm(null);
+      await fetchOrder();
+    } catch {
+      // apiFetch já mostrou o toast de erro
     } finally {
-      setPublishingSectionId(null);
+      setConfirmBusy(false);
     }
   };
 
-  const handleOpenEditForm = (sectionId: number, currentNotes: string | null) => {
-    setEditingSectionId((current) => (current === sectionId ? null : sectionId));
-
-    setEditingNotesBySection((prev) => ({
-      ...prev,
-      [sectionId]: prev[sectionId] ?? (currentNotes ?? ""),
-    }));
+  const copyClientLink = async () => {
+    if (!data) return;
+    await navigator.clipboard.writeText(data.public_url);
+    toast.success("Link copiado! É só mandar pro cliente.");
   };
 
-  const handleSaveSectionText = async (sectionId: number) => {
+  const downloadReport = async () => {
     const token = localStorage.getItem("token");
-
-    if (!token) {
-      alert("Token não encontrado.");
-      return;
-    }
-
-    try {
-      setSavingEditSectionId(sectionId);
-
-      const response = await fetch(`${API_URL}/sections/${sectionId}`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          notes: editingNotesBySection[sectionId] ?? "",
-        }),
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        alert(result?.message ?? "Erro ao editar etapa.");
-        return;
-      }
-
-      setEditingSectionId(null);
-      await fetchServiceOrder();
-    } catch (error) {
-      console.error(error);
-      alert("Erro ao editar etapa.");
-    } finally {
-      setSavingEditSectionId(null);
-    }
-  };
-
-  const handleDownloadReport = async () => {
-    const token = localStorage.getItem("token");
-
-    if (!token || !id) {
-      alert("Token não encontrado.");
-      return;
-    }
+    if (!token || !id) return;
 
     try {
       setDownloadingReport(true);
-
-      const response = await fetch(
-        `${API_URL}/service_orders/${id}/report.pdf`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        },
-      );
+      const response = await fetch(`${API_URL}/service_orders/${id}/report.pdf`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
 
       if (!response.ok) {
-        const result = await response.json().catch(() => null);
-        alert(result?.message ?? "Erro ao gerar o laudo em PDF.");
+        toast.error("Não foi possível gerar o laudo agora.");
         return;
       }
 
@@ -616,496 +172,37 @@ export function OsWorkPage() {
       link.download = `laudo-os-${id}.pdf`;
       link.click();
       URL.revokeObjectURL(url);
-    } catch (error) {
-      console.error(error);
-      alert("Erro ao gerar o laudo em PDF.");
+      toast.success("Laudo gerado!");
+    } catch {
+      toast.error("Sem conexão com o servidor.");
     } finally {
       setDownloadingReport(false);
     }
   };
 
-  const handleGeneratePromoVideo = async () => {
-    const token = localStorage.getItem("token");
-
-    if (!token || !id) {
-      alert("Token não encontrado.");
-      return;
-    }
+  const generatePromoVideo = async () => {
+    if (!id) return;
 
     try {
-      setTriggeringPromoVideo(true);
-
-      const response = await fetch(
-        `${API_URL}/service_orders/${id}/promo-video`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        },
-      );
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        alert(result?.message ?? "Erro ao gerar vídeo de divulgação.");
-        return;
-      }
-
-      await fetchServiceOrder();
-    } catch (error) {
-      console.error(error);
-      alert("Erro ao gerar vídeo de divulgação.");
+      setTriggeringVideo(true);
+      await apiFetch(`/service_orders/${id}/promo-video`, { method: "POST" });
+      toast.success("Gerando o vídeo — isso leva alguns minutos.");
+      await fetchOrder();
+    } catch {
+      // apiFetch já mostrou o toast de erro
     } finally {
-      setTriggeringPromoVideo(false);
+      setTriggeringVideo(false);
     }
   };
 
-  const promoVideoMedia = data?.sections
-    .flatMap((section) => section.medias)
-    .find((media) => media.label === "Vídeo de divulgação");
-
-  const handleOpenTestForm = (sectionId: number) => {
-    setOpenTestSectionId((current) => (current === sectionId ? null : sectionId));
-
-    setTestDraftBySection((prev) => ({
-      ...prev,
-      [sectionId]: prev[sectionId] ?? emptyTestDraft(),
-    }));
-
-    setNewTestTypeBySection((prev) => ({ ...prev, [sectionId]: null }));
-  };
-
-  const updateNewTestField = (
-    sectionId: number,
-    field: "title" | "verdict" | "notes",
-    value: string,
-  ) => {
-    setTestDraftBySection((prev) => ({
-      ...prev,
-      [sectionId]: { ...(prev[sectionId] ?? emptyTestDraft()), [field]: value },
-    }));
-  };
-
-  const updateNewTestMeasurement = (
-    sectionId: number,
-    index: number,
-    field: keyof TestMeasurement,
-    value: string,
-  ) => {
-    setTestDraftBySection((prev) => {
-      const draft = prev[sectionId] ?? emptyTestDraft();
-      const measurements = draft.measurements.map((m, i) =>
-        i === index ? { ...m, [field]: value } : m,
-      );
-      return { ...prev, [sectionId]: { ...draft, measurements } };
-    });
-  };
-
-  const addNewTestMeasurementRow = (sectionId: number) => {
-    setTestDraftBySection((prev) => {
-      const draft = prev[sectionId] ?? emptyTestDraft();
-      return {
-        ...prev,
-        [sectionId]: {
-          ...draft,
-          measurements: [...draft.measurements, { label: "", expected: "", actual: "" }],
-        },
-      };
-    });
-  };
-
-  const removeNewTestMeasurementRow = (sectionId: number, index: number) => {
-    setTestDraftBySection((prev) => {
-      const draft = prev[sectionId] ?? emptyTestDraft();
-      const measurements = draft.measurements.filter((_, i) => i !== index);
-      return {
-        ...prev,
-        [sectionId]: {
-          ...draft,
-          measurements: measurements.length ? measurements : [{ label: "", expected: "", actual: "" }],
-        },
-      };
-    });
-  };
-
-  const handleCreateTest = async (sectionId: number) => {
-    const token = localStorage.getItem("token");
-    const draft = testDraftBySection[sectionId];
-
-    if (!token || !draft || !draft.title.trim()) {
-      alert("Informe o título do teste.");
-      return;
-    }
-
-    try {
-      setSavingTestSectionId(sectionId);
-
-      const response = await fetch(`${API_URL}/tests`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          section_id: sectionId,
-          title: draft.title.trim(),
-          measurements: cleanMeasurements(draft.measurements),
-          verdict: draft.verdict || undefined,
-          notes: draft.notes.trim() || undefined,
-        }),
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        alert(result?.message ?? "Erro ao criar teste.");
-        return;
-      }
-
-      setTestDraftBySection((prev) => ({ ...prev, [sectionId]: emptyTestDraft() }));
-      setOpenTestSectionId(null);
-      await fetchServiceOrder();
-    } catch (error) {
-      console.error(error);
-      alert("Erro ao criar teste.");
-    } finally {
-      setSavingTestSectionId(null);
-    }
-  };
-
-  const handleSaveSpecializedTest = async (
-    sectionId: number,
-    testType: TestTypeCategory,
-    payload: { title: string; data: object; verdict: string; notes: string },
-  ) => {
-    const token = localStorage.getItem("token");
-
-    if (!token) {
-      alert("Token não encontrado.");
-      return;
-    }
-
-    if (!payload.title.trim()) {
-      alert("Informe o título do teste.");
-      return;
-    }
-
-    try {
-      setSavingTestSectionId(sectionId);
-
-      const response = await fetch(`${API_URL}/tests`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          section_id: sectionId,
-          title: payload.title.trim(),
-          test_type: testType,
-          data: payload.data,
-          verdict: payload.verdict || undefined,
-          notes: payload.notes.trim() || undefined,
-        }),
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        alert(result?.message ?? "Erro ao criar teste.");
-        return;
-      }
-
-      setOpenTestSectionId(null);
-      setNewTestTypeBySection((prev) => ({ ...prev, [sectionId]: null }));
-      await fetchServiceOrder();
-    } catch (error) {
-      console.error(error);
-      alert("Erro ao criar teste.");
-    } finally {
-      setSavingTestSectionId(null);
-    }
-  };
-
-  const handleOpenEditTest = (test: TestItem) => {
-    if (editingTestId === test.test_id) {
-      setEditingTestId(null);
-      setEditingTestDraft(null);
-      return;
-    }
-
-    setEditingTestId(test.test_id);
-    setEditingTestDraft({
-      title: test.title,
-      measurements:
-        test.measurements && test.measurements.length > 0
-          ? test.measurements.map((m) => ({
-              label: m.label,
-              expected: m.expected ?? "",
-              actual: m.actual,
-            }))
-          : [{ label: "", expected: "", actual: "" }],
-      verdict: test.verdict ?? "",
-      notes: test.notes ?? "",
-    });
-  };
-
-  const updateEditTestField = (field: "title" | "verdict" | "notes", value: string) => {
-    setEditingTestDraft((prev) => (prev ? { ...prev, [field]: value } : prev));
-  };
-
-  const updateEditTestMeasurement = (
-    index: number,
-    field: keyof TestMeasurement,
-    value: string,
-  ) => {
-    setEditingTestDraft((prev) => {
-      if (!prev) return prev;
-      const measurements = prev.measurements.map((m, i) =>
-        i === index ? { ...m, [field]: value } : m,
-      );
-      return { ...prev, measurements };
-    });
-  };
-
-  const addEditTestMeasurementRow = () => {
-    setEditingTestDraft((prev) =>
-      prev
-        ? { ...prev, measurements: [...prev.measurements, { label: "", expected: "", actual: "" }] }
-        : prev,
-    );
-  };
-
-  const removeEditTestMeasurementRow = (index: number) => {
-    setEditingTestDraft((prev) => {
-      if (!prev) return prev;
-      const measurements = prev.measurements.filter((_, i) => i !== index);
-      return {
-        ...prev,
-        measurements: measurements.length ? measurements : [{ label: "", expected: "", actual: "" }],
-      };
-    });
-  };
-
-  const handleUpdateTest = async (testId: number) => {
-    const token = localStorage.getItem("token");
-
-    if (!token || !editingTestDraft || !editingTestDraft.title.trim()) {
-      alert("Informe o título do teste.");
-      return;
-    }
-
-    try {
-      setSavingEditTestId(testId);
-
-      const response = await fetch(`${API_URL}/tests/${testId}`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          title: editingTestDraft.title.trim(),
-          measurements: cleanMeasurements(editingTestDraft.measurements),
-          verdict: editingTestDraft.verdict || undefined,
-          notes: editingTestDraft.notes.trim() || undefined,
-        }),
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        alert(result?.message ?? "Erro ao editar teste.");
-        return;
-      }
-
-      setEditingTestId(null);
-      setEditingTestDraft(null);
-      await fetchServiceOrder();
-    } catch (error) {
-      console.error(error);
-      alert("Erro ao editar teste.");
-    } finally {
-      setSavingEditTestId(null);
-    }
-  };
-
-  const handleDeleteTest = async (testId: number) => {
-    const token = localStorage.getItem("token");
-
-    if (!token) {
-      alert("Token não encontrado.");
-      return;
-    }
-
-    if (!window.confirm("Excluir este teste?")) {
-      return;
-    }
-
-    try {
-      setDeletingTestId(testId);
-
-      const response = await fetch(`${API_URL}/tests/${testId}`, {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (!response.ok) {
-        const result = await response.json().catch(() => null);
-        alert(result?.message ?? "Erro ao excluir teste.");
-        return;
-      }
-
-      await fetchServiceOrder();
-    } catch (error) {
-      console.error(error);
-      alert("Erro ao excluir teste.");
-    } finally {
-      setDeletingTestId(null);
-    }
-  };
-
-  const renderMeasurementRows = (
-    measurements: TestMeasurement[],
-    onChange: (index: number, field: keyof TestMeasurement, value: string) => void,
-    onAdd: () => void,
-    onRemove: (index: number) => void,
-  ) => (
-    <div className="space-y-2">
-      {measurements.map((measurement, index) => (
-        <div key={index} className="grid grid-cols-1 gap-2 md:grid-cols-[1fr_1fr_1fr_auto]">
-          <input
-            type="text"
-            value={measurement.label}
-            onChange={(e) => onChange(index, "label", e.target.value)}
-            placeholder="Ex: Tensão mínima"
-            className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-          />
-          <input
-            type="text"
-            value={measurement.expected ?? ""}
-            onChange={(e) => onChange(index, "expected", e.target.value)}
-            placeholder="Esperado (opcional)"
-            className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-          />
-          <input
-            type="text"
-            value={measurement.actual}
-            onChange={(e) => onChange(index, "actual", e.target.value)}
-            placeholder="Obtido"
-            className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-          />
-          <Button type="button" variant="outline" onClick={() => onRemove(index)}>
-            Remover
-          </Button>
-        </div>
-      ))}
-      <Button type="button" variant="outline" onClick={onAdd}>
-        + Adicionar linha
-      </Button>
-    </div>
-  );
-
-  const renderTestFormBody = (
-    draft: TestDraft,
-    handlers: {
-      onTitleChange: (value: string) => void;
-      onVerdictChange: (value: string) => void;
-      onNotesChange: (value: string) => void;
-      onMeasurementChange: (index: number, field: keyof TestMeasurement, value: string) => void;
-      onAddRow: () => void;
-      onRemoveRow: (index: number) => void;
-    },
-    onSave: () => void,
-    onCancel: () => void,
-    saving: boolean,
-  ) => (
-    <div className="space-y-4">
-      <div className="space-y-2">
-        <label className="text-sm font-medium">Título do teste</label>
-        <input
-          type="text"
-          value={draft.title}
-          onChange={(e) => handlers.onTitleChange(e.target.value)}
-          placeholder="Ex: Teste de bateria"
-          className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-        />
-        <div className="flex flex-wrap gap-2">
-          {testTitleSuggestions.map((suggestion) => (
-            <button
-              key={suggestion}
-              type="button"
-              onClick={() => handlers.onTitleChange(suggestion)}
-              className="rounded-full border px-3 py-1 text-xs text-muted-foreground hover:bg-muted"
-            >
-              {suggestion}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div className="space-y-2">
-        <label className="text-sm font-medium">Medições</label>
-        {renderMeasurementRows(
-          draft.measurements,
-          handlers.onMeasurementChange,
-          handlers.onAddRow,
-          handlers.onRemoveRow,
-        )}
-      </div>
-
-      <div className="space-y-2">
-        <label className="text-sm font-medium">Veredito</label>
-        <select
-          value={draft.verdict}
-          onChange={(e) => handlers.onVerdictChange(e.target.value)}
-          className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm md:w-64"
-        >
-          <option value="">Sem veredito ainda</option>
-          <option value="approved">Aprovado</option>
-          <option value="failed">Reprovado</option>
-          <option value="inconclusive">Inconclusivo</option>
-        </select>
-      </div>
-
-      <div className="space-y-2">
-        <label className="text-sm font-medium">Observações</label>
-        <textarea
-          value={draft.notes}
-          onChange={(e) => handlers.onNotesChange(e.target.value)}
-          placeholder="Explique o que foi analisado neste teste..."
-          className="min-h-[100px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none"
-        />
-      </div>
-
-      <div className="flex gap-2">
-        <Button
-          className="bg-lime-400 text-black hover:bg-lime-500"
-          onClick={onSave}
-          disabled={saving}
-        >
-          {saving ? "Salvando..." : "Salvar teste"}
-        </Button>
-
-        <Button variant="outline" onClick={onCancel}>
-          Cancelar
-        </Button>
-      </div>
-    </div>
-  );
+  /* ------------------------- estados ------------------------- */
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-neutral-100 p-6">
-        <div className="mx-auto max-w-7xl">
-          <Card className="rounded-3xl">
-            <CardContent className="p-8">
-              <p className="text-sm text-muted-foreground">Carregando ordem de serviço...</p>
-            </CardContent>
-          </Card>
+      <div className="dark flex min-h-screen items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-4">
+          <div className="h-10 w-10 animate-spin rounded-full border-2 border-white/10 border-t-brand" />
+          <p className="text-sm text-muted-foreground">Carregando a OS...</p>
         </div>
       </div>
     );
@@ -1113,725 +210,232 @@ export function OsWorkPage() {
 
   if (error || !data) {
     return (
-      <div className="min-h-screen bg-neutral-100 p-6">
-        <div className="mx-auto max-w-4xl">
-          <Card className="rounded-3xl border-red-200">
-            <CardContent className="p-8">
-              <h1 className="text-xl font-semibold">Não foi possível abrir esta OS</h1>
-              <p className="mt-2 text-sm text-muted-foreground">
-                {error || "Ordem de serviço não encontrada."}
-              </p>
-
-              <Button className="mt-6" variant="outline" onClick={() => navigate("/dashboard")}>
-                Voltar para dashboard
-              </Button>
-            </CardContent>
-          </Card>
+      <div className="dark flex min-h-screen items-center justify-center bg-background p-6">
+        <div className="max-w-md rounded-3xl border border-border bg-card p-8 text-center">
+          <h1 className="text-xl font-semibold text-foreground">
+            Não foi possível abrir esta OS
+          </h1>
+          <p className="mt-3 text-sm text-muted-foreground">
+            {error || "Ordem de serviço não encontrada."}
+          </p>
+          <Button className="mt-6" variant="outline" onClick={() => navigate("/dashboard")}>
+            Voltar para o dashboard
+          </Button>
         </div>
       </div>
     );
   }
 
+  const chip = statusChip[data.status] ?? statusChip.open;
+  const videoStatus = data.promo_video_status ?? "none";
+
   return (
-    <div className="min-h-screen bg-neutral-100 p-4 md:p-6">
-      <div className="mx-auto max-w-7xl space-y-6">
-        <Card className="rounded-3xl border-0 bg-gradient-to-br from-black via-neutral-950 to-emerald-950 text-white shadow-sm">
-          <CardContent className="p-6 md:p-8">
-            <div className="flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
-              <div className="space-y-3">
-                <div className="text-sm text-emerald-400">{data.tenant.name}</div>
+    <div className="dark min-h-screen bg-background text-foreground">
+      <div className="mx-auto max-w-4xl space-y-6 px-4 py-6 sm:px-6">
+        {/* ---------- cabeçalho ---------- */}
+        <header className="space-y-4">
+          <button
+            type="button"
+            onClick={() => navigate("/dashboard")}
+            className="flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Dashboard
+          </button>
 
-                <div className="flex items-center gap-3">
-                  <h1 className="text-3xl font-bold tracking-tight">
-                    OS #{data.service_order_id}
-                  </h1>
+          <div className="flex flex-wrap items-center gap-3">
+            <h1 className="text-3xl font-bold tracking-tight">
+              OS #{data.service_order_id}
+            </h1>
+            <span
+              className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${chip.className}`}
+            >
+              {chip.label}
+            </span>
+          </div>
 
-                  <span
-                    className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${getPillClass(
-                      data.status
-                    )}`}
-                  >
-                    {formatStatus(data.status)}
-                  </span>
-                </div>
+          <p className="text-sm text-muted-foreground">
+            <span className="font-medium text-foreground">{data.client.name}</span>
+            {" · "}
+            {data.car.brand} {data.car.model} ·{" "}
+            <span className="font-mono">{data.car.plate}</span>
+            {" · "}
+            {data.car.mileage_in.toLocaleString("pt-BR")} km
+          </p>
 
-                <p className="max-w-2xl text-sm text-white/70">
-                  Tela operacional da ordem de serviço. Aqui o mecânico acompanha,
-                  registra e publica cada etapa do reparo.
-                </p>
-              </div>
+          {/* ações principais */}
+          <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
+            <Button
+              variant="outline"
+              className="h-11"
+              onClick={() => window.open(data.public_url, "_blank")}
+            >
+              <ExternalLink className="mr-1.5 h-4 w-4" />
+              Página do cliente
+            </Button>
+            <Button variant="outline" className="h-11" onClick={copyClientLink}>
+              <Copy className="mr-1.5 h-4 w-4" />
+              Copiar link
+            </Button>
+            <Button
+              variant="outline"
+              className="h-11"
+              onClick={downloadReport}
+              disabled={downloadingReport}
+            >
+              {downloadingReport ? (
+                <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+              ) : (
+                <FileText className="mr-1.5 h-4 w-4" />
+              )}
+              {downloadingReport ? "Gerando..." : "Laudo PDF"}
+            </Button>
 
-              <div className="flex flex-col gap-2 sm:flex-row">
-                <Button
-                  variant="outline"
-                  className="border-white/20 bg-white/5 text-white hover:bg-white/10"
-                  onClick={() => window.open(data.public_url, "_blank")}
-                >
-                  Ver página do cliente
-                </Button>
+            {videoStatus === "ready" && promoVideoMedia?.url ? (
+              <Button
+                variant="outline"
+                className="h-11"
+                onClick={() => window.open(promoVideoMedia.url, "_blank")}
+              >
+                <Clapperboard className="mr-1.5 h-4 w-4" />
+                Baixar vídeo
+              </Button>
+            ) : (
+              <Button
+                variant="outline"
+                className="h-11"
+                onClick={generatePromoVideo}
+                disabled={triggeringVideo || videoStatus === "processing"}
+              >
+                {videoStatus === "processing" ? (
+                  <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+                ) : (
+                  <Clapperboard className="mr-1.5 h-4 w-4" />
+                )}
+                {videoStatus === "processing"
+                  ? "Gerando vídeo..."
+                  : videoStatus === "failed"
+                    ? "Vídeo falhou — tentar de novo"
+                    : "Gerar vídeo"}
+              </Button>
+            )}
 
-                <Button
-                  className="bg-lime-400 text-black hover:bg-lime-500"
-                  onClick={() => navigator.clipboard.writeText(data.public_url)}
-                >
-                  Copiar link do cliente
-                </Button>
+            <Button
+              className="col-span-2 h-11 bg-brand text-brand-foreground hover:bg-brand/90 sm:ml-auto"
+              onClick={() => navigate(`/os/${data.service_order_id}/finalizar`)}
+            >
+              <Flag className="mr-1.5 h-4 w-4" />
+              Finalizar OS
+            </Button>
+          </div>
+        </header>
 
-                <Button variant="secondary" onClick={() => navigate("/dashboard")}>
-                  Voltar
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1.3fr_0.7fr]">
-          <Card className="rounded-3xl">
-            <CardHeader>
-              <CardTitle>Defeito relatado</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="whitespace-pre-line text-sm leading-6 text-muted-foreground">
-                {data.client_complaint || "Sem relato informado."}
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="rounded-3xl">
-            <CardHeader>
-              <CardTitle>Cliente</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2 text-sm">
-              <p><strong>Nome:</strong> {data.client.name}</p>
-              <p><strong>Telefone:</strong> {data.client.phone}</p>
-              <p><strong>Email:</strong> {data.client.email || "-"}</p>
-              <p><strong>CPF:</strong> {data.client.cpf || "-"}</p>
-            </CardContent>
-          </Card>
+        {/* ---------- contexto ---------- */}
+        <div className="rounded-3xl border border-border bg-card p-5">
+          <p className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
+            Defeito relatado
+          </p>
+          <p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-foreground/90">
+            {data.client_complaint || "Sem relato informado."}
+          </p>
         </div>
 
-        <Card className="rounded-3xl">
-          <CardHeader>
-            <CardTitle>Dados do veículo</CardTitle>
-          </CardHeader>
-          <CardContent className="grid grid-cols-1 gap-4 md:grid-cols-3 text-sm">
-            <div className="rounded-2xl bg-muted/40 p-4">
-              <p className="font-medium">Modelo</p>
-              <p className="mt-1 text-muted-foreground">
-                {data.car.brand} {data.car.model}
-              </p>
-            </div>
+        {/* ---------- trilha das etapas ---------- */}
+        <div className="space-y-2">
+          <p className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
+            Etapas do serviço — toque numa etapa tracejada pra criar
+          </p>
+          <SectionStepper sections={orderedSections} onCreateSection={setCreateSectionType} />
+        </div>
 
-            <div className="rounded-2xl bg-muted/40 p-4">
-              <p className="font-medium">Placa</p>
-              <p className="mt-1 text-muted-foreground">{data.car.plate}</p>
-            </div>
-
-            <div className="rounded-2xl bg-muted/40 p-4">
-              <p className="font-medium">Ano</p>
-              <p className="mt-1 text-muted-foreground">{data.car.year}</p>
-            </div>
-
-            <div className="rounded-2xl bg-muted/40 p-4">
-              <p className="font-medium">KM de entrada</p>
-              <p className="mt-1 text-muted-foreground">
-                {data.car.mileage_in.toLocaleString("pt-BR")}
-              </p>
-            </div>
-
-            <div className="rounded-2xl bg-muted/40 p-4">
-              <p className="font-medium">Cor</p>
-              <p className="mt-1 text-muted-foreground">{data.car.color}</p>
-            </div>
-
-            <div className="rounded-2xl bg-muted/40 p-4">
-              <p className="font-medium">Combustível</p>
-              <p className="mt-1 text-muted-foreground">{data.car.fuel_type}</p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="rounded-3xl">
-          <CardHeader className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-            <div>
-              <CardTitle>Etapas da ordem de serviço</CardTitle>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Registre o storytelling do reparo e publique quando quiser mostrar ao cliente.
-              </p>
-            </div>
-
-            <div className="flex flex-wrap gap-2">
-              <Button
-                variant="outline"
-                onClick={() => setShowAddSectionBox((prev) => !prev)}
-                disabled={availableSectionTypes.length === 0}
-              >
-                {availableSectionTypes.length === 0
-                  ? "Todas as etapas já foram criadas"
-                  : "Adicionar etapa"}
-              </Button>
-
-              <Button
-                variant="outline"
-                onClick={() => navigate(`/os/${data.service_order_id}/finalizar`)}
-              >
-                Finalizar OS
-              </Button>
-
-              <Button
-                variant="outline"
-                onClick={handleDownloadReport}
-                disabled={downloadingReport}
-              >
-                {downloadingReport ? "Gerando PDF..." : "Baixar laudo PDF"}
-              </Button>
-
-              {data.promo_video_status === "ready" && promoVideoMedia?.url ? (
-                <Button
-                  className="bg-lime-400 text-black hover:bg-lime-500"
-                  onClick={() => window.open(promoVideoMedia.url, "_blank")}
-                >
-                  Baixar vídeo de divulgação
-                </Button>
-              ) : (
-                <Button
-                  variant="outline"
-                  onClick={handleGeneratePromoVideo}
-                  disabled={
-                    triggeringPromoVideo ||
-                    data.promo_video_status === "processing"
-                  }
-                >
-                  {data.promo_video_status === "processing"
-                    ? "Gerando vídeo..."
-                    : data.promo_video_status === "failed"
-                    ? "Falha ao gerar — tentar de novo"
-                    : "Gerar vídeo de divulgação"}
-                </Button>
-              )}
-            </div>
-          </CardHeader>
-
-          <CardContent className="space-y-5">
-            {showAddSectionBox && availableSectionTypes.length > 0 && (
-              <div className="rounded-2xl border bg-background p-4 space-y-4">
-                <div>
-                  <h3 className="font-medium">Nova etapa</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Escolha uma etapa que ainda não existe nesta OS.
-                  </p>
-                </div>
-
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Tipo da etapa</label>
-                    <select
-                      value={selectedSectionType}
-                      onChange={(e) => setSelectedSectionType(e.target.value)}
-                      className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                    >
-                      {availableSectionTypes.map((option) => (
-                        <option key={option.value} value={option.value}>
-                          {option.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Observações iniciais</label>
-                    <input
-                      type="text"
-                      value={newSectionNotes}
-                      onChange={(e) => setNewSectionNotes(e.target.value)}
-                      placeholder="Ex: leitura do scanner realizada"
-                      className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                    />
-                  </div>
-                </div>
-
-                <div className="flex gap-2">
-                  <Button
-                    className="bg-lime-400 text-black hover:bg-lime-500"
-                    onClick={handleCreateSection}
-                    disabled={creatingSection || !selectedSectionType}
-                  >
-                    {creatingSection ? "Criando..." : "Criar etapa"}
-                  </Button>
-
-                  <Button
-                    variant="outline"
-                    onClick={() => setShowAddSectionBox(false)}
-                  >
-                    Cancelar
-                  </Button>
-                </div>
-              </div>
-            )}
-
-            {orderedSections.length === 0 && (
-              <div className="rounded-2xl border border-dashed p-6 text-sm text-muted-foreground">
-                Nenhuma etapa cadastrada ainda.
-              </div>
-            )}
-
+        {/* ---------- etapas ---------- */}
+        {orderedSections.length === 0 ? (
+          <div className="rounded-3xl border border-dashed border-border p-10 text-center text-sm text-muted-foreground">
+            Nenhuma etapa ainda — comece criando o Check-in na trilha acima.
+          </div>
+        ) : (
+          <div className="space-y-5">
             {orderedSections.map((section) => (
-              <Card key={section.section_id} className="rounded-2xl border shadow-none">
-                <CardHeader className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                  <div>
-                    <CardTitle className="text-lg">
-                      {getSectionTitle(section.type)}
-                    </CardTitle>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      Criada em {formatDate(section.created_at)} • Publicada em{" "}
-                      {formatDate(section.published_at)}
-                    </p>
-                  </div>
-
-                  <span
-                    className={`inline-flex w-fit items-center rounded-full px-3 py-1 text-xs font-medium ${getPillClass(
-                      section.status
-                    )}`}
-                  >
-                    {formatStatus(section.status)}
-                  </span>
-                </CardHeader>
-
-                <CardContent className="space-y-5">
-                  {editingSectionId === section.section_id ? (
-                    <div className="rounded-2xl border bg-background p-4 space-y-4">
-                      <div>
-                        <h3 className="font-medium">Editar texto da etapa</h3>
-                        <p className="text-sm text-muted-foreground">
-                          Ajuste a explicação desta etapa antes de publicar.
-                        </p>
-                      </div>
-
-                      <textarea
-                        value={editingNotesBySection[section.section_id] ?? ""}
-                        onChange={(e) =>
-                          setEditingNotesBySection((prev) => ({
-                            ...prev,
-                            [section.section_id]: e.target.value,
-                          }))
-                        }
-                        placeholder="Descreva o que foi analisado ou realizado nesta etapa..."
-                        className="min-h-[140px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none"
-                      />
-
-                      <div className="flex gap-2">
-                        <Button
-                          className="bg-lime-400 text-black hover:bg-lime-500"
-                          onClick={() => handleSaveSectionText(section.section_id)}
-                          disabled={savingEditSectionId === section.section_id}
-                        >
-                          {savingEditSectionId === section.section_id
-                            ? "Salvando..."
-                            : "Salvar texto"}
-                        </Button>
-
-                        <Button
-                          variant="outline"
-                          onClick={() => setEditingSectionId(null)}
-                        >
-                          Cancelar
-                        </Button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="rounded-2xl bg-muted/40 p-4">
-                      <p className="whitespace-pre-line text-sm leading-6 text-muted-foreground">
-                        {section.notes || "Sem observações nesta etapa."}
-                      </p>
-                    </div>
-                  )}
-
-                  <div className="space-y-4">
-                    <Separator />
-                    <div>
-                      <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                        Testes realizados
-                      </h3>
-
-                      {section.tests.length === 0 && (
-                        <p className="mt-2 text-sm text-muted-foreground">
-                          Nenhum teste registrado nesta etapa ainda.
-                        </p>
-                      )}
-
-                      <div className="mt-4 space-y-4">
-                        {section.tests.map((test) => (
-                          <div key={test.test_id} className="space-y-3 rounded-2xl border p-4">
-                            <div className="flex flex-wrap items-center justify-between gap-2">
-                              <h4 className="font-medium">{test.title}</h4>
-                              <span
-                                className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${getVerdictPillClass(
-                                  test.verdict
-                                )}`}
-                              >
-                                {test.verdict ? verdictLabels[test.verdict] : "Sem veredito"}
-                              </span>
-                            </div>
-
-                            {test.test_type === "bateria" && test.data && (
-                              <BateriaCard data={test.data as unknown as BateriaData} />
-                            )}
-
-                            {test.test_type === "leitura_dtc" && test.data && (
-                              <LeituraDtcCard data={test.data as unknown as LeituraDtcData} />
-                            )}
-
-                            {test.test_type === "compressao_mecanica" && test.data && (
-                              <CompressaoMecanicaCard
-                                data={test.data as unknown as CompressaoMecanicaData}
-                                sectionMedias={section.medias}
-                              />
-                            )}
-
-                            {test.test_type === "injetores_banco" && test.data && (
-                              <InjetoresBancoCard
-                                data={test.data as unknown as InjetoresBancoData}
-                                sectionMedias={section.medias}
-                              />
-                            )}
-
-                            {!test.test_type && test.measurements && test.measurements.length > 0 && (
-                              <table className="w-full text-sm">
-                                <thead>
-                                  <tr className="text-left text-muted-foreground">
-                                    <th className="pb-1 pr-2 font-medium">Item</th>
-                                    <th className="pb-1 pr-2 font-medium">Esperado</th>
-                                    <th className="pb-1 font-medium">Obtido</th>
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  {test.measurements.map((measurement, index) => (
-                                    <tr key={index} className="border-t">
-                                      <td className="py-1 pr-2">{measurement.label}</td>
-                                      <td className="py-1 pr-2 text-muted-foreground">
-                                        {measurement.expected || "-"}
-                                      </td>
-                                      <td className="py-1">{measurement.actual}</td>
-                                    </tr>
-                                  ))}
-                                </tbody>
-                              </table>
-                            )}
-
-                            {test.notes && (
-                              <p className="whitespace-pre-line text-sm text-muted-foreground">
-                                {test.notes}
-                              </p>
-                            )}
-
-                            <div className="flex gap-2">
-                              {!test.test_type && (
-                                <Button variant="outline" onClick={() => handleOpenEditTest(test)}>
-                                  {editingTestId === test.test_id ? "Fechar edição" : "Editar teste"}
-                                </Button>
-                              )}
-
-                              <Button
-                                variant="outline"
-                                onClick={() => handleDeleteTest(test.test_id)}
-                                disabled={deletingTestId === test.test_id}
-                              >
-                                {deletingTestId === test.test_id ? "Excluindo..." : "Excluir teste"}
-                              </Button>
-                            </div>
-
-                            {editingTestId === test.test_id && editingTestDraft && (
-                              <div className="rounded-2xl border bg-background p-4">
-                                {renderTestFormBody(
-                                  editingTestDraft,
-                                  {
-                                    onTitleChange: (value) => updateEditTestField("title", value),
-                                    onVerdictChange: (value) => updateEditTestField("verdict", value),
-                                    onNotesChange: (value) => updateEditTestField("notes", value),
-                                    onMeasurementChange: updateEditTestMeasurement,
-                                    onAddRow: addEditTestMeasurementRow,
-                                    onRemoveRow: removeEditTestMeasurementRow,
-                                  },
-                                  () => handleUpdateTest(test.test_id),
-                                  () => {
-                                    setEditingTestId(null);
-                                    setEditingTestDraft(null);
-                                  },
-                                  savingEditTestId === test.test_id
-                                )}
-                              </div>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-
-                      {openTestSectionId === section.section_id &&
-                        !newTestTypeBySection[section.section_id] && (
-                          <div className="mt-4">
-                            <TestTypeSelector
-                              onSelect={(type) =>
-                                setNewTestTypeBySection((prev) => ({
-                                  ...prev,
-                                  [section.section_id]: type,
-                                }))
-                              }
-                            />
-                          </div>
-                        )}
-
-                      {openTestSectionId === section.section_id &&
-                        newTestTypeBySection[section.section_id] === "generic" && (
-                          <div className="mt-4 rounded-2xl border bg-background p-4">
-                            <h4 className="mb-4 font-medium">Novo teste</h4>
-                            {renderTestFormBody(
-                              testDraftBySection[section.section_id] ?? emptyTestDraft(),
-                              {
-                                onTitleChange: (value) =>
-                                  updateNewTestField(section.section_id, "title", value),
-                                onVerdictChange: (value) =>
-                                  updateNewTestField(section.section_id, "verdict", value),
-                                onNotesChange: (value) =>
-                                  updateNewTestField(section.section_id, "notes", value),
-                                onMeasurementChange: (index, field, value) =>
-                                  updateNewTestMeasurement(section.section_id, index, field, value),
-                                onAddRow: () => addNewTestMeasurementRow(section.section_id),
-                                onRemoveRow: (index) =>
-                                  removeNewTestMeasurementRow(section.section_id, index),
-                              },
-                              () => handleCreateTest(section.section_id),
-                              () => setOpenTestSectionId(null),
-                              savingTestSectionId === section.section_id
-                            )}
-                          </div>
-                        )}
-
-                      {openTestSectionId === section.section_id &&
-                        newTestTypeBySection[section.section_id] === "bateria" && (
-                          <div className="mt-4 rounded-2xl border bg-background p-4">
-                            <BateriaForm
-                              saving={savingTestSectionId === section.section_id}
-                              onCancel={() => setOpenTestSectionId(null)}
-                              onSave={(payload) =>
-                                handleSaveSpecializedTest(section.section_id, "bateria", payload)
-                              }
-                            />
-                          </div>
-                        )}
-
-                      {openTestSectionId === section.section_id &&
-                        newTestTypeBySection[section.section_id] === "leitura_dtc" && (
-                          <div className="mt-4 rounded-2xl border bg-background p-4">
-                            <LeituraDtcForm
-                              saving={savingTestSectionId === section.section_id}
-                              onCancel={() => setOpenTestSectionId(null)}
-                              onSave={(payload) =>
-                                handleSaveSpecializedTest(section.section_id, "leitura_dtc", payload)
-                              }
-                            />
-                          </div>
-                        )}
-
-                      {openTestSectionId === section.section_id &&
-                        newTestTypeBySection[section.section_id] === "compressao_mecanica" && (
-                          <div className="mt-4 rounded-2xl border bg-background p-4">
-                            <CompressaoMecanicaForm
-                              sectionId={section.section_id}
-                              saving={savingTestSectionId === section.section_id}
-                              onCancel={() => setOpenTestSectionId(null)}
-                              onSave={(payload) =>
-                                handleSaveSpecializedTest(
-                                  section.section_id,
-                                  "compressao_mecanica",
-                                  payload
-                                )
-                              }
-                            />
-                          </div>
-                        )}
-
-                      {openTestSectionId === section.section_id &&
-                        newTestTypeBySection[section.section_id] === "injetores_banco" && (
-                          <div className="mt-4 rounded-2xl border bg-background p-4">
-                            <InjetoresBancoForm
-                              sectionId={section.section_id}
-                              saving={savingTestSectionId === section.section_id}
-                              onCancel={() => setOpenTestSectionId(null)}
-                              onSave={(payload) =>
-                                handleSaveSpecializedTest(
-                                  section.section_id,
-                                  "injetores_banco",
-                                  payload
-                                )
-                              }
-                            />
-                          </div>
-                        )}
-                    </div>
-                  </div>
-
-                  {openMediaSectionId === section.section_id && (
-                    <div className="rounded-2xl border bg-background p-4 space-y-4">
-                      <div>
-                        <h3 className="font-medium">Adicionar mídia nesta etapa</h3>
-                        <p className="text-sm text-muted-foreground">
-                          Envie foto, vídeo ou áudio para complementar esta parte do serviço.
-                        </p>
-                      </div>
-
-                      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                        <div className="space-y-2">
-                          <label className="text-sm font-medium">Tipo</label>
-                          <select
-                            value={mediaTypeBySection[section.section_id] ?? "photo"}
-                            onChange={(e) =>
-                              setMediaTypeBySection((prev) => ({
-                                ...prev,
-                                [section.section_id]: e.target.value,
-                              }))
-                            }
-                            className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                          >
-                            <option value="photo">Foto</option>
-                            <option value="video">Vídeo</option>
-                            <option value="audio">Áudio</option>
-                          </select>
-                        </div>
-
-                        <div className="space-y-2 md:col-span-2">
-                          <label className="text-sm font-medium">Legenda</label>
-                          <input
-                            type="text"
-                            value={mediaLabelBySection[section.section_id] ?? ""}
-                            onChange={(e) =>
-                              setMediaLabelBySection((prev) => ({
-                                ...prev,
-                                [section.section_id]: e.target.value,
-                              }))
-                            }
-                            placeholder="Ex: detalhe da falha no chicote"
-                            className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                          />
-                        </div>
-                      </div>
-
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium">Arquivo</label>
-                        <input
-                          type="file"
-                          accept="image/*,video/*,audio/*"
-                          onChange={(e) =>
-                            handleMediaFileChange(
-                              section.section_id,
-                              e.target.files?.[0] ?? null
-                            )
-                          }
-                          className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm file:mr-3 file:rounded-md file:border-0 file:bg-lime-100 file:px-3 file:py-1.5"
-                        />
-                      </div>
-
-                      <div className="flex gap-2">
-                        <Button
-                          className="bg-lime-400 text-black hover:bg-lime-500"
-                          onClick={() => handleUploadMedia(section.section_id)}
-                          disabled={uploadingSectionId === section.section_id}
-                        >
-                          {uploadingSectionId === section.section_id
-                            ? "Enviando..."
-                            : "Salvar mídia"}
-                        </Button>
-
-                        <Button
-                          variant="outline"
-                          onClick={() => setOpenMediaSectionId(null)}
-                        >
-                          Cancelar
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-
-                  {section.medias.length > 0 && (
-                    <div className="space-y-4">
-                      <Separator />
-                      <div>
-                        <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                          Mídias da etapa
-                        </h3>
-
-                        <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
-                          {section.medias.map((media) => (
-                            <div
-                              key={media.media_id}
-                              className="space-y-3 rounded-2xl border p-4"
-                            >
-                              <MediaPreview media={media} />
-
-                              <div>
-                                <p className="text-sm font-medium">
-                                  {media.label || "Mídia anexada"}
-                                </p>
-                                <p className="text-xs text-muted-foreground">
-                                  {media.type} • {media.mime_type}
-                                </p>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="flex flex-wrap gap-2">
-                    <Button
-                      variant="outline"
-                      onClick={() => handleOpenMediaForm(section.section_id)}
-                    >
-                      {openMediaSectionId === section.section_id
-                        ? "Fechar mídia"
-                        : "Adicionar mídia"}
-                    </Button>
-
-                    <Button
-                      variant="outline"
-                      onClick={() =>
-                        handleOpenEditForm(section.section_id, section.notes)
-                      }
-                    >
-                      {editingSectionId === section.section_id
-                        ? "Fechar edição"
-                        : "Editar texto"}
-                    </Button>
-
-                    <Button
-                      variant="outline"
-                      onClick={() => handleOpenTestForm(section.section_id)}
-                    >
-                      {openTestSectionId === section.section_id
-                        ? "Fechar teste"
-                        : "Adicionar teste"}
-                    </Button>
-
-                    <Button
-                      className="bg-lime-400 text-black hover:bg-lime-500"
-                      onClick={() => handlePublishSection(section.section_id)}
-                      disabled={
-                        publishingSectionId === section.section_id ||
-                        section.status === "published"
-                      }
-                    >
-                      {publishingSectionId === section.section_id
-                        ? "Publicando..."
-                        : section.status === "published"
-                        ? "Etapa publicada"
-                        : "Publicar etapa"}
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
+              <SectionCard
+                key={section.section_id}
+                section={section}
+                publishing={
+                  confirmBusy &&
+                  confirm?.kind === "publish" &&
+                  confirm.section.section_id === section.section_id
+                }
+                onAddMedia={() => setAddMediaSectionId(section.section_id)}
+                onAddTest={() => setAddTestSectionId(section.section_id)}
+                onEditNotes={() => setEditNotesSection(section)}
+                onEditTest={setEditTest}
+                onDeleteTest={(test) => setConfirm({ kind: "delete-test", test })}
+                onPublish={() => setConfirm({ kind: "publish", section })}
+                onOpenMedia={setLightboxMedia}
+              />
             ))}
-          </CardContent>
-        </Card>
+          </div>
+        )}
       </div>
+
+      {/* ---------- sheets ---------- */}
+      <AddTestSheet
+        sectionId={addTestSectionId}
+        onClose={() => setAddTestSectionId(null)}
+        onSaved={fetchOrder}
+      />
+      <MediaUploadSheet
+        sectionId={addMediaSectionId}
+        onClose={() => setAddMediaSectionId(null)}
+        onSaved={fetchOrder}
+      />
+      <EditNotesSheet
+        section={editNotesSection}
+        onClose={() => setEditNotesSection(null)}
+        onSaved={fetchOrder}
+      />
+      <EditTestSheet test={editTest} onClose={() => setEditTest(null)} onSaved={fetchOrder} />
+      <CreateSectionSheet
+        serviceOrderId={data.service_order_id}
+        sectionType={createSectionType}
+        onClose={() => setCreateSectionType(null)}
+        onSaved={fetchOrder}
+      />
+
+      {/* ---------- confirmações ---------- */}
+      <AlertDialog open={confirm !== null} onOpenChange={(o) => !o && setConfirm(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {confirm?.kind === "publish" ? "Publicar esta etapa?" : "Excluir este teste?"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {confirm?.kind === "publish"
+                ? "Ela vai aparecer imediatamente na página do cliente, com as fotos e testes registrados."
+                : `"${confirm?.kind === "delete-test" ? confirm.test.title : ""}" será removido do laudo e da página do cliente. Essa ação não pode ser desfeita.`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={confirmBusy}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={confirmBusy}
+              onClick={(e) => {
+                e.preventDefault();
+                runConfirm();
+              }}
+              className={
+                confirm?.kind === "delete-test"
+                  ? "bg-red-500 text-white hover:bg-red-600"
+                  : "bg-brand text-brand-foreground hover:bg-brand/90"
+              }
+            >
+              {confirmBusy && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />}
+              {confirm?.kind === "publish" ? "Publicar" : "Excluir"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <Lightbox media={lightboxMedia} onClose={() => setLightboxMedia(null)} />
     </div>
   );
 }
