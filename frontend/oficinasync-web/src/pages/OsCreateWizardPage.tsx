@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { ChevronDown, ChevronUp, Mic, Plus, Trash2, Video } from "lucide-react";
 import { WizardShell } from "@/components/wizard/WizardShell";
 import { EntryPhotoSlot } from "@/components/wizard/EntryPhotoSlot";
 import { PhoneField } from "@/components/fields/PhoneField";
@@ -9,7 +10,11 @@ import { PlateField } from "@/components/fields/PlateField";
 import { YearField } from "@/components/fields/YearField";
 import { KmField } from "@/components/fields/KmField";
 import { FieldShell } from "@/components/fields/FieldShell";
+import { MediaCaptureField, type MediaCaptureType } from "@/components/media/MediaCaptureField";
+import { Button } from "@/components/ui/button";
 import { apiFetch } from "@/lib/api";
+import { CAR_BRANDS, OTHER_BRAND } from "@/lib/carBrands";
+import { intakeQuestions } from "@/lib/intakeQuestions";
 import {
   e164ToDigits,
   formatPhone,
@@ -39,7 +44,38 @@ const photoLabels = {
 
 type PhotoKey = keyof typeof photoLabels;
 
+const clientMediaLabels: Record<MediaCaptureType, string> = {
+  photo: "Foto enviada pelo cliente",
+  video: "Vídeo enviado pelo cliente",
+  audio: "Áudio enviado pelo cliente",
+};
+
+type ClientMediaItem = {
+  id: string;
+  type: MediaCaptureType;
+  file: File | null;
+};
+
+type ExtraPhotoItem = {
+  id: string;
+  label: string;
+  file: File | null;
+};
+
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function newId() {
+  return Math.random().toString(36).slice(2);
+}
+
+function formatAnswers(answers: Record<string, string>): string {
+  const lines = intakeQuestions
+    .map((q) => ({ label: q.label, value: answers[q.key]?.trim() }))
+    .filter(({ value }) => value)
+    .map(({ label, value }) => `${label}\nR: ${value}`);
+
+  return lines.join("\n\n");
+}
 
 export function OsCreateWizardPage() {
   const navigate = useNavigate();
@@ -56,6 +92,7 @@ export function OsCreateWizardPage() {
   // passo 2 — veículo
   const [plate, setPlate] = useState("");
   const [brand, setBrand] = useState("");
+  const [brandMode, setBrandMode] = useState<"list" | "custom">("list");
   const [model, setModel] = useState("");
   const [year, setYear] = useState("");
   const [fuelType, setFuelType] = useState("flex");
@@ -65,6 +102,9 @@ export function OsCreateWizardPage() {
 
   // passo 3 — defeito relatado
   const [complaint, setComplaint] = useState("");
+  const [clientMedia, setClientMedia] = useState<ClientMediaItem[]>([]);
+  const [showQuestionnaire, setShowQuestionnaire] = useState(false);
+  const [answers, setAnswers] = useState<Record<string, string>>({});
 
   // passo 4 — fotos de entrada
   const [photos, setPhotos] = useState<Record<PhotoKey, File | null>>({
@@ -73,6 +113,7 @@ export function OsCreateWizardPage() {
     left: null,
     right: null,
   });
+  const [extraPhotos, setExtraPhotos] = useState<ExtraPhotoItem[]>([]);
 
   const stepCount = 5;
 
@@ -114,13 +155,42 @@ export function OsCreateWizardPage() {
     submitAll();
   };
 
-  const uploadPhoto = async (file: File, label: string, sectionId: number) => {
+  const uploadMedia = async (
+    file: File,
+    label: string,
+    sectionId: number,
+    type: MediaCaptureType,
+  ) => {
     const formData = new FormData();
     formData.append("file", file);
     formData.append("section_id", String(sectionId));
-    formData.append("type", "photo");
+    formData.append("type", type);
     formData.append("label", label);
     await apiFetch("/medias", { method: "POST", body: formData });
+  };
+
+  const addClientMedia = (type: MediaCaptureType) => {
+    setClientMedia((prev) => [...prev, { id: newId(), type, file: null }]);
+  };
+
+  const updateClientMedia = (id: string, file: File | null) => {
+    setClientMedia((prev) => prev.map((m) => (m.id === id ? { ...m, file } : m)));
+  };
+
+  const removeClientMedia = (id: string) => {
+    setClientMedia((prev) => prev.filter((m) => m.id !== id));
+  };
+
+  const addExtraPhoto = () => {
+    setExtraPhotos((prev) => [...prev, { id: newId(), label: "", file: null }]);
+  };
+
+  const updateExtraPhoto = (id: string, patch: Partial<ExtraPhotoItem>) => {
+    setExtraPhotos((prev) => prev.map((p) => (p.id === id ? { ...p, ...patch } : p)));
+  };
+
+  const removeExtraPhoto = (id: string) => {
+    setExtraPhotos((prev) => prev.filter((p) => p.id !== id));
   };
 
   const submitAll = async () => {
@@ -161,6 +231,32 @@ export function OsCreateWizardPage() {
         },
       });
 
+      // relato do cliente (mídia + roteiro) — só cria a etapa se houver algo de fato
+      const filledClientMedia = clientMedia.filter((m): m is ClientMediaItem & { file: File } =>
+        Boolean(m.file),
+      );
+      const answersText = formatAnswers(answers);
+      const hasIntakeContent = filledClientMedia.length > 0 || answersText.length > 0;
+
+      if (hasIntakeContent) {
+        const intakeSection = await apiFetch<{ section_id: number }>("/sections", {
+          method: "POST",
+          json: {
+            service_order_id: serviceOrder.service_order_id,
+            type: "intake",
+            notes: answersText || null,
+          },
+        });
+
+        await Promise.all(
+          filledClientMedia.map((m) =>
+            uploadMedia(m.file, clientMediaLabels[m.type], intakeSection.section_id, m.type),
+          ),
+        );
+
+        await apiFetch(`/sections/${intakeSection.section_id}/publish`, { method: "PATCH" });
+      }
+
       const section = await apiFetch<{ section_id: number }>("/sections", {
         method: "POST",
         json: {
@@ -170,11 +266,18 @@ export function OsCreateWizardPage() {
         },
       });
 
-      await Promise.all(
-        (Object.keys(photoLabels) as PhotoKey[]).map((key) =>
-          uploadPhoto(photos[key] as File, photoLabels[key], section.section_id),
-        ),
+      const filledExtraPhotos = extraPhotos.filter(
+        (p): p is ExtraPhotoItem & { file: File } => p.file !== null,
       );
+
+      await Promise.all([
+        ...(Object.keys(photoLabels) as PhotoKey[]).map((key) =>
+          uploadMedia(photos[key] as File, photoLabels[key], section.section_id, "photo"),
+        ),
+        ...filledExtraPhotos.map((p) =>
+          uploadMedia(p.file, p.label.trim() || "Detalhe adicional", section.section_id, "photo"),
+        ),
+      ]);
 
       await apiFetch(`/sections/${section.section_id}/publish`, { method: "PATCH" });
 
@@ -254,14 +357,54 @@ export function OsCreateWizardPage() {
           <YearField value={year} onChange={setYear} />
 
           <FieldShell label="Marca" htmlFor="brand">
-            <input
-              id="brand"
-              type="text"
-              placeholder="Ex: Volkswagen"
-              value={brand}
-              onChange={(e) => setBrand(e.target.value)}
-              className={inputClass}
-            />
+            {brandMode === "list" ? (
+              <select
+                id="brand"
+                value={CAR_BRANDS.includes(brand as (typeof CAR_BRANDS)[number]) ? brand : ""}
+                onChange={(e) => {
+                  if (e.target.value === OTHER_BRAND) {
+                    setBrandMode("custom");
+                    setBrand("");
+                    return;
+                  }
+                  setBrand(e.target.value);
+                }}
+                className={inputClass}
+              >
+                <option value="" disabled>
+                  Selecione a marca
+                </option>
+                {CAR_BRANDS.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+                <option value={OTHER_BRAND}>Outra (digitar)</option>
+              </select>
+            ) : (
+              <div className="flex gap-2">
+                <input
+                  id="brand"
+                  type="text"
+                  placeholder="Digite a marca"
+                  value={brand}
+                  onChange={(e) => setBrand(e.target.value)}
+                  className={inputClass}
+                  autoFocus
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-11 shrink-0"
+                  onClick={() => {
+                    setBrandMode("list");
+                    setBrand("");
+                  }}
+                >
+                  Lista
+                </Button>
+              </div>
+            )}
           </FieldShell>
 
           <FieldShell label="Modelo" htmlFor="model">
@@ -329,16 +472,124 @@ export function OsCreateWizardPage() {
         onNext={goNext}
         nextDisabled={!canAdvance}
       >
-        <textarea
-          value={complaint}
-          onChange={(e) => setComplaint(e.target.value)}
-          placeholder="Ex: veículo falha ao ligar de manhã, painel oscila e a bateria descarrega com frequência..."
-          maxLength={500}
-          className="min-h-[200px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        />
-        <p className="mt-1.5 text-right text-xs text-muted-foreground">
-          {complaint.length}/500
-        </p>
+        <div className="space-y-6">
+          <div>
+            <textarea
+              value={complaint}
+              onChange={(e) => setComplaint(e.target.value)}
+              placeholder="Ex: veículo falha ao ligar de manhã, painel oscila e a bateria descarrega com frequência..."
+              maxLength={500}
+              className="min-h-[160px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            />
+            <p className="mt-1.5 text-right text-xs text-muted-foreground">
+              {complaint.length}/500
+            </p>
+          </div>
+
+          <div className="space-y-3 rounded-2xl border border-dashed border-border p-4">
+            <div>
+              <p className="text-sm font-medium">
+                Tem foto, vídeo ou áudio do problema? <span className="text-muted-foreground">(opcional)</span>
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Ajuda o mecânico a entender exatamente o que você quis dizer.
+              </p>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              <Button type="button" variant="outline" className="h-10" onClick={() => addClientMedia("photo")}>
+                <Plus className="mr-1.5 h-4 w-4" />
+                Foto
+              </Button>
+              <Button type="button" variant="outline" className="h-10" onClick={() => addClientMedia("video")}>
+                <Video className="mr-1.5 h-4 w-4" />
+                Vídeo
+              </Button>
+              <Button type="button" variant="outline" className="h-10" onClick={() => addClientMedia("audio")}>
+                <Mic className="mr-1.5 h-4 w-4" />
+                Áudio
+              </Button>
+            </div>
+
+            {clientMedia.map((item) => (
+              <div key={item.id} className="space-y-2 rounded-xl bg-muted/20 p-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-medium text-muted-foreground">
+                    {clientMediaLabels[item.type]}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => removeClientMedia(item.id)}
+                    className="text-muted-foreground hover:text-red-400"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+                <MediaCaptureField
+                  type={item.type}
+                  value={item.file}
+                  onChange={(file) => updateClientMedia(item.id, file)}
+                />
+              </div>
+            ))}
+          </div>
+
+          <div className="rounded-2xl border border-dashed border-border p-4">
+            <button
+              type="button"
+              onClick={() => setShowQuestionnaire((s) => !s)}
+              className="flex w-full items-center justify-between text-left"
+            >
+              <span>
+                <span className="text-sm font-medium">Roteiro de perguntas extra</span>{" "}
+                <span className="text-xs text-muted-foreground">
+                  (opcional — pule se o cliente tiver pressa)
+                </span>
+              </span>
+              {showQuestionnaire ? (
+                <ChevronUp className="h-4 w-4 text-muted-foreground" />
+              ) : (
+                <ChevronDown className="h-4 w-4 text-muted-foreground" />
+              )}
+            </button>
+
+            {showQuestionnaire && (
+              <div className="mt-4 space-y-4">
+                {intakeQuestions.map((q) => (
+                  <FieldShell key={q.key} label={q.label} htmlFor={q.key} optional>
+                    {q.type === "select" ? (
+                      <select
+                        id={q.key}
+                        value={answers[q.key] ?? ""}
+                        onChange={(e) =>
+                          setAnswers((prev) => ({ ...prev, [q.key]: e.target.value }))
+                        }
+                        className={inputClass}
+                      >
+                        <option value="">Não perguntado</option>
+                        {q.options?.map((option) => (
+                          <option key={option} value={option}>
+                            {option}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <input
+                        id={q.key}
+                        type="text"
+                        value={answers[q.key] ?? ""}
+                        onChange={(e) =>
+                          setAnswers((prev) => ({ ...prev, [q.key]: e.target.value }))
+                        }
+                        className={inputClass}
+                      />
+                    )}
+                  </FieldShell>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
       </WizardShell>
     );
   }
@@ -354,19 +605,62 @@ export function OsCreateWizardPage() {
         onNext={goNext}
         nextDisabled={!canAdvance}
       >
-        <div className="grid grid-cols-2 gap-3">
-          {(Object.keys(photoLabels) as PhotoKey[]).map((key) => (
-            <EntryPhotoSlot
-              key={key}
-              label={photoLabels[key]}
-              file={photos[key]}
-              onCapture={(file) => setPhotos((prev) => ({ ...prev, [key]: file }))}
-            />
-          ))}
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-3">
+            {(Object.keys(photoLabels) as PhotoKey[]).map((key) => (
+              <EntryPhotoSlot
+                key={key}
+                label={photoLabels[key]}
+                file={photos[key]}
+                onCapture={(file) => setPhotos((prev) => ({ ...prev, [key]: file }))}
+              />
+            ))}
+          </div>
+
+          <div className="space-y-3 rounded-2xl border border-dashed border-border p-4">
+            <p className="text-sm font-medium">
+              Riscos, avarias ou detalhes extras? <span className="text-muted-foreground">(opcional)</span>
+            </p>
+
+            {extraPhotos.map((photo) => (
+              <div key={photo.id} className="space-y-2 rounded-xl bg-muted/20 p-3">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    placeholder="Ex: risco na porta traseira"
+                    value={photo.label}
+                    onChange={(e) => updateExtraPhoto(photo.id, { label: e.target.value })}
+                    className={inputClass}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removeExtraPhoto(photo.id)}
+                    className="shrink-0 text-muted-foreground hover:text-red-400"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+                <MediaCaptureField
+                  type="photo"
+                  value={photo.file}
+                  onChange={(file) => updateExtraPhoto(photo.id, { file })}
+                />
+              </div>
+            ))}
+
+            <Button type="button" variant="outline" className="h-10" onClick={addExtraPhoto}>
+              <Plus className="mr-1.5 h-4 w-4" />
+              Adicionar mais fotos
+            </Button>
+          </div>
         </div>
       </WizardShell>
     );
   }
+
+  const answeredCount = Object.values(answers).filter((a) => a?.trim()).length;
+  const filledClientMediaCount = clientMedia.filter((m) => m.file).length;
+  const filledExtraPhotosCount = extraPhotos.filter((p) => p.file).length;
 
   return (
     <WizardShell
@@ -407,6 +701,14 @@ export function OsCreateWizardPage() {
             Defeito relatado
           </p>
           <p className="mt-1 whitespace-pre-line text-sm text-foreground/90">{complaint}</p>
+          {(filledClientMediaCount > 0 || answeredCount > 0) && (
+            <p className="mt-2 text-xs text-brand">
+              {filledClientMediaCount > 0 &&
+                `${filledClientMediaCount} mídia(s) do cliente`}
+              {filledClientMediaCount > 0 && answeredCount > 0 && " · "}
+              {answeredCount > 0 && `${answeredCount} pergunta(s) respondida(s)`}
+            </p>
+          )}
         </div>
 
         <div className="rounded-2xl border border-border bg-card p-4">
@@ -432,6 +734,11 @@ export function OsCreateWizardPage() {
               );
             })}
           </div>
+          {filledExtraPhotosCount > 0 && (
+            <p className="mt-2 text-xs text-brand">
+              + {filledExtraPhotosCount} foto(s) extra(s)
+            </p>
+          )}
         </div>
       </div>
     </WizardShell>
