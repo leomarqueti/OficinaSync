@@ -32,6 +32,41 @@ export function isValidCpf(digits: string) {
   return check2 === Number(d[10]);
 }
 
+/* ----------------------------- CNPJ ----------------------------- */
+
+export function formatCnpj(digits: string) {
+  const d = onlyDigits(digits).slice(0, 14);
+  if (d.length <= 2) return d;
+  if (d.length <= 5) return `${d.slice(0, 2)}.${d.slice(2)}`;
+  if (d.length <= 8) return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5)}`;
+  if (d.length <= 12)
+    return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5, 8)}/${d.slice(8)}`;
+  return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5, 8)}/${d.slice(8, 12)}-${d.slice(12, 14)}`;
+}
+
+function cnpjCheckDigit(base: string) {
+  const weights =
+    base.length === 12
+      ? [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]
+      : [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
+  const sum = base
+    .split("")
+    .reduce((acc, digit, i) => acc + Number(digit) * weights[i], 0);
+  const rest = sum % 11;
+  return rest < 2 ? 0 : 11 - rest;
+}
+
+export function isValidCnpj(digits: string) {
+  const d = onlyDigits(digits);
+  if (d.length !== 14) return false;
+  if (/^(\d)\1{13}$/.test(d)) return false;
+
+  const base = d.slice(0, 12);
+  const digit1 = cnpjCheckDigit(base);
+  const digit2 = cnpjCheckDigit(base + digit1);
+  return d === base + String(digit1) + String(digit2);
+}
+
 /* ---------------------------- Telefone --------------------------- */
 
 export function formatPhone(digits: string) {
@@ -85,6 +120,23 @@ export function isValidYear(value: string) {
   const year = Number(value);
   const currentYear = new Date().getFullYear();
   return Number.isInteger(year) && year >= 1950 && year <= currentYear + 1;
+}
+
+/* ------------------------------ Senha ------------------------------ */
+
+/** Espelha as regras padrão do @IsStrongPassword() do backend. */
+export function passwordRules(password: string) {
+  return {
+    length: password.length >= 8,
+    lowercase: /[a-z]/.test(password),
+    uppercase: /[A-Z]/.test(password),
+    number: /[0-9]/.test(password),
+    symbol: /[^A-Za-z0-9]/.test(password),
+  };
+}
+
+export function isStrongPassword(password: string) {
+  return Object.values(passwordRules(password)).every(Boolean);
 }
 
 /* -------------------------------- KM ------------------------------- */
