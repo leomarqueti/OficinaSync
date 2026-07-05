@@ -53,6 +53,8 @@ export type ServiceOrderData = {
   promo_video_status?: "none" | "processing" | "ready" | "failed";
   public_token: string;
   public_url: string;
+  /** KM do veículo nessa visita — cai pro mileage_in do carro em OS antigas. */
+  mileage_in: number;
   tenant: { name: string };
   user: { user_id: number; name: string; email: string };
   car: {

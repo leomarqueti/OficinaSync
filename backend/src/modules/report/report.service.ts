@@ -81,17 +81,33 @@ export class ReportService {
 
     const photoLookup = new Map<number, string>();
 
+    // Baixa todas as fotos do MinIO em paralelo — com 20+ fotos numa OS, o
+    // download sequencial multiplicava a latência e deixava o PDF lento.
+    const allPhotoMedias = [
+      ...(intakeSection?.medias ?? []),
+      ...sections.flatMap((s) => s.medias ?? []),
+    ].filter((media) => media.type === 'photo');
+
+    await Promise.all(
+      allPhotoMedias.map(async (media) => {
+        try {
+          const buffer = await this.minioService.getObjectBuffer(
+            media.object_name,
+          );
+          const dataUri = `data:${media.mime_type};base64,${buffer.toString('base64')}`;
+          photoLookup.set(media.media_id, dataUri);
+        } catch {
+          // Mídia ausente no storage — não deve derrubar o relatório inteiro.
+        }
+      }),
+    );
+
     const intakePhotos: ReportPhoto[] = [];
     for (const media of intakeSection?.medias ?? []) {
       if (media.type !== 'photo') continue;
-      try {
-        const buffer = await this.minioService.getObjectBuffer(media.object_name);
-        const dataUri = `data:${media.mime_type};base64,${buffer.toString('base64')}`;
-        photoLookup.set(media.media_id, dataUri);
-        intakePhotos.push({ label: media.label ?? 'Foto enviada pelo cliente', dataUri });
-      } catch {
-        // Mídia ausente no storage — não deve derrubar o relatório inteiro.
-      }
+      const dataUri = photoLookup.get(media.media_id);
+      if (!dataUri) continue;
+      intakePhotos.push({ label: media.label ?? 'Foto enviada pelo cliente', dataUri });
     }
 
     const chapters: ReportChapter[] = [];
@@ -102,22 +118,14 @@ export class ReportService {
       for (const media of section.medias ?? []) {
         if (media.type !== 'photo') continue;
 
-        try {
-          const buffer = await this.minioService.getObjectBuffer(
-            media.object_name,
-          );
-          const dataUri = `data:${media.mime_type};base64,${buffer.toString('base64')}`;
+        const dataUri = photoLookup.get(media.media_id);
+        if (!dataUri) continue;
 
-          photoLookup.set(media.media_id, dataUri);
-
-          if (!claimedMediaIds.has(media.media_id)) {
-            photos.push({
-              label: media.label ?? 'Registro fotográfico',
-              dataUri,
-            });
-          }
-        } catch {
-          // Mídia ausente no storage (ex: dado órfão de testes antigos) — não deve derrubar o relatório inteiro.
+        if (!claimedMediaIds.has(media.media_id)) {
+          photos.push({
+            label: media.label ?? 'Registro fotográfico',
+            dataUri,
+          });
         }
       }
 

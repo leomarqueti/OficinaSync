@@ -59,6 +59,17 @@ export class ServiceOrdersController {
     return this.serviceOrdersService.findAll(userId, validStatus);
   }
 
+  @Get('/by-car/:carId')
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.OK)
+  async findByCar(
+    @Param('carId', ParseIntPipe) carId: number,
+    @Req() req: any,
+  ) {
+    const userId = req.user.sub;
+    return this.serviceOrdersService.findByCar(carId, userId);
+  }
+
   @Get(':id')
   @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.OK)

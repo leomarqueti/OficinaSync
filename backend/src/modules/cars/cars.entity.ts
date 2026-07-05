@@ -3,6 +3,7 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  Index,
   JoinColumn,
   ManyToOne,
   OneToMany,
@@ -18,6 +19,7 @@ export class Cars {
   @PrimaryGeneratedColumn()
   car_id: number;
 
+  @Index()
   @Column({
     type: 'varchar',
     length: 7,
@@ -71,6 +73,8 @@ export class Cars {
   @JoinColumn({ name: 'client_id' })
   client: Clients;
 
+  // SQL Server não indexa FKs automaticamente — toda query do sistema filtra por tenant.
+  @Index()
   @ManyToOne(() => Tenants, (tenant) => tenant.cars, {
     nullable: false,
   })

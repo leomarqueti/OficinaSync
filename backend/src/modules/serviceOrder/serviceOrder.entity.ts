@@ -3,6 +3,7 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  Index,
   JoinColumn,
   ManyToOne,
   OneToMany,
@@ -84,6 +85,16 @@ export class ServiceOrders {
   })
   promo_video_status: PromoVideoStatus;
 
+  // KM do veículo nessa visita — nullable pra não quebrar OS já existentes,
+  // que caem de volta pro mileage_in do carro (só a primeira entrada histórica).
+  @Column({
+    type: 'integer',
+    nullable: true,
+  })
+  mileage_in: number | null;
+
+  // SQL Server não indexa FKs automaticamente — o dashboard filtra por tenant em toda carga.
+  @Index()
   @ManyToOne(() => Tenants, (tenant) => tenant.serviceOrders, {
     nullable: false,
   })

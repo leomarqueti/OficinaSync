@@ -273,7 +273,7 @@ export function OsWorkPage() {
             {data.car.brand} {data.car.model} ·{" "}
             <span className="font-mono">{data.car.plate}</span>
             {" · "}
-            {data.car.mileage_in.toLocaleString("pt-BR")} km
+            {data.mileage_in.toLocaleString("pt-BR")} km
           </p>
 
           {/* ações principais */}

@@ -120,6 +120,9 @@ export function OsCreateWizardPage() {
   const [loadingCars, setLoadingCars] = useState(false);
   const [selectedCarId, setSelectedCarId] = useState<number | null>(null);
   const [carMode, setCarMode] = useState<"existing" | "new">("new");
+  // KM da visita atual quando reaproveita um veículo — nunca sobrescreve o
+  // mileage_in do cadastro do carro (perderia o histórico de KM entre visitas).
+  const [currentMileage, setCurrentMileage] = useState("");
   const [plate, setPlate] = useState("");
   const [brand, setBrand] = useState("");
   const [brandMode, setBrandMode] = useState<"list" | "custom">("list");
@@ -156,7 +159,9 @@ export function OsCreateWizardPage() {
       address.trim().length >= 3);
 
   const carValid =
-    (carMode === "existing" && selectedCarId !== null) ||
+    (carMode === "existing" &&
+      selectedCarId !== null &&
+      currentMileage.length > 0) ||
     (carMode === "new" &&
       isValidPlate(plate) &&
       brand.trim().length >= 2 &&
@@ -252,6 +257,8 @@ export function OsCreateWizardPage() {
     setColor(car.color);
     setChassis(car.chassis);
     setMileageIn(String(car.mileage_in));
+    // ponto de partida razoável — o mecânico ajusta pro KM real dessa visita
+    setCurrentMileage(String(car.mileage_in));
   };
 
   const complaintValid = complaint.trim().length >= 5;
@@ -353,11 +360,17 @@ export function OsCreateWizardPage() {
               })
             ).car_id;
 
+      const orderMileageIn =
+        carMode === "existing" && selectedCarId !== null
+          ? Number(currentMileage)
+          : Number(mileageIn);
+
       const serviceOrder = await apiFetch<{ service_order_id: number }>("/service_orders", {
         method: "POST",
         json: {
           car_id: carId,
           client_complaint: complaint.trim(),
+          mileage_in: orderMileageIn,
         },
       });
 
@@ -590,6 +603,15 @@ export function OsCreateWizardPage() {
                   </button>
                 ))}
               </div>
+
+              {selectedCarId !== null && (
+                <KmField
+                  value={currentMileage}
+                  onChange={setCurrentMileage}
+                  label="KM atual (nessa visita)"
+                />
+              )}
+
               <Button
                 type="button"
                 variant="outline"
@@ -597,6 +619,7 @@ export function OsCreateWizardPage() {
                 onClick={() => {
                   setCarMode("new");
                   setSelectedCarId(null);
+                  setCurrentMileage("");
                 }}
               >
                 <Plus className="mr-1.5 h-4 w-4" />
@@ -970,7 +993,15 @@ export function OsCreateWizardPage() {
             {brand} {model} · {year} · {color}
           </p>
           <p className="text-sm text-muted-foreground">
-            {plate.toUpperCase()} · {mileageIn ? Number(mileageIn).toLocaleString("pt-BR") : 0} km
+            {plate.toUpperCase()} ·{" "}
+            {(() => {
+              const km =
+                carMode === "existing" && selectedCarId !== null
+                  ? currentMileage
+                  : mileageIn;
+              return km ? Number(km).toLocaleString("pt-BR") : 0;
+            })()}{" "}
+            km {carMode === "existing" && selectedCarId !== null && "nessa visita"}
           </p>
         </div>
 

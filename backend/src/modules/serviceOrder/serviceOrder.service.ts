@@ -48,6 +48,7 @@ export class ServiceOrdersService {
     serviceOrder.public_token = token;
     serviceOrder.car = car;
     serviceOrder.client_complaint = createServiceOrdesDto.client_complaint;
+    serviceOrder.mileage_in = createServiceOrdesDto.mileage_in ?? null;
 
     return this.serviceOrdersRepository.save(serviceOrder);
   }
@@ -94,6 +95,8 @@ export class ServiceOrdersService {
       promo_video_status: serviceOrder.promo_video_status,
       public_token: serviceOrder.public_token,
       public_url: `${frontendUrl}/servico/${serviceOrder.public_token}`,
+      // KM da OS (visita atual) — cai pro mileage_in do carro em OS antigas, que não tinham esse campo.
+      mileage_in: serviceOrder.mileage_in ?? serviceOrder.car.mileage_in,
 
       tenant: {
         name: serviceOrder.tenant.name,
@@ -216,6 +219,7 @@ export class ServiceOrdersService {
       root_cause: serviceOrder.root_cause,
       conclusion: serviceOrder.conclusion,
       final_verdict: serviceOrder.final_verdict,
+      mileage_in: serviceOrder.mileage_in ?? serviceOrder.car.mileage_in,
       tenant: {
         name: serviceOrder.tenant.name,
       },
@@ -270,10 +274,12 @@ export class ServiceOrdersService {
       created_at: serviceOrder.created_at,
       public_token: serviceOrder.public_token,
       public_url: `${frontendUrl}/servico/${serviceOrder.public_token}`,
+      mileage_in: serviceOrder.mileage_in ?? serviceOrder.car.mileage_in,
       tenant: {
         name: serviceOrder.tenant.name,
       },
       car: {
+        car_id: serviceOrder.car.car_id,
         brand: serviceOrder.car.brand,
         model: serviceOrder.car.model,
         year: serviceOrder.car.year,
@@ -286,6 +292,29 @@ export class ServiceOrdersService {
         name: serviceOrder.car.client.name,
         phone: serviceOrder.car.client.phone,
       },
+    }));
+  }
+
+  async findByCar(carId: number, userId: number) {
+    const user = await this.usersService.findById(userId);
+    const car = await this.carsService.findById(carId);
+
+    if (!user.tenant || car.tenant.id !== user.tenant.id) {
+      throw new ForbiddenException('Esse veículo não pertence ao tenant do usuário.');
+    }
+
+    const serviceOrders = await this.serviceOrdersRepository.find({
+      where: { car: { car_id: carId } },
+      order: { created_at: 'DESC' },
+    });
+
+    return serviceOrders.map((serviceOrder) => ({
+      service_order_id: serviceOrder.service_order_id,
+      status: serviceOrder.status,
+      client_complaint: serviceOrder.client_complaint,
+      created_at: serviceOrder.created_at,
+      finished_at: serviceOrder.finished_at,
+      mileage_in: serviceOrder.mileage_in ?? car.mileage_in,
     }));
   }
 

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
-import { Car, Clock3, ClipboardList, Plus, User } from "lucide-react";
+import { Car, Clock3, ClipboardList, Plus, Search, User } from "lucide-react";
 import { DashboardSidebar } from "@/components/DashboardSidebar";
 import { apiFetch } from "@/lib/api";
 import { useDarkTheme } from "@/hooks/useDarkTheme";
@@ -14,8 +14,11 @@ type OpenServiceOrder = {
   created_at: string;
   public_token?: string;
   public_url?: string;
+  /** KM do veículo nessa visita — cai pro mileage_in do carro em OS antigas. */
+  mileage_in: number;
   tenant: { name: string };
   car: {
+    car_id: number;
     brand: string;
     model: string;
     year: number;
@@ -126,6 +129,7 @@ export function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("open");
+  const [search, setSearch] = useState("");
 
   useEffect(() => {
     const load = async () => {
@@ -173,6 +177,22 @@ export function DashboardPage() {
       today: createdToday,
     };
   }, [orders]);
+
+  const filteredOrders = useMemo(() => {
+    const term = search.trim().toLowerCase();
+    if (!term) return orders;
+
+    const digitsTerm = term.replace(/[^a-z0-9]/g, "");
+
+    return orders.filter((order) => {
+      const plate = order.car.plate.toLowerCase().replace(/[^a-z0-9]/g, "");
+      return (
+        order.client.name.toLowerCase().includes(term) ||
+        plate.includes(digitsTerm) ||
+        String(order.service_order_id).includes(term)
+      );
+    });
+  }, [orders, search]);
 
   return (
     <>
@@ -273,6 +293,19 @@ export function DashboardPage() {
                 </div>
               </div>
 
+              <div className="px-6 pt-4">
+                <div className="relative">
+                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <input
+                    type="text"
+                    placeholder="Buscar por cliente, placa ou nº da OS..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className="h-11 w-full rounded-md border border-input bg-background pl-9 pr-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  />
+                </div>
+              </div>
+
               <div className="space-y-4 p-6">
                 {loading && (
                   <>
@@ -297,9 +330,15 @@ export function DashboardPage() {
                   </div>
                 )}
 
+                {!loading && !error && orders.length > 0 && filteredOrders.length === 0 && (
+                  <div className="rounded-2xl border border-dashed border-border p-10 text-center text-sm text-muted-foreground">
+                    Nenhuma OS encontrada pra "{search}".
+                  </div>
+                )}
+
                 {!loading &&
                   !error &&
-                  orders.map((order) => (
+                  filteredOrders.map((order) => (
                     <div
                       key={order.service_order_id}
                       role="button"
@@ -354,7 +393,7 @@ export function DashboardPage() {
                           <div className="rounded-2xl bg-muted/40 p-3 text-sm">
                             <p className="font-medium">KM entrada</p>
                             <p className="text-muted-foreground">
-                              {order.car.mileage_in.toLocaleString("pt-BR")}
+                              {order.mileage_in.toLocaleString("pt-BR")}
                             </p>
                           </div>
 

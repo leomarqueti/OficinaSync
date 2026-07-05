@@ -7,6 +7,9 @@ import {
   Get,
   HttpCode,
   HttpStatus,
+  Param,
+  ParseIntPipe,
+  Patch,
   Post,
   Query,
   Req,
@@ -14,6 +17,7 @@ import {
 } from '@nestjs/common';
 import { ClientsService } from './clients.service';
 import { CreateClientDto } from './dto/create-clients-dto';
+import { UpdateClientDto } from './dto/update-clients-dto';
 import { ResponseClientDto } from './dto/response-clients-dto';
 import { plainToInstance } from 'class-transformer';
 import { JwtAuthGuard } from '../AuthModule/jwt-auth.guard';
@@ -46,5 +50,19 @@ export class ClientsController {
     const clients = await this.clientsService.findAll(userId, search);
 
     return plainToInstance(ResponseClientDto, clients);
+  }
+
+  @Patch(':id')
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.OK)
+  async update(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() updateClientDto: UpdateClientDto,
+    @Req() req: any,
+  ): Promise<ResponseClientDto> {
+    const userId = req.user.sub;
+    const client = await this.clientsService.update(id, updateClientDto, userId);
+
+    return plainToInstance(ResponseClientDto, client);
   }
 }

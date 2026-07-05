@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
-import { Loader2, Search, User } from "lucide-react";
+import { FilePenLine, Loader2, Search, User } from "lucide-react";
 import { SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
 import { DashboardSidebar } from "@/components/DashboardSidebar";
+import { Button } from "@/components/ui/button";
+import { EditClientSheet } from "@/components/clients/EditClientSheet";
 import { apiFetch } from "@/lib/api";
 import { formatPhone, e164ToDigits } from "@/lib/validators";
 import { useDarkTheme } from "@/hooks/useDarkTheme";
@@ -25,21 +27,23 @@ export function ClientsPage() {
   const [search, setSearch] = useState("");
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
+  const [editingClient, setEditingClient] = useState<Client | null>(null);
+
+  const loadClients = async () => {
+    try {
+      setLoading(true);
+      const query = search.trim() ? `?search=${encodeURIComponent(search.trim())}` : "";
+      const result = await apiFetch<Client[]>(`/clients${query}`, { silent: true });
+      setClients(result);
+    } catch {
+      setClients([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const handle = setTimeout(async () => {
-      try {
-        setLoading(true);
-        const query = search.trim() ? `?search=${encodeURIComponent(search.trim())}` : "";
-        const result = await apiFetch<Client[]>(`/clients${query}`, { silent: true });
-        setClients(result);
-      } catch {
-        setClients([]);
-      } finally {
-        setLoading(false);
-      }
-    }, 300);
-
+    const handle = setTimeout(loadClients, 300);
     return () => clearTimeout(handle);
   }, [search]);
 
@@ -102,12 +106,27 @@ export function ClientsPage() {
                       <p className="truncate text-xs text-muted-foreground">{client.address}</p>
                     )}
                   </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="shrink-0"
+                    onClick={() => setEditingClient(client)}
+                  >
+                    <FilePenLine className="mr-1.5 h-3.5 w-3.5" />
+                    Editar
+                  </Button>
                 </div>
               ))}
             </div>
           </div>
         </div>
       </SidebarInset>
+
+      <EditClientSheet
+        client={editingClient}
+        onClose={() => setEditingClient(null)}
+        onSaved={loadClients}
+      />
     </>
   );
 }

@@ -1,12 +1,14 @@
 import {
   ConflictException,
+  ForbiddenException,
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Clients } from './clients.entity';
 import { CreateClientDto } from './dto/create-clients-dto';
-import { ILike, Repository } from 'typeorm';
+import { UpdateClientDto } from './dto/update-clients-dto';
+import { ILike, Not, Repository } from 'typeorm';
 
 import { UsersService } from '../users/users.service';
 
@@ -103,5 +105,36 @@ export class ClientsService {
     }
 
     return client;
+  }
+
+  async update(
+    clientId: number,
+    updateClientDto: UpdateClientDto,
+    userId: number,
+  ): Promise<Clients> {
+    const user = await this.usersService.findById(userId);
+    const client = await this.findById(clientId);
+
+    if (!user.tenant || client.tenant.id !== user.tenant.id) {
+      throw new ForbiddenException('Esse cliente não pertence ao tenant do usuário.');
+    }
+
+    if (updateClientDto.cpf && updateClientDto.cpf !== client.cpf) {
+      const checkClientExistence = await this.clientsRepository.findOne({
+        where: {
+          cpf: updateClientDto.cpf,
+          tenant: { id: user.tenant.id },
+          client_id: Not(clientId),
+        },
+      });
+
+      if (checkClientExistence) {
+        throw new ConflictException('Já existe outro cliente com esse CPF.');
+      }
+    }
+
+    Object.assign(client, updateClientDto);
+
+    return this.clientsRepository.save(client);
   }
 }

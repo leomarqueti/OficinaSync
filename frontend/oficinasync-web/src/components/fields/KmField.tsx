@@ -8,12 +8,13 @@ type KmFieldProps = {
   /** Valor só com dígitos. */
   value: string;
   onChange: (digits: string) => void;
+  label?: string;
 };
 
 /** Quilometragem com separador de milhar (123.000) e teclado numérico no celular. */
-export function KmField({ value, onChange }: KmFieldProps) {
+export function KmField({ value, onChange, label = "Quilometragem de entrada" }: KmFieldProps) {
   return (
-    <FieldShell label="Quilometragem de entrada" htmlFor="km">
+    <FieldShell label={label} htmlFor="km">
       <input
         id="km"
         type="text"

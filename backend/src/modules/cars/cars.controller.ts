@@ -8,6 +8,9 @@ import {
   Get,
   HttpCode,
   HttpStatus,
+  Param,
+  ParseIntPipe,
+  Patch,
   Post,
   Query,
   UseGuards,
@@ -16,6 +19,7 @@ import {
 import { CarsService } from './cars.service';
 import { JwtAuthGuard } from '../AuthModule/jwt-auth.guard';
 import { CreateCarDto } from './dto/create.cars.dto';
+import { UpdateCarDto } from './dto/update.cars.dto';
 import { plainToInstance } from 'class-transformer';
 
 import { ResponseCarDto } from './dto/response.cars.dto';
@@ -54,5 +58,32 @@ export class CarsController {
       : await this.carsService.findAll(userId, search);
 
     return plainToInstance(ResponseCarDto, cars);
+  }
+
+  @Get(':id')
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.OK)
+  async findOne(
+    @Param('id', ParseIntPipe) id: number,
+    @Req() req: any,
+  ): Promise<ResponseCarDto> {
+    const userId = req.user.sub;
+    const car = await this.carsService.findOneScoped(id, userId);
+
+    return plainToInstance(ResponseCarDto, car);
+  }
+
+  @Patch(':id')
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.OK)
+  async update(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() updateCarDto: UpdateCarDto,
+    @Req() req: any,
+  ): Promise<ResponseCarDto> {
+    const userId = req.user.sub;
+    const car = await this.carsService.update(id, updateCarDto, userId);
+
+    return plainToInstance(ResponseCarDto, car);
   }
 }

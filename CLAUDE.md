@@ -188,7 +188,7 @@ Motivação: cada OS nova recriava cliente e carro do zero, mesmo pra quem já e
 - `GET /cars?client_id=` (rota nova, `CarsController`/`CarsService.findByClient`) lista os veículos de um cliente, validando que o carro pertence ao mesmo tenant do usuário — não existia nenhum `GET` em `CarsModule` antes disso.
 - `OsCreateWizardPage.tsx` passo 1: campo de busca com debounce (350ms) acima do formulário; selecionar um resultado preenche os campos e trava o formulário (mostra card "cliente já cadastrado" com botão "Trocar"). Passo 2: se o cliente selecionado tem carros cadastrados, mostra lista pra reaproveitar (com opção "Cadastrar veículo novo"); senão form normal.
 - `submitAll()`: só chama `POST /clients`/`POST /cars` quando não há seleção — usa os IDs existentes direto no `POST /service_orders`. Testado ponta a ponta: reaproveitar cliente+carro não cria registros duplicados (contagem de clientes antes/depois idêntica), OS nova referencia corretamente o cliente/carro reaproveitados.
-- **Débito conhecido, não resolvido aqui**: ao reaproveitar um carro existente, o KM de entrada (`mileage_in`) não é atualizado — está ligado à questão arquitetural já em aberto "`mileage_in` deveria estar em `service_orders`, não em `cars`" (ver seção de decisões em aberto). Atualizar o KM do carro sobrescreveria o histórico; resolver isso exige mover a coluna, fora do escopo desta mudança pontual.
+- ~~**Débito conhecido, não resolvido aqui**: ao reaproveitar um carro existente, o KM de entrada (`mileage_in`) não é atualizado~~ — resolvido depois, ver seção "Histórico do veículo + KM por visita" abaixo.
 
 ### Rate limiting em auth (feito)
 
@@ -245,6 +245,48 @@ Antes só dava pra criar/excluir testes especializados (bateria, DTC, compressã
 - `EditTestSheet.tsx` reescrito: dispatcha pelo `test.test_type` pro form certo (genérico continua indo pro `GenericTestForm`), passando `initial` hidratado + `sectionId` (necessário pros forms com foto, que fazem upload direto via `PhotoCaptureButton`). `AddFindingSheet.tsx` ganhou prop `editingTest` (achado_adicional tem fluxo próprio, fora do `TestTypeSelector`) — mesmo sheet agora serve criar e editar, trocando `POST`/`PATCH` conforme o caso.
 - `OsWorkPage.tsx`: `onEditTest` agora roteia pro sheet certo (`EditTestSheet` vs `AddFindingSheet`) conforme o `test_type`, carregando `sectionId`/`sectionMedias` da section que contém o teste (o `TestItem` não guarda `section_id` — o contexto vem de qual `section` do loop disparou o clique).
 - Testado ponta a ponta numa OS de teste já existente (`TESTE DESCARTAVEL - PODE DELETAR`, #9002): editar "Compressão Mecânica" mostrou a foto do cilindro 1 já resolvida como URL real do MinIO (não blob morta), mudar a ferramenta e salvar persistiu corretamente (`PATCH /tests/4` → 200, confirmado direto no banco) preservando o `media_id` da foto; editar um "Achado adicional" (#9004) confirmou o mesmo fluxo pro tipo com sheet próprio, incluindo troca de severidade persistida no banco.
+
+### Performance: PDF em paralelo, índices de busca, code-splitting (feito)
+
+Primeiros itens da rodada de melhorias pós-deploy (pesquisa de mercado + auditoria de código de julho/2026, ver "Ideias guardadas" acima).
+
+- `report.service.ts`: as fotos do laudo eram baixadas do MinIO **uma por vez** num loop sequencial — com muitas fotos numa OS, a latência do PDF multiplicava. Agora todas as mídias (`intake` + capítulos) são coletadas numa lista e baixadas via `Promise.all`, populando um `photoLookup` único consultado depois na montagem dos capítulos. Testado gerando o PDF da OS #9002 (200 OK, 124KB, sem regressão de conteúdo).
+- Índices adicionados (SQL Server não indexa FK automaticamente): `clients.name`, `clients.cpf`, `clients.tenant` (FK), `cars.plate`, `cars.tenant` (FK), `service_orders.tenant` (FK) — cobrem as buscas de cliente/veículo e o filtro por tenant que roda em toda query sensível do sistema. Confirmado via `sys.indexes` que o `synchronize: true` criou os índices no banco de dev sem precisar de script manual (diferente do gotcha de `@Check`, `@Index` novo em coluna existente não tem esse problema).
+- `App.tsx`: todas as páginas viraram `React.lazy` (antes um bundle único de 687KB). Build agora gera um chunk por página (a maior, `OsWorkPage`, cai pra 57KB gzip; a página pública do cliente — a que mais importa carregar rápido no 4G — cai pra ~22KB). `<Suspense>` com spinner simples como fallback.
+
+### Editar cliente e veículo (feito)
+
+`ClientsPage`/`CarsPage` eram somente leitura — sem jeito de corrigir um telefone ou placa digitada errada sem mexer direto no banco.
+
+- `PATCH /clients/:id` e `PATCH /cars/:id` (`UpdateClientDto`/`UpdateCarDto`, todos os campos opcionais), tenant-scoped igual todo o resto do sistema (`ForbiddenException` se o registro não pertence ao tenant do usuário). Trocar o CPF do cliente reaproveita a mesma checagem de duplicidade do `create` (exclui o próprio ID da busca).
+- `EditClientSheet.tsx`/`EditCarSheet.tsx` (novos, em `src/components/clients/` e `src/components/cars/`) reaproveitam os campos com máscara/validação já existentes (`PhoneField`, `CpfField`, `PlateField`, `YearField`, `KmField`). Botão "Editar" nas duas páginas de listagem abre o sheet pré-preenchido.
+- Testado ponta a ponta com usuário descartável: editar endereço de um cliente e cor de um veículo persistiu corretamente no banco em ambos os casos.
+
+### Busca no dashboard (feito)
+
+Com 18+ OS na lista (e crescendo), rolar a página inteira procurando um cliente ou placa vira inviável.
+
+- Filtro **client-side** em `dashBoardPage.tsx` (`filteredOrders`, via `useMemo`) — sem round-trip novo ao backend, já que a lista completa do status selecionado já vem carregada. Busca por nome do cliente, placa (normalizada, ignora hífen/maiúsculas) ou número da OS, combinados num único campo.
+- Métricas do topo (Clientes/Veículos/Criadas hoje) continuam calculadas sobre `orders` (não filtrado) — a busca só afeta a lista, não os cartões de resumo.
+- Testado: buscar "deleon" filtrou 18 OS pra 2; buscar a placa "doo0037" (sem hífen, minúscula) achou as 9 OS que compartilham essa placa nos dados de teste; buscar "9005" achou só a OS #9005.
+
+### PWA — instalável na tela inicial (feito)
+
+Pesquisa de mercado (julho/2026) apontou PWA como caminho certo antes de app nativo: mesma sensação de "app" (ícone, tela cheia, cache offline básico) por uma fração do custo/tempo — e o frontend já é mobile-first.
+
+- `vite-plugin-pwa` instalado, configurado em `vite.config.ts` (`registerType: 'autoUpdate'`, `devOptions.enabled: true` pra também funcionar no servidor de dev, não só no build de produção). Gera `manifest.webmanifest` + service worker (`sw.js`) automaticamente a cada build; nenhuma mudança necessária no `Dockerfile.proxy` (já copia `dist/` inteiro).
+- Ícones (`public/icon-192.png`, `icon-512.png`, `icon-maskable-512.png`) gerados a partir do `logoOficinaSync.png` existente via `sharp` (usado uma vez, depois desinstalado — não é dependência do projeto). `index.html` ganhou `<meta name="theme-color">` + `apple-touch-icon` + meta tags de app iOS (Safari não lê o manifest do mesmo jeito que Android/Chrome).
+- `start_url: '/dashboard'` — o "app" instalável é voltado pro mecânico (quem usa no dia a dia); a página pública do cliente não tem manifest próprio (um único manifest por origem). Deixar o cliente instalar a página dele como app é ideia guardada pra depois, não implementada agora.
+- Testado no servidor de dev: manifest serve corretamente via `fetch`, Service Worker registra (`navigator.serviceWorker.getRegistrations()` retorna 1, escopo `/`), os 3 ícones respondem 200. Build de produção gera os arquivos esperados (`dist/sw.js`, `dist/workbox-*.js`, `dist/manifest.webmanifest`, `dist/icon-*.png`).
+
+### Histórico do veículo + KM por visita (feito)
+
+Antes, `mileage_in` morava só em `cars` — reaproveitar um carro numa OS nova sobrescrevia (ou, na prática, deixava estático) o KM de entrada, perdendo o valor real daquela visita específica; e não existia nenhuma tela pra ver o histórico de OS de um veículo.
+
+- **Decisão arquitetural**: em vez de mover `mileage_in` inteiramente de `cars` pra `service_orders` (migration arriscada, perde a semântica de "KM na primeira entrada"), a solução foi **aditiva**: `service_orders` ganhou uma coluna `mileage_in` nullable própria (KM daquela visita específica), enquanto `cars.mileage_in` continua intocado (KM da primeira entrada do carro, nunca mais sobrescrito ao reaproveitar o carro). Todo lugar que exibe KM (`findById`, `findByPublicToken`, `findAll`, `findByCar`) resolve como `serviceOrder.mileage_in ?? serviceOrder.car.mileage_in` — OS antigas (sem o campo populado) continuam mostrando o KM do carro como fallback.
+- Backend: `CreateServiceOrderDto.mileage_in` (opcional), `ServiceOrdersService.findByCar(carId, userId)` (tenant-scoped, retorna as OS do carro ordenadas por criação desc.), `GET /service_orders/by-car/:carId` (rota nova). `CarsService.findOneScoped(carId, userId)` + `GET /cars/:id` (rota nova, não existia nenhum `GET` de carro único antes).
+- Frontend: `OsCreateWizardPage.tsx` — ao reaproveitar um carro já cadastrado (fluxo de busca de cliente/veículo existente), mostra um campo **"KM atual (nessa visita)"** pré-preenchido com o último KM conhecido do carro, mas editável; `submitAll()` manda esse valor no `POST /service_orders`. `dashBoardPage.tsx`/`OsWorkPage.tsx` exibem `order.mileage_in` (o da visita) em vez de `car.mileage_in`. Nova `CarHistoryPage.tsx` (`/veiculos/:id`) — resumo do veículo + lista clicável de todas as suas OS com KM por visita, acessível clicando num card em `CarsPage.tsx` (antes só tinha o botão "Editar", sem jeito de ver o histórico).
+- Testado ponta a ponta com veículo descartável: criada 1ª OS com KM 50.000, 2ª OS reaproveitando o mesmo carro com KM 55.500 — confirmado via API que `cars.mileage_in` permanece 50.000 (âncora histórica) enquanto cada OS guarda seu próprio valor; `CarHistoryPage` lista as duas OS com "KM 55.500"/"KM 50.000" corretos; dashboard e `OsWorkPage` exibem o KM da visita certa por OS; wizard pré-preenche o campo de KM ao reaproveitar o carro e permite editar antes de enviar.
 
 ## Configuração (.env do backend)
 
@@ -304,13 +346,17 @@ FRONTEND_URL=http://localhost:5173
 
 11. Landing page + política de privacidade + termos de uso (LGPD)
 12. Planos e pagamento (Stripe ou similar)
-13. `password_resets` (recuperação de senha)
+13. ~~`password_resets` (recuperação de senha)~~ — feito (ver seção "Troca de senha + recuperação de senha")
+
+### Ideias guardadas (decisão consciente de adiar, não descartar)
+
+- **Orçamento digital com aprovação na página do cliente** — recomendação estratégica nº 1 da pesquisa de mercado de julho/2026 (mercado DVI americano: ticket médio +15–30%, aprovação +70% quando a foto acompanha o preço). Desenho: itens de orçamento (peça + mão de obra + valor) linkados à foto/teste que os justifica; botões Aprovar/Recusar por item na página pública com registro de data/hora; `achado_adicional` evolui de informativo pra oportunidade de venda; laudo PDF vira também fatura. Complementos: botões wa.me (WhatsApp sem API oficial), lembretes de revisão por KM/tempo, retorno de itens recusados. Leonardo pediu pra guardar pra depois.
+- **Scanner OBD próprio (visão do plano Pro)** — dongle ESP32+ELM327 da OficinaSync incluso no plano Pro. Em fases: (1) DTCs + temperatura coletados na abertura da OS (firmware parcial já existe: `/data`, `/snapshot.json`, `/dtc`); (2) teste de bateria automático via comando ATRV do ELM327 (amostrar tensão em repouso → partida → carga, preenchendo o BateriaForm sozinho); (3) **teste de rodagem georreferenciado** — celular conectado no AP WiFi do ESP32, grava GPS (funciona sem internet) + parâmetros a cada 1s em IndexedDB, sobe tudo ao voltar pra oficina; mapa com Leaflet/OpenStreetMap traçando a rota com pinos onde DTC apareceu ou parâmetro saiu da faixa. Nenhum concorrente BR tem hardware próprio.
 
 ## Decisões arquiteturais em aberto
 
 - Semântica de `trial` vs `free` no enum de planos do tenant
 - Se CPF deve ser único por tenant (índice composto `tenant_id, cpf`)
-- `mileage_in` está no `cars` mas deveria estar em `service_orders` (perde histórico entre visitas)
 - Se múltiplas sections do mesmo tipo devem ser permitidas na mesma OS
 - Parâmetros OBD: colunas individuais vs JSON
 

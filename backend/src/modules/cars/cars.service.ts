@@ -1,7 +1,8 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { ForbiddenException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Cars } from './cars.entity';
 import { CreateCarDto } from './dto/create.cars.dto';
+import { UpdateCarDto } from './dto/update.cars.dto';
 import { ILike, Repository } from 'typeorm';
 import { UsersService } from '../users/users.service';
 import { ClientsService } from '../clients/clients.service';
@@ -109,5 +110,33 @@ export class CarsService {
       order: { created_at: 'DESC' },
       take: 20,
     });
+  }
+
+  async update(
+    carId: number,
+    updateCarDto: UpdateCarDto,
+    userId: number,
+  ): Promise<Cars> {
+    const user = await this.usersService.findById(userId);
+    const car = await this.findById(carId);
+
+    if (!user.tenant || car.tenant.id !== user.tenant.id) {
+      throw new ForbiddenException('Esse veículo não pertence ao tenant do usuário.');
+    }
+
+    Object.assign(car, updateCarDto);
+
+    return this.carsRepository.save(car);
+  }
+
+  async findOneScoped(carId: number, userId: number): Promise<Cars> {
+    const user = await this.usersService.findById(userId);
+    const car = await this.findById(carId);
+
+    if (!user.tenant || car.tenant.id !== user.tenant.id) {
+      throw new ForbiddenException('Esse veículo não pertence ao tenant do usuário.');
+    }
+
+    return car;
   }
 }

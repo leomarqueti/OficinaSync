@@ -2,6 +2,7 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  Index,
   JoinColumn,
   ManyToOne,
   OneToMany,
@@ -15,6 +16,7 @@ export class Clients {
   @PrimaryGeneratedColumn()
   client_id: number;
 
+  @Index()
   @Column({ length: 150, type: 'varchar' })
   name: string;
 
@@ -24,6 +26,7 @@ export class Clients {
   @Column({ length: 100, type: 'varchar', nullable: true })
   email: string | null;
 
+  @Index()
   @Column()
   cpf: string;
 
@@ -45,6 +48,8 @@ export class Clients {
   @OneToMany(() => Cars, (car) => car.client)
   cars: Cars[];
 
+  // SQL Server não indexa FKs automaticamente — toda query do sistema filtra por tenant.
+  @Index()
   @ManyToOne(() => Tenants, (tenant) => tenant.clients, {
     nullable: false,
     onDelete: 'CASCADE',

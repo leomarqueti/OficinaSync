@@ -1,7 +1,10 @@
 import { useEffect, useState } from "react";
-import { Car, Loader2, Search } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Car, FilePenLine, Loader2, Search } from "lucide-react";
 import { SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
 import { DashboardSidebar } from "@/components/DashboardSidebar";
+import { Button } from "@/components/ui/button";
+import { EditCarSheet } from "@/components/cars/EditCarSheet";
 import { apiFetch } from "@/lib/api";
 import { useDarkTheme } from "@/hooks/useDarkTheme";
 
@@ -23,25 +26,28 @@ type CarItem = {
 
 export function CarsPage() {
   useDarkTheme();
+  const navigate = useNavigate();
 
   const [search, setSearch] = useState("");
   const [cars, setCars] = useState<CarItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [editingCar, setEditingCar] = useState<CarItem | null>(null);
+
+  const loadCars = async () => {
+    try {
+      setLoading(true);
+      const query = search.trim() ? `?search=${encodeURIComponent(search.trim())}` : "";
+      const result = await apiFetch<CarItem[]>(`/cars${query}`, { silent: true });
+      setCars(result);
+    } catch {
+      setCars([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const handle = setTimeout(async () => {
-      try {
-        setLoading(true);
-        const query = search.trim() ? `?search=${encodeURIComponent(search.trim())}` : "";
-        const result = await apiFetch<CarItem[]>(`/cars${query}`, { silent: true });
-        setCars(result);
-      } catch {
-        setCars([]);
-      } finally {
-        setLoading(false);
-      }
-    }, 300);
-
+    const handle = setTimeout(loadCars, 300);
     return () => clearTimeout(handle);
   }, [search]);
 
@@ -88,7 +94,15 @@ export function CarsPage() {
               {cars.map((car) => (
                 <div
                   key={car.car_id}
-                  className="flex items-center gap-4 rounded-2xl border border-border bg-card p-4"
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => navigate(`/veiculos/${car.car_id}`)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      navigate(`/veiculos/${car.car_id}`);
+                    }
+                  }}
+                  className="flex cursor-pointer items-center gap-4 rounded-2xl border border-border bg-card p-4 transition hover:border-brand/30 hover:bg-muted/30"
                 >
                   <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-muted/40">
                     <Car className="h-5 w-5 text-muted-foreground" />
@@ -102,12 +116,26 @@ export function CarsPage() {
                       {car.client_name && ` · dono: ${car.client_name}`}
                     </p>
                   </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="shrink-0"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setEditingCar(car);
+                    }}
+                  >
+                    <FilePenLine className="mr-1.5 h-3.5 w-3.5" />
+                    Editar
+                  </Button>
                 </div>
               ))}
             </div>
           </div>
         </div>
       </SidebarInset>
+
+      <EditCarSheet car={editingCar} onClose={() => setEditingCar(null)} onSaved={loadCars} />
     </>
   );
 }
