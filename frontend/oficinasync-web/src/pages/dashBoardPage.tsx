@@ -16,6 +16,8 @@ type OpenServiceOrder = {
   public_url?: string;
   /** KM do veículo nessa visita — cai pro mileage_in do carro em OS antigas. */
   mileage_in: number;
+  /** Foto "Frente do veículo" do check-in, se já tiver sido enviada. */
+  photo_url: string | null;
   tenant: { name: string };
   car: {
     car_id: number;
@@ -352,7 +354,25 @@ export function DashboardPage() {
                       className="w-full cursor-pointer rounded-3xl border border-border bg-muted/20 p-5 text-left transition hover:border-brand/30 hover:bg-muted/30"
                     >
                       <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-                        <div className="grid flex-1 grid-cols-1 gap-4 md:grid-cols-[120px_1fr_1fr]">
+                        <div className="flex flex-1 gap-4">
+                          <div className="hidden h-20 w-20 shrink-0 overflow-hidden rounded-2xl bg-muted/40 sm:block">
+                            {order.photo_url ? (
+                              <img
+                                src={order.photo_url}
+                                alt={`${order.car.brand} ${order.car.model}`}
+                                className="h-full w-full object-cover"
+                                onError={(e) => {
+                                  e.currentTarget.style.display = "none";
+                                }}
+                              />
+                            ) : (
+                              <div className="flex h-full w-full items-center justify-center">
+                                <Car className="h-7 w-7 text-muted-foreground" />
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="grid flex-1 grid-cols-1 gap-4 md:grid-cols-[120px_1fr_1fr]">
                           <div>
                             <p className="text-xs uppercase text-muted-foreground">OS</p>
                             <p className="mt-1 text-lg font-bold">
@@ -378,6 +398,7 @@ export function DashboardPage() {
                             <p className="mt-1 text-sm text-muted-foreground">
                               {order.client_complaint}
                             </p>
+                          </div>
                           </div>
                         </div>
 

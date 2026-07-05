@@ -19,6 +19,10 @@ import { UsersService } from '../users/users.service';
 import { CarsService } from '../cars/cars.service';
 import { MinioService } from '../minio/minio.service';
 import { Status } from './status.enum';
+import { SectionType } from '../sections/typeSection.enum';
+
+// Mesmo label usado em OsCreateWizardPage.tsx pra foto fixa de entrada "front".
+const FRONT_PHOTO_LABEL = 'Frente do veículo';
 
 @Injectable()
 export class ServiceOrdersService {
@@ -249,25 +253,42 @@ export class ServiceOrdersService {
 
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
 
-    const serviceOrders = await this.serviceOrdersRepository.find({
-      where: {
-        tenant: {
-          id: user.tenant.id,
-        },
-        ...(status ? { status } : {}),
-      },
-      relations: {
-        tenant: true,
-        car: {
-          client: true,
-        },
-      },
-      order: {
-        created_at: 'DESC',
-      },
-    });
+    const qb = this.serviceOrdersRepository
+      .createQueryBuilder('so')
+      .leftJoinAndSelect('so.tenant', 'tenant')
+      .leftJoinAndSelect('so.car', 'car')
+      .leftJoinAndSelect('car.client', 'client')
+      .leftJoinAndSelect(
+        'so.sections',
+        'section',
+        'section.type = :checkinType',
+        { checkinType: SectionType.CHECKIN },
+      )
+      .leftJoinAndSelect(
+        'section.medias',
+        'media',
+        'media.label = :frontLabel',
+        { frontLabel: FRONT_PHOTO_LABEL },
+      )
+      .where('tenant.id = :tenantId', { tenantId: user.tenant.id })
+      .orderBy('so.created_at', 'DESC');
 
-    return serviceOrders.map((serviceOrder) => ({
+    if (status) {
+      qb.andWhere('so.status = :status', { status });
+    }
+
+    const serviceOrders = await qb.getMany();
+
+    const photoUrls = await Promise.all(
+      serviceOrders.map((serviceOrder) => {
+        const photoMedia = serviceOrder.sections?.[0]?.medias?.[0];
+        return photoMedia
+          ? this.minioService.getPresignedUrl(photoMedia.object_name)
+          : Promise.resolve(null);
+      }),
+    );
+
+    return serviceOrders.map((serviceOrder, index) => ({
       service_order_id: serviceOrder.service_order_id,
       status: serviceOrder.status,
       client_complaint: serviceOrder.client_complaint,
@@ -275,6 +296,7 @@ export class ServiceOrdersService {
       public_token: serviceOrder.public_token,
       public_url: `${frontendUrl}/servico/${serviceOrder.public_token}`,
       mileage_in: serviceOrder.mileage_in ?? serviceOrder.car.mileage_in,
+      photo_url: photoUrls[index],
       tenant: {
         name: serviceOrder.tenant.name,
       },

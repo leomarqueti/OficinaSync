@@ -21,6 +21,8 @@ import { GenericTestForm } from "./GenericTestForm";
 type AddTestSheetProps = {
   /** Section alvo; null = sheet fechado. */
   sectionId: number | null;
+  /** Veículo da OS atual — habilita o painel de histórico entre visitas no teste genérico. */
+  carId: number;
   onClose: () => void;
   onSaved: () => Promise<void> | void;
 };
@@ -33,7 +35,7 @@ type SpecializedPayload = {
 };
 
 /** Fluxo de registrar um teste: escolhe o tipo → formulário certo → salva. */
-export function AddTestSheet({ sectionId, onClose, onSaved }: AddTestSheetProps) {
+export function AddTestSheet({ sectionId, carId, onClose, onSaved }: AddTestSheetProps) {
   const [chosen, setChosen] = useState<TestTypeCategory | "generic" | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -100,6 +102,7 @@ export function AddTestSheet({ sectionId, onClose, onSaved }: AddTestSheetProps)
 
           {chosen === "generic" && (
             <GenericTestForm
+              carId={carId}
               saving={saving}
               onCancel={close}
               onSave={(p) =>

@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { TestFormShell } from "@/components/tests/TestFormShell";
+import { componentTestTemplates } from "@/lib/testComponentTemplates";
+import { TestHistoryPanel } from "./TestHistoryPanel";
 import type { TestMeasurement, TestItem } from "./types";
 
 const titleSuggestions = [
@@ -21,6 +23,8 @@ export type GenericTestPayload = {
 type GenericTestFormProps = {
   /** Preenche o formulário pra edição de um teste existente. */
   initial?: TestItem;
+  /** Veículo da OS atual — habilita o painel de histórico entre visitas. */
+  carId?: number;
   onSave: (payload: GenericTestPayload) => void;
   onCancel: () => void;
   saving: boolean;
@@ -38,7 +42,7 @@ function cleanMeasurements(measurements: TestMeasurement[]) {
 
 /** Formulário livre (título + linhas esperado/medido) pra qualquer teste
  *  que não tem UI dedicada. */
-export function GenericTestForm({ initial, onSave, onCancel, saving }: GenericTestFormProps) {
+export function GenericTestForm({ initial, carId, onSave, onCancel, saving }: GenericTestFormProps) {
   const [title, setTitle] = useState(initial?.title ?? "");
   const [verdict, setVerdict] = useState<string>(initial?.verdict ?? "");
   const [notes, setNotes] = useState(initial?.notes ?? "");
@@ -67,6 +71,17 @@ export function GenericTestForm({ initial, onSave, onCancel, saving }: GenericTe
       return next.length ? next : [{ label: "", expected: "", actual: "" }];
     });
 
+  const applyTemplate = (template: (typeof componentTestTemplates)[number]) => {
+    setTitle(template.title);
+    setMeasurements(
+      template.measurements.map((m) => ({
+        label: m.label,
+        expected: m.expected ?? "",
+        actual: "",
+      })),
+    );
+  };
+
   return (
     <TestFormShell
       title={title}
@@ -94,6 +109,30 @@ export function GenericTestForm({ initial, onSave, onCancel, saving }: GenericTe
             </button>
           ))}
         </div>
+      )}
+
+      {!initial && (
+        <div className="space-y-2">
+          <label className="text-sm font-medium">
+            Testar um componente (alimentação/sinal já preenchidos)
+          </label>
+          <div className="flex flex-wrap gap-2">
+            {componentTestTemplates.map((template) => (
+              <button
+                key={template.title}
+                type="button"
+                onClick={() => applyTemplate(template)}
+                className="rounded-full border border-brand/30 bg-brand/5 px-3 py-1.5 text-xs text-brand hover:bg-brand/10"
+              >
+                {template.title}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {carId !== undefined && title.trim() !== "" && (
+        <TestHistoryPanel carId={carId} title={title} />
       )}
 
       <div className="space-y-2">

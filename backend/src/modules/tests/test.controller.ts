@@ -4,12 +4,14 @@ import {
   Body,
   Controller,
   Delete,
+  Get,
   HttpCode,
   HttpStatus,
   Param,
   ParseIntPipe,
   Patch,
   Post,
+  Query,
   Req,
   UseGuards,
 } from '@nestjs/common';
@@ -23,6 +25,19 @@ import { ResponseTestDto } from './dto/response-test-dto';
 @Controller('tests')
 export class TestsController {
   constructor(private readonly testsService: TestsService) {}
+
+  @Get('history')
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.OK)
+  async findHistory(
+    @Query('car_id', ParseIntPipe) carId: number,
+    @Query('title') title: string | undefined,
+    @Query('test_type') testType: string | undefined,
+    @Req() req: any,
+  ) {
+    const userId = req.user.sub;
+    return this.testsService.findHistory(carId, userId, title, testType);
+  }
 
   @Post()
   @UseGuards(JwtAuthGuard)

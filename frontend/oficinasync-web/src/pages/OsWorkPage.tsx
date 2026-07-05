@@ -405,6 +405,7 @@ export function OsWorkPage() {
       {/* ---------- sheets ---------- */}
       <AddTestSheet
         sectionId={addTestSectionId}
+        carId={data.car.car_id}
         onClose={() => setAddTestSectionId(null)}
         onSaved={fetchOrder}
       />

@@ -6,6 +6,7 @@ import { TestsService } from './test.service';
 import { UsersModule } from '../users/users.module';
 import { SectionsModule } from '../sections/section.module';
 import { AuthModule } from '../AuthModule/authModule.module';
+import { CarsModule } from '../cars/cars.module';
 
 @Module({
   imports: [
@@ -13,6 +14,7 @@ import { AuthModule } from '../AuthModule/authModule.module';
     UsersModule,
     SectionsModule,
     AuthModule,
+    CarsModule,
   ],
   controllers: [TestsController],
   providers: [TestsService],
