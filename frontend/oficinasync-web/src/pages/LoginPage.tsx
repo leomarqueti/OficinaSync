@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { apiFetch } from "@/lib/api";
@@ -102,11 +101,7 @@ export function LoginPage() {
             <button
               type="button"
               className="w-fit text-sm font-medium text-muted-foreground underline-offset-4 hover:underline"
-              onClick={() =>
-                toast.info(
-                  "Recuperação de senha ainda não está disponível — fale com o dono da oficina.",
-                )
-              }
+              onClick={() => navigate("/esqueci-senha")}
             >
               Esqueceu a senha?
             </button>

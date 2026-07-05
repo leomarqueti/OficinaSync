@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { API_URL } from "@/lib/api";
+import { compressImage } from "@/lib/imageCompression";
 
 type PhotoCaptureButtonProps = {
   sectionId: number;
@@ -19,8 +20,8 @@ export function PhotoCaptureButton({
   const [uploading, setUploading] = useState(false);
 
   const handleChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const rawFile = e.target.files?.[0];
+    if (!rawFile) return;
 
     const token = localStorage.getItem("token");
 
@@ -29,6 +30,7 @@ export function PhotoCaptureButton({
       return;
     }
 
+    const file = await compressImage(rawFile);
     const localPreview = URL.createObjectURL(file);
 
     try {

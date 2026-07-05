@@ -7,6 +7,7 @@ import { emptyCompressaoData, testTypeLabels } from "./testTypes";
 
 type CompressaoMecanicaFormProps = {
   sectionId: number;
+  initial?: { title: string; data: CompressaoMecanicaData; verdict: string; notes: string };
   onSave: (payload: {
     title: string;
     data: CompressaoMecanicaData;
@@ -19,14 +20,15 @@ type CompressaoMecanicaFormProps = {
 
 export function CompressaoMecanicaForm({
   sectionId,
+  initial,
   onSave,
   onCancel,
   saving,
 }: CompressaoMecanicaFormProps) {
-  const [title, setTitle] = useState(testTypeLabels.compressao_mecanica);
-  const [data, setData] = useState<CompressaoMecanicaData>(emptyCompressaoData());
-  const [verdict, setVerdict] = useState("");
-  const [notes, setNotes] = useState("");
+  const [title, setTitle] = useState(initial?.title ?? testTypeLabels.compressao_mecanica);
+  const [data, setData] = useState<CompressaoMecanicaData>(initial?.data ?? emptyCompressaoData());
+  const [verdict, setVerdict] = useState(initial?.verdict ?? "");
+  const [notes, setNotes] = useState(initial?.notes ?? "");
 
   const updateCylinder = (
     index: number,

@@ -14,6 +14,7 @@ import { CreateUserDto } from './dto/create-users.dto';
 import * as argon2 from 'argon2';
 import { ConfigService } from '@nestjs/config';
 import { Tenants } from '../tenants/tenants.entity';
+import { Role } from './role.enum';
 
 @Injectable()
 export class UsersService {
@@ -49,6 +50,48 @@ export class UsersService {
     });
 
     newUser.password_hash = senhaHash;
+
+    return this.usersRepository.save(newUser);
+  }
+
+  // criação a partir de um convite aceito: já vem com tenant, cargo definido e ativo direto
+  // (o link do convite já foi enviado pro email, então chegar até aqui já prova posse da caixa de entrada)
+  async createFromInvite(
+    name: string,
+    email: string,
+    password: string,
+    tenant: Tenants,
+    role: Role,
+  ): Promise<Users> {
+    const PEPPER = this.configService.get<string>('PASSWORD_PEPPER');
+
+    if (!PEPPER) {
+      throw new InternalServerErrorException(
+        'PASSWORD_PEPPER não foi definido no .env',
+      );
+    }
+
+    const checkUserExistence = await this.usersRepository.findOne({
+      where: { email },
+    });
+
+    if (checkUserExistence) {
+      throw new ConflictException('Email já cadastrado!');
+    }
+
+    const senhaHash = await argon2.hash(password, {
+      type: argon2.argon2id,
+      secret: Buffer.from(PEPPER, 'utf8'),
+    });
+
+    const newUser = this.usersRepository.create({
+      name,
+      email,
+      password_hash: senhaHash,
+      tenant,
+      role,
+      is_active: true,
+    });
 
     return this.usersRepository.save(newUser);
   }
@@ -133,5 +176,40 @@ export class UsersService {
     user.is_active = true;
 
     await this.usersRepository.save(user);
+  }
+
+  // usada na troca de senha logada, pra verificar a senha atual antes de trocar
+  async findHashPasswordById(id: number) {
+    const user = await this.usersRepository
+      .createQueryBuilder('user')
+      .addSelect('user.password_hash')
+      .where('user.user_id = :id', { id })
+      .getOne();
+
+    if (!user?.password_hash) {
+      throw new UnauthorizedException('Usuario nao encontrado!');
+    }
+
+    return user;
+  }
+
+  async updatePassword(userId: number, plainPassword: string) {
+    const PEPPER = this.configService.get<string>('PASSWORD_PEPPER');
+
+    if (!PEPPER) {
+      throw new InternalServerErrorException(
+        'PASSWORD_PEPPER não foi definido no .env',
+      );
+    }
+
+    const senhaHash = await argon2.hash(plainPassword, {
+      type: argon2.argon2id,
+      secret: Buffer.from(PEPPER, 'utf8'),
+    });
+
+    await this.usersRepository.update(
+      { user_id: userId },
+      { password_hash: senhaHash },
+    );
   }
 }

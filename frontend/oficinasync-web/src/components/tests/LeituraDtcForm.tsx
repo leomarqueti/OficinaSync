@@ -5,6 +5,7 @@ import type { DtcCode, DtcStatus, LeituraDtcData } from "./testTypes";
 import { emptyLeituraDtcData, testTypeLabels } from "./testTypes";
 
 type LeituraDtcFormProps = {
+  initial?: { title: string; data: LeituraDtcData; verdict: string; notes: string };
   onSave: (payload: {
     title: string;
     data: LeituraDtcData;
@@ -15,11 +16,11 @@ type LeituraDtcFormProps = {
   saving: boolean;
 };
 
-export function LeituraDtcForm({ onSave, onCancel, saving }: LeituraDtcFormProps) {
-  const [title, setTitle] = useState(testTypeLabels.leitura_dtc);
-  const [data, setData] = useState<LeituraDtcData>(emptyLeituraDtcData());
-  const [verdict, setVerdict] = useState("");
-  const [notes, setNotes] = useState("");
+export function LeituraDtcForm({ initial, onSave, onCancel, saving }: LeituraDtcFormProps) {
+  const [title, setTitle] = useState(initial?.title ?? testTypeLabels.leitura_dtc);
+  const [data, setData] = useState<LeituraDtcData>(initial?.data ?? emptyLeituraDtcData());
+  const [verdict, setVerdict] = useState(initial?.verdict ?? "");
+  const [notes, setNotes] = useState(initial?.notes ?? "");
 
   const updateDtc = (index: number, field: keyof DtcCode, value: string) => {
     setData((prev) => ({

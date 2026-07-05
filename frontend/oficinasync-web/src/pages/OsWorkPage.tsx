@@ -66,7 +66,10 @@ export function OsWorkPage() {
   const [addFindingSectionId, setAddFindingSectionId] = useState<number | null>(null);
   const [addMediaSectionId, setAddMediaSectionId] = useState<number | null>(null);
   const [editNotesSection, setEditNotesSection] = useState<SectionItem | null>(null);
-  const [editTest, setEditTest] = useState<TestItem | null>(null);
+  const [editTest, setEditTest] = useState<{ test: TestItem; sectionId: number } | null>(null);
+  const [editingFinding, setEditingFinding] = useState<{ test: TestItem; sectionId: number } | null>(
+    null,
+  );
   const [createSectionType, setCreateSectionType] = useState<string | null>(null);
 
   // confirmações e ações longas
@@ -383,7 +386,13 @@ export function OsWorkPage() {
                 onAddTest={() => setAddTestSectionId(section.section_id)}
                 onAddFinding={() => setAddFindingSectionId(section.section_id)}
                 onEditNotes={() => setEditNotesSection(section)}
-                onEditTest={setEditTest}
+                onEditTest={(test) => {
+                  if (test.test_type === "achado_adicional") {
+                    setEditingFinding({ test, sectionId: section.section_id });
+                  } else {
+                    setEditTest({ test, sectionId: section.section_id });
+                  }
+                }}
                 onDeleteTest={(test) => setConfirm({ kind: "delete-test", test })}
                 onPublish={() => setConfirm({ kind: "publish", section })}
                 onOpenMedia={setLightboxMedia}
@@ -400,8 +409,15 @@ export function OsWorkPage() {
         onSaved={fetchOrder}
       />
       <AddFindingSheet
-        sectionId={addFindingSectionId}
-        onClose={() => setAddFindingSectionId(null)}
+        sectionId={addFindingSectionId ?? editingFinding?.sectionId ?? null}
+        editingTest={editingFinding?.test ?? null}
+        sectionMedias={
+          orderedSections.find((s) => s.section_id === editingFinding?.sectionId)?.medias ?? []
+        }
+        onClose={() => {
+          setAddFindingSectionId(null);
+          setEditingFinding(null);
+        }}
         onSaved={fetchOrder}
       />
       <MediaUploadSheet
@@ -414,7 +430,15 @@ export function OsWorkPage() {
         onClose={() => setEditNotesSection(null)}
         onSaved={fetchOrder}
       />
-      <EditTestSheet test={editTest} onClose={() => setEditTest(null)} onSaved={fetchOrder} />
+      <EditTestSheet
+        test={editTest?.test ?? null}
+        sectionId={editTest?.sectionId ?? null}
+        sectionMedias={
+          orderedSections.find((s) => s.section_id === editTest?.sectionId)?.medias ?? []
+        }
+        onClose={() => setEditTest(null)}
+        onSaved={fetchOrder}
+      />
       <CreateSectionSheet
         serviceOrderId={data.service_order_id}
         sectionType={createSectionType}

@@ -6,6 +6,13 @@ import { LoginPage } from './pages/LoginPage'
 import { UserRegisterPage } from './pages/UserRegisterPage'
 import { TenantRegisterPage } from './pages/TenantRegisterPage'
 import { EmailSendPage } from './pages/EmailSendPage'
+import { ForgotPasswordPage } from './pages/ForgotPasswordPage'
+import { ResetPasswordPage } from './pages/ResetPasswordPage'
+import { SettingsPage } from './pages/SettingsPage'
+import { TeamPage } from './pages/TeamPage'
+import { AcceptInvitePage } from './pages/AcceptInvitePage'
+import { ClientsPage } from './pages/ClientsPage'
+import { CarsPage } from './pages/CarsPage'
 import { DashboardPage } from './pages/dashBoardPage'
 import { SidebarProvider } from '@/components/ui/sidebar'
 import { OsCreateWizardPage } from './pages/OsCreateWizardPage'
@@ -23,11 +30,46 @@ function App() {
         <Route path="/tenant-register" element={<TenantRegisterPage />} />
         <Route path="/email-send" element={<EmailSendPage />} />
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/esqueci-senha" element={<ForgotPasswordPage />} />
+        <Route path="/redefinir-senha" element={<ResetPasswordPage />} />
+        <Route path="/convite" element={<AcceptInvitePage />} />
         <Route
           path="/dashboard"
           element={
             <SidebarProvider>
               <DashboardPage />
+            </SidebarProvider>
+          }
+        />
+        <Route
+          path="/configuracoes"
+          element={
+            <SidebarProvider>
+              <SettingsPage />
+            </SidebarProvider>
+          }
+        />
+        <Route
+          path="/equipe"
+          element={
+            <SidebarProvider>
+              <TeamPage />
+            </SidebarProvider>
+          }
+        />
+        <Route
+          path="/clientes"
+          element={
+            <SidebarProvider>
+              <ClientsPage />
+            </SidebarProvider>
+          }
+        />
+        <Route
+          path="/veiculos"
+          element={
+            <SidebarProvider>
+              <CarsPage />
             </SidebarProvider>
           }
         />

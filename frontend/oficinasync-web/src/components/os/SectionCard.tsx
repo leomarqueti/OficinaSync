@@ -155,12 +155,10 @@ export function SectionCard({
                 onOpenMedia={onOpenMedia}
               />
               <div className="mt-1.5 flex justify-end gap-2">
-                {!test.test_type && (
-                  <Button variant="ghost" size="sm" onClick={() => onEditTest(test)}>
-                    <FilePenLine className="mr-1.5 h-3.5 w-3.5" />
-                    Editar
-                  </Button>
-                )}
+                <Button variant="ghost" size="sm" onClick={() => onEditTest(test)}>
+                  <FilePenLine className="mr-1.5 h-3.5 w-3.5" />
+                  Editar
+                </Button>
                 <Button
                   variant="ghost"
                   size="sm"

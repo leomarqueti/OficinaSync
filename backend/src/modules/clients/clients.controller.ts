@@ -8,6 +8,7 @@ import {
   HttpCode,
   HttpStatus,
   Post,
+  Query,
   Req,
   UseGuards,
 } from '@nestjs/common';
@@ -35,8 +36,15 @@ export class ClientsController {
   }
 
   @Get()
+  @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.OK)
-  async findAll() {
-    return this.clientsService.findAll();
+  async findAll(
+    @Req() req: any,
+    @Query('search') search?: string,
+  ): Promise<ResponseClientDto[]> {
+    const userId = req.user.sub;
+    const clients = await this.clientsService.findAll(userId, search);
+
+    return plainToInstance(ResponseClientDto, clients);
   }
 }

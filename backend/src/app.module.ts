@@ -1,6 +1,8 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { Module } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { TenantsModule } from './modules/tenants/tenants.module';
 import { UsersModule } from './modules/users/users.module';
@@ -19,6 +21,8 @@ import { MinioModule } from './modules/minio/minio.module';
 import { TestsModule } from './modules/tests/test.module';
 import { ReportModule } from './modules/report/report.module';
 import { VideoModule } from './modules/video/video.module';
+import { InvitesModule } from './modules/invites/invites.module';
+import { HealthModule } from './modules/health/health.module';
 
 export const PASSWORD_PEPPER = 'PASSWORD_PEPPER';
 
@@ -28,6 +32,13 @@ export const PASSWORD_PEPPER = 'PASSWORD_PEPPER';
     ConfigModule.forRoot({
       isGlobal: true,
     }),
+    // Limite global de requisições por IP — protege contra força bruta e abuso básico da API.
+    ThrottlerModule.forRoot([
+      {
+        ttl: 60000,
+        limit: 60,
+      },
+    ]),
     //Vamos configuar o typeOrm para conectar com o banco de dados, todos os paramentros que iremos passar como senha do banco e etc, vira das variaveis de ambiente, porque se deixamos aqui escrito senha: 123456, alguem com acesso ao codigo fonte do projeto, poderia ver a senha do banco de dados, e isso não é seguro, por isso usamos as variaveis de ambiente. 10/03/2026
     TypeOrmModule.forRootAsync({
       //Colocamos async no final de root, porque vamos esperar o config carregar o configService para pegar as variaveis de ambiente, e ai sim, passar para o typeOrm as configurações do banco de dados. 10/03/2026
@@ -62,9 +73,15 @@ export const PASSWORD_PEPPER = 'PASSWORD_PEPPER';
     TestsModule,
     ReportModule,
     VideoModule,
+    InvitesModule,
+    HealthModule,
   ],
   controllers: [],
   providers: [
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
     {
       provide: PASSWORD_PEPPER,
       inject: [ConfigService],

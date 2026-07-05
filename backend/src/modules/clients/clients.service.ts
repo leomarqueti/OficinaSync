@@ -6,7 +6,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Clients } from './clients.entity';
 import { CreateClientDto } from './dto/create-clients-dto';
-import { Repository } from 'typeorm';
+import { ILike, Repository } from 'typeorm';
 
 import { UsersService } from '../users/users.service';
 
@@ -53,8 +53,39 @@ export class ClientsService {
     return this.clientsRepository.save(newClient);
   }
 
-  async findAll(): Promise<Clients[]> {
-    return this.clientsRepository.find();
+  async findAll(userId: number, search?: string): Promise<Clients[]> {
+    const user = await this.usersService.findById(userId);
+
+    if (!user.tenant) {
+      throw new UnauthorizedException();
+    }
+
+    const tenantId = user.tenant.id;
+    const term = search?.trim();
+
+    if (!term) {
+      return this.clientsRepository.find({
+        where: { tenant: { id: tenantId } },
+        order: { name: 'ASC' },
+        take: 50,
+      });
+    }
+
+    const digitsOnly = term.replace(/\D/g, '');
+
+    return this.clientsRepository.find({
+      where: [
+        { tenant: { id: tenantId }, name: ILike(`%${term}%`) },
+        ...(digitsOnly
+          ? [
+              { tenant: { id: tenantId }, cpf: ILike(`%${digitsOnly}%`) },
+              { tenant: { id: tenantId }, phone: ILike(`%${digitsOnly}%`) },
+            ]
+          : []),
+      ],
+      order: { name: 'ASC' },
+      take: 20,
+    });
   }
 
   async findById(id: number) {

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import {
@@ -11,12 +11,16 @@ import {
 import { Button } from "@/components/ui/button";
 import { PhotoCaptureButton } from "@/components/tests/PhotoCaptureButton";
 import type { AchadoSeverity } from "@/components/tests/testTypes";
-import { achadoSeverityLabels } from "@/components/tests/testTypes";
+import { achadoSeverityLabels, hydrateSpecializedData } from "@/components/tests/testTypes";
 import { apiFetch } from "@/lib/api";
+import type { MediaItem, TestItem } from "./types";
 
 type AddFindingSheetProps = {
-  /** Section alvo; null = sheet fechado. */
+  /** Section alvo; null = sheet fechado. Ignorado quando editingTest é passado. */
   sectionId: number | null;
+  /** Achado já existente sendo editado — presente = modo edição (PATCH em vez de POST). */
+  editingTest?: TestItem | null;
+  sectionMedias?: MediaItem[];
   onClose: () => void;
   onSaved: () => Promise<void> | void;
 };
@@ -24,10 +28,17 @@ type AddFindingSheetProps = {
 const severities: AchadoSeverity[] = ["baixa", "media", "alta"];
 
 /**
- * Registrar algo que o mecânico encontrou mas o cliente não pediu (ex: lâmpada
- * queimada) — vira um alerta informativo na página do cliente e no laudo.
+ * Registrar (ou editar) algo que o mecânico encontrou mas o cliente não pediu
+ * (ex: lâmpada queimada) — vira um alerta informativo na página do cliente e
+ * no laudo.
  */
-export function AddFindingSheet({ sectionId, onClose, onSaved }: AddFindingSheetProps) {
+export function AddFindingSheet({
+  sectionId,
+  editingTest,
+  sectionMedias = [],
+  onClose,
+  onSaved,
+}: AddFindingSheetProps) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [severity, setSeverity] = useState<AchadoSeverity>("media");
@@ -35,7 +46,18 @@ export function AddFindingSheet({ sectionId, onClose, onSaved }: AddFindingSheet
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const open = sectionId !== null;
+  const open = sectionId !== null || editingTest != null;
+
+  useEffect(() => {
+    if (!editingTest || !editingTest.data) return;
+
+    const hydrated = hydrateSpecializedData("achado_adicional", editingTest.data, sectionMedias);
+    setTitle(editingTest.title);
+    setDescription(String(hydrated.description ?? ""));
+    setSeverity((hydrated.severity as AchadoSeverity) ?? "media");
+    setMediaId((hydrated.media_id as number | null) ?? null);
+    setPreviewUrl((hydrated.previewUrl as string | null) ?? null);
+  }, [editingTest, sectionMedias]);
 
   const close = () => {
     setTitle("");
@@ -54,20 +76,37 @@ export function AddFindingSheet({ sectionId, onClose, onSaved }: AddFindingSheet
 
     try {
       setSaving(true);
-      await apiFetch("/tests", {
-        method: "POST",
-        json: {
-          section_id: sectionId,
-          title: title.trim(),
-          test_type: "achado_adicional",
-          data: {
-            severity,
-            description: description.trim(),
-            media_id: mediaId,
+
+      if (editingTest) {
+        await apiFetch(`/tests/${editingTest.test_id}`, {
+          method: "PATCH",
+          json: {
+            title: title.trim(),
+            data: {
+              severity,
+              description: description.trim(),
+              media_id: mediaId,
+            },
           },
-        },
-      });
-      toast.success("Achado registrado!");
+        });
+        toast.success("Achado atualizado!");
+      } else {
+        await apiFetch("/tests", {
+          method: "POST",
+          json: {
+            section_id: sectionId,
+            title: title.trim(),
+            test_type: "achado_adicional",
+            data: {
+              severity,
+              description: description.trim(),
+              media_id: mediaId,
+            },
+          },
+        });
+        toast.success("Achado registrado!");
+      }
+
       close();
       await onSaved();
     } catch {
@@ -81,7 +120,7 @@ export function AddFindingSheet({ sectionId, onClose, onSaved }: AddFindingSheet
     <Sheet open={open} onOpenChange={(o) => !o && close()}>
       <SheetContent side="bottom" className="max-h-[90vh] overflow-y-auto rounded-t-3xl">
         <SheetHeader>
-          <SheetTitle>Achado adicional</SheetTitle>
+          <SheetTitle>{editingTest ? "Editar achado" : "Achado adicional"}</SheetTitle>
           <SheetDescription>
             Algo que você notou mas o cliente não pediu — vira um alerta informativo pra ele, sem
             compromisso de aceite.
@@ -153,7 +192,7 @@ export function AddFindingSheet({ sectionId, onClose, onSaved }: AddFindingSheet
               disabled={saving}
             >
               {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {saving ? "Salvando..." : "Registrar achado"}
+              {saving ? "Salvando..." : editingTest ? "Salvar alterações" : "Registrar achado"}
             </Button>
             <Button className="h-11" variant="outline" onClick={close}>
               Cancelar

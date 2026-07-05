@@ -196,6 +196,46 @@ export function resolveMediaUrl(
   return sectionMedias.find((m) => m.media_id === mediaId)?.url ?? null;
 }
 
+/**
+ * Ao editar um teste especializado já salvo, os `previewUrl` guardados no
+ * `data` persistido são blob: URLs mortas (só válidas na sessão do navegador
+ * em que a foto foi tirada) — precisam ser re-resolvidos a partir das
+ * mídias reais da section antes de preencher o formulário de edição.
+ */
+export function hydrateSpecializedData(
+  testType: TestTypeCategory,
+  data: Record<string, any>,
+  sectionMedias: { media_id: number; url?: string }[],
+): Record<string, any> {
+  switch (testType) {
+    case "compressao_mecanica": {
+      const d = data as CompressaoMecanicaData;
+      return {
+        ...d,
+        cylinders: (d.cylinders ?? []).map((cyl) => ({
+          ...cyl,
+          previewUrl: resolveMediaUrl(cyl.media_id, sectionMedias),
+        })),
+      };
+    }
+    case "injetores_banco":
+    case "antes_depois": {
+      const d = data as InjetoresBancoData & AntesDepoisData;
+      return {
+        ...d,
+        fotoAntesPreviewUrl: resolveMediaUrl(d.fotoAntesMediaId, sectionMedias),
+        fotoDepoisPreviewUrl: resolveMediaUrl(d.fotoDepoisMediaId, sectionMedias),
+      };
+    }
+    case "achado_adicional": {
+      const d = data as AchadoAdicionalData;
+      return { ...d, previewUrl: resolveMediaUrl(d.media_id, sectionMedias) };
+    }
+    default:
+      return data;
+  }
+}
+
 // --- Antes e Depois (genérico) ---
 
 export interface AntesDepoisData {

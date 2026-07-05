@@ -15,6 +15,9 @@ export class ResponseClientDto {
   cpf: string;
 
   @Expose()
+  email: string;
+
+  @Expose()
   address: string;
 
   @Expose()

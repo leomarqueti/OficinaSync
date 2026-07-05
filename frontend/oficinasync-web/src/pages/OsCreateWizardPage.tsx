@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { ChevronDown, ChevronUp, Mic, Plus, Trash2, Video } from "lucide-react";
+import { Car, Check, ChevronDown, ChevronUp, Loader2, Mic, Plus, Search, Trash2, Video, X } from "lucide-react";
 import { WizardShell } from "@/components/wizard/WizardShell";
 import { EntryPhotoSlot } from "@/components/wizard/EntryPhotoSlot";
 import { PhoneField } from "@/components/fields/PhoneField";
@@ -62,6 +62,27 @@ type ExtraPhotoItem = {
   file: File | null;
 };
 
+type ExistingClient = {
+  client_id: number;
+  name: string;
+  phone: string;
+  cpf: string;
+  email: string;
+  address: string;
+};
+
+type ExistingCar = {
+  car_id: number;
+  plate: string;
+  brand: string;
+  model: string;
+  year: number;
+  fuel_type: string;
+  color: string;
+  chassis: string;
+  mileage_in: number;
+};
+
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function newId() {
@@ -89,7 +110,16 @@ export function OsCreateWizardPage() {
   const [email, setEmail] = useState("");
   const [address, setAddress] = useState("");
 
+  const [selectedClientId, setSelectedClientId] = useState<number | null>(null);
+  const [clientSearch, setClientSearch] = useState("");
+  const [clientResults, setClientResults] = useState<ExistingClient[]>([]);
+  const [searchingClients, setSearchingClients] = useState(false);
+
   // passo 2 — veículo
+  const [existingCars, setExistingCars] = useState<ExistingCar[]>([]);
+  const [loadingCars, setLoadingCars] = useState(false);
+  const [selectedCarId, setSelectedCarId] = useState<number | null>(null);
+  const [carMode, setCarMode] = useState<"existing" | "new">("new");
   const [plate, setPlate] = useState("");
   const [brand, setBrand] = useState("");
   const [brandMode, setBrandMode] = useState<"list" | "custom">("list");
@@ -118,20 +148,111 @@ export function OsCreateWizardPage() {
   const stepCount = 5;
 
   const clientValid =
-    name.trim().length >= 2 &&
-    isValidPhone(e164ToDigits(phone)) &&
-    isValidCpf(cpf) &&
-    emailRegex.test(email) &&
-    address.trim().length >= 3;
+    selectedClientId !== null ||
+    (name.trim().length >= 2 &&
+      isValidPhone(e164ToDigits(phone)) &&
+      isValidCpf(cpf) &&
+      emailRegex.test(email) &&
+      address.trim().length >= 3);
 
   const carValid =
-    isValidPlate(plate) &&
-    brand.trim().length >= 2 &&
-    model.trim().length >= 1 &&
-    isValidYear(year) &&
-    color.trim().length >= 2 &&
-    chassis.trim().length >= 5 &&
-    mileageIn.length > 0;
+    (carMode === "existing" && selectedCarId !== null) ||
+    (carMode === "new" &&
+      isValidPlate(plate) &&
+      brand.trim().length >= 2 &&
+      model.trim().length >= 1 &&
+      isValidYear(year) &&
+      color.trim().length >= 2 &&
+      chassis.trim().length >= 5 &&
+      mileageIn.length > 0);
+
+  // busca de cliente existente (tenant-scoped no backend), debounced
+  useEffect(() => {
+    if (selectedClientId !== null) return;
+    const term = clientSearch.trim();
+
+    if (term.length < 2) {
+      setClientResults([]);
+      return;
+    }
+
+    const handle = setTimeout(async () => {
+      try {
+        setSearchingClients(true);
+        const results = await apiFetch<ExistingClient[]>(
+          `/clients?search=${encodeURIComponent(term)}`,
+          { silent: true },
+        );
+        setClientResults(results);
+      } catch {
+        setClientResults([]);
+      } finally {
+        setSearchingClients(false);
+      }
+    }, 350);
+
+    return () => clearTimeout(handle);
+  }, [clientSearch, selectedClientId]);
+
+  // veículos já cadastrados pro cliente selecionado
+  useEffect(() => {
+    if (selectedClientId === null) {
+      setExistingCars([]);
+      setCarMode("new");
+      setSelectedCarId(null);
+      return;
+    }
+
+    (async () => {
+      try {
+        setLoadingCars(true);
+        const cars = await apiFetch<ExistingCar[]>(
+          `/cars?client_id=${selectedClientId}`,
+          { silent: true },
+        );
+        setExistingCars(cars);
+        setCarMode(cars.length > 0 ? "existing" : "new");
+      } catch {
+        setExistingCars([]);
+        setCarMode("new");
+      } finally {
+        setLoadingCars(false);
+      }
+    })();
+  }, [selectedClientId]);
+
+  const selectClient = (client: ExistingClient) => {
+    setSelectedClientId(client.client_id);
+    setName(client.name);
+    setPhone(client.phone);
+    setCpf(client.cpf);
+    setEmail(client.email ?? "");
+    setAddress(client.address);
+    setClientResults([]);
+    setClientSearch("");
+  };
+
+  const clearClientSelection = () => {
+    setSelectedClientId(null);
+    setName("");
+    setPhone("");
+    setCpf("");
+    setEmail("");
+    setAddress("");
+    setSelectedCarId(null);
+  };
+
+  const selectCar = (car: ExistingCar) => {
+    setSelectedCarId(car.car_id);
+    setPlate(car.plate);
+    setBrand(car.brand);
+    setModel(car.model);
+    setYear(String(car.year));
+    setFuelType(car.fuel_type);
+    setColor(car.color);
+    setChassis(car.chassis);
+    setMileageIn(String(car.mileage_in));
+  };
 
   const complaintValid = complaint.trim().length >= 5;
 
@@ -197,36 +318,45 @@ export function OsCreateWizardPage() {
     try {
       setSubmitting(true);
 
-      const client = await apiFetch<{ client_id: number }>("/clients", {
-        method: "POST",
-        json: {
-          name: name.trim(),
-          phone,
-          email: email.trim(),
-          cpf: onlyDigits(cpf),
-          address: address.trim(),
-        },
-      });
+      const clientId =
+        selectedClientId ??
+        (
+          await apiFetch<{ client_id: number }>("/clients", {
+            method: "POST",
+            json: {
+              name: name.trim(),
+              phone,
+              email: email.trim(),
+              cpf: onlyDigits(cpf),
+              address: address.trim(),
+            },
+          })
+        ).client_id;
 
-      const car = await apiFetch<{ car_id: number }>("/cars", {
-        method: "POST",
-        json: {
-          plate: plate.toUpperCase().replace(/[^A-Z0-9]/g, ""),
-          brand: brand.trim(),
-          model: model.trim(),
-          year: Number(year),
-          fuel_type: fuelType,
-          chassis: chassis.trim().toUpperCase(),
-          color: color.trim(),
-          mileage_in: Number(mileageIn),
-          client_id: client.client_id,
-        },
-      });
+      const carId =
+        carMode === "existing" && selectedCarId !== null
+          ? selectedCarId
+          : (
+              await apiFetch<{ car_id: number }>("/cars", {
+                method: "POST",
+                json: {
+                  plate: plate.toUpperCase().replace(/[^A-Z0-9]/g, ""),
+                  brand: brand.trim(),
+                  model: model.trim(),
+                  year: Number(year),
+                  fuel_type: fuelType,
+                  chassis: chassis.trim().toUpperCase(),
+                  color: color.trim(),
+                  mileage_in: Number(mileageIn),
+                  client_id: clientId,
+                },
+              })
+            ).car_id;
 
       const serviceOrder = await apiFetch<{ service_order_id: number }>("/service_orders", {
         method: "POST",
         json: {
-          car_id: car.car_id,
+          car_id: carId,
           client_complaint: complaint.trim(),
         },
       });
@@ -302,41 +432,111 @@ export function OsCreateWizardPage() {
         nextDisabled={!canAdvance}
       >
         <div className="space-y-4">
-          <FieldShell label="Nome completo" htmlFor="name">
-            <input
-              id="name"
-              type="text"
-              placeholder="Ex: Diogo Deleon"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className={inputClass}
-            />
-          </FieldShell>
+          {selectedClientId !== null ? (
+            <div className="flex items-start justify-between gap-3 rounded-2xl border border-brand/30 bg-brand/[0.06] p-4">
+              <div>
+                <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-brand">
+                  <Check className="h-3.5 w-3.5" />
+                  Cliente já cadastrado
+                </p>
+                <p className="mt-1.5 font-medium text-foreground">{name}</p>
+                <p className="text-sm text-muted-foreground">
+                  {formatPhone(e164ToDigits(phone))}
+                  {cpf && ` · CPF ${cpf}`}
+                </p>
+                {address && <p className="text-sm text-muted-foreground">{address}</p>}
+              </div>
+              <Button type="button" variant="outline" className="h-9 shrink-0" onClick={clearClientSelection}>
+                Trocar
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <FieldShell label="Buscar cliente existente" htmlFor="client-search">
+                <div className="relative">
+                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <input
+                    id="client-search"
+                    type="text"
+                    placeholder="Nome, CPF ou telefone..."
+                    value={clientSearch}
+                    onChange={(e) => setClientSearch(e.target.value)}
+                    className={`${inputClass} pl-9`}
+                  />
+                  {searchingClients && (
+                    <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-muted-foreground" />
+                  )}
+                </div>
+              </FieldShell>
 
-          <PhoneField value={phone} onChange={setPhone} />
-          <CpfField value={cpf} onChange={setCpf} />
+              {clientResults.length > 0 && (
+                <div className="space-y-1.5 rounded-2xl border border-border bg-card p-2">
+                  {clientResults.map((client) => (
+                    <button
+                      key={client.client_id}
+                      type="button"
+                      onClick={() => selectClient(client)}
+                      className="flex w-full items-center justify-between rounded-xl px-3 py-2 text-left transition-colors hover:bg-muted/40"
+                    >
+                      <span>
+                        <span className="block text-sm font-medium">{client.name}</span>
+                        <span className="block text-xs text-muted-foreground">
+                          {formatPhone(e164ToDigits(client.phone))} · CPF {client.cpf}
+                        </span>
+                      </span>
+                      <Plus className="h-4 w-4 text-brand" />
+                    </button>
+                  ))}
+                </div>
+              )}
 
-          <FieldShell label="Email" htmlFor="email">
-            <input
-              id="email"
-              type="email"
-              placeholder="ex: cliente@email.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className={inputClass}
-            />
-          </FieldShell>
+              {clientSearch.trim().length >= 2 &&
+                !searchingClients &&
+                clientResults.length === 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    Nenhum cliente encontrado — preencha os dados abaixo pra cadastrar um novo.
+                  </p>
+                )}
+            </div>
+          )}
 
-          <FieldShell label="Endereço" htmlFor="address">
-            <input
-              id="address"
-              type="text"
-              placeholder="Rua, número, bairro"
-              value={address}
-              onChange={(e) => setAddress(e.target.value)}
-              className={inputClass}
-            />
-          </FieldShell>
+          <div className={selectedClientId !== null ? "hidden" : "space-y-4"}>
+            <FieldShell label="Nome completo" htmlFor="name">
+              <input
+                id="name"
+                type="text"
+                placeholder="Ex: Diogo Deleon"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className={inputClass}
+              />
+            </FieldShell>
+
+            <PhoneField value={phone} onChange={setPhone} />
+            <CpfField value={cpf} onChange={setCpf} />
+
+            <FieldShell label="Email" htmlFor="email">
+              <input
+                id="email"
+                type="email"
+                placeholder="ex: cliente@email.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className={inputClass}
+              />
+            </FieldShell>
+
+            <FieldShell label="Endereço" htmlFor="address">
+              <input
+                id="address"
+                type="text"
+                placeholder="Rua, número, bairro"
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
+                className={inputClass}
+              />
+            </FieldShell>
+          </div>
         </div>
       </WizardShell>
     );
@@ -352,7 +552,78 @@ export function OsCreateWizardPage() {
         onNext={goNext}
         nextDisabled={!canAdvance}
       >
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className="space-y-4">
+          {loadingCars && (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Buscando veículos do cliente...
+            </div>
+          )}
+
+          {!loadingCars && existingCars.length > 0 && carMode === "existing" && (
+            <div className="space-y-2">
+              <p className="text-sm font-medium">Veículos já cadastrados desse cliente</p>
+              <div className="space-y-1.5">
+                {existingCars.map((car) => (
+                  <button
+                    key={car.car_id}
+                    type="button"
+                    onClick={() => selectCar(car)}
+                    className={`flex w-full items-center justify-between rounded-2xl border p-3 text-left transition-colors ${
+                      selectedCarId === car.car_id
+                        ? "border-brand/40 bg-brand/[0.06]"
+                        : "border-border bg-card hover:bg-muted/30"
+                    }`}
+                  >
+                    <span className="flex items-center gap-2.5">
+                      <Car className="h-4 w-4 text-muted-foreground" />
+                      <span>
+                        <span className="block text-sm font-medium">
+                          {car.brand} {car.model} · {car.year}
+                        </span>
+                        <span className="block text-xs text-muted-foreground">
+                          {car.plate} · {car.color}
+                        </span>
+                      </span>
+                    </span>
+                    {selectedCarId === car.car_id && <Check className="h-4 w-4 text-brand" />}
+                  </button>
+                ))}
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                className="h-9"
+                onClick={() => {
+                  setCarMode("new");
+                  setSelectedCarId(null);
+                }}
+              >
+                <Plus className="mr-1.5 h-4 w-4" />
+                Cadastrar veículo novo
+              </Button>
+            </div>
+          )}
+
+          {carMode === "new" && existingCars.length > 0 && (
+            <Button
+              type="button"
+              variant="outline"
+              className="h-9"
+              onClick={() => setCarMode("existing")}
+            >
+              <X className="mr-1.5 h-4 w-4" />
+              Usar veículo já cadastrado
+            </Button>
+          )}
+
+          <div
+            className={
+              carMode === "existing"
+                ? "hidden"
+                : "grid grid-cols-1 gap-4 sm:grid-cols-2"
+            }
+          >
           <PlateField value={plate} onChange={setPlate} />
           <YearField value={year} onChange={setYear} />
 
@@ -456,6 +727,7 @@ export function OsCreateWizardPage() {
           </FieldShell>
 
           <KmField value={mileageIn} onChange={setMileageIn} />
+          </div>
         </div>
       </WizardShell>
     );
@@ -675,8 +947,11 @@ export function OsCreateWizardPage() {
     >
       <div className="space-y-4">
         <div className="rounded-2xl border border-border bg-card p-4">
-          <p className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
+          <p className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
             Cliente
+            {selectedClientId !== null && (
+              <span className="rounded-full bg-brand/10 px-2 py-0.5 text-brand">já cadastrado</span>
+            )}
           </p>
           <p className="mt-1 text-sm text-foreground">{name}</p>
           <p className="text-sm text-muted-foreground">
@@ -685,8 +960,11 @@ export function OsCreateWizardPage() {
         </div>
 
         <div className="rounded-2xl border border-border bg-card p-4">
-          <p className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
+          <p className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
             Veículo
+            {carMode === "existing" && selectedCarId !== null && (
+              <span className="rounded-full bg-brand/10 px-2 py-0.5 text-brand">já cadastrado</span>
+            )}
           </p>
           <p className="mt-1 text-sm text-foreground">
             {brand} {model} · {year} · {color}

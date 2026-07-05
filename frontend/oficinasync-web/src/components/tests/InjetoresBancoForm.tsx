@@ -7,6 +7,7 @@ import { emptyInjetoresBancoData, testTypeLabels } from "./testTypes";
 
 type InjetoresBancoFormProps = {
   sectionId: number;
+  initial?: { title: string; data: InjetoresBancoData; verdict: string; notes: string };
   onSave: (payload: {
     title: string;
     data: InjetoresBancoData;
@@ -19,14 +20,15 @@ type InjetoresBancoFormProps = {
 
 export function InjetoresBancoForm({
   sectionId,
+  initial,
   onSave,
   onCancel,
   saving,
 }: InjetoresBancoFormProps) {
-  const [title, setTitle] = useState(testTypeLabels.injetores_banco);
-  const [data, setData] = useState<InjetoresBancoData>(emptyInjetoresBancoData());
-  const [verdict, setVerdict] = useState("");
-  const [notes, setNotes] = useState("");
+  const [title, setTitle] = useState(initial?.title ?? testTypeLabels.injetores_banco);
+  const [data, setData] = useState<InjetoresBancoData>(initial?.data ?? emptyInjetoresBancoData());
+  const [verdict, setVerdict] = useState(initial?.verdict ?? "");
+  const [notes, setNotes] = useState(initial?.notes ?? "");
 
   const updateInjector = (
     index: number,

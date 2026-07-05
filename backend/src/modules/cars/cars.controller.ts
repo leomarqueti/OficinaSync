@@ -5,9 +5,11 @@
 import {
   Body,
   Controller,
+  Get,
   HttpCode,
   HttpStatus,
   Post,
+  Query,
   UseGuards,
   Req,
 } from '@nestjs/common';
@@ -35,5 +37,22 @@ export class CarsController {
     const car = await this.carsService.create(createCarDto, userId, clientId);
 
     return plainToInstance(ResponseCarDto, car);
+  }
+
+  @Get()
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.OK)
+  async findAll(
+    @Query('client_id') clientId: string | undefined,
+    @Query('search') search: string | undefined,
+    @Req() req: any,
+  ): Promise<ResponseCarDto[]> {
+    const userId = req.user.sub;
+
+    const cars = clientId
+      ? await this.carsService.findByClient(Number(clientId), userId)
+      : await this.carsService.findAll(userId, search);
+
+    return plainToInstance(ResponseCarDto, cars);
   }
 }

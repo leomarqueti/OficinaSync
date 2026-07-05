@@ -2,6 +2,7 @@ import { useEffect, useMemo } from "react";
 import { Camera, FolderOpen, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AudioRecorder } from "./AudioRecorder";
+import { compressImage } from "@/lib/imageCompression";
 
 export type MediaCaptureType = "photo" | "video" | "audio";
 
@@ -47,6 +48,14 @@ export function MediaCaptureField({ type, value, onChange }: MediaCaptureFieldPr
 
   const accept = type === "photo" ? "image/*" : "video/*";
 
+  const handleFile = async (file: File | null) => {
+    if (!file) {
+      onChange(null);
+      return;
+    }
+    onChange(type === "photo" ? await compressImage(file) : file);
+  };
+
   return (
     <div className="flex flex-wrap gap-2">
       <label className="flex h-11 cursor-pointer items-center rounded-md border border-input px-4 text-sm font-medium hover:bg-muted">
@@ -57,7 +66,7 @@ export function MediaCaptureField({ type, value, onChange }: MediaCaptureFieldPr
           accept={accept}
           capture="environment"
           className="hidden"
-          onChange={(e) => onChange(e.target.files?.[0] ?? null)}
+          onChange={(e) => handleFile(e.target.files?.[0] ?? null)}
         />
       </label>
       <label className="flex h-11 cursor-pointer items-center rounded-md border border-input px-4 text-sm font-medium hover:bg-muted">
@@ -67,7 +76,7 @@ export function MediaCaptureField({ type, value, onChange }: MediaCaptureFieldPr
           type="file"
           accept={accept}
           className="hidden"
-          onChange={(e) => onChange(e.target.files?.[0] ?? null)}
+          onChange={(e) => handleFile(e.target.files?.[0] ?? null)}
         />
       </label>
     </div>

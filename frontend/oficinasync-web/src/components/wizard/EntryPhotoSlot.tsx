@@ -1,5 +1,6 @@
 import { useEffect, useMemo } from "react";
 import { Camera, Check } from "lucide-react";
+import { compressImage } from "@/lib/imageCompression";
 
 type EntryPhotoSlotProps = {
   label: string;
@@ -42,7 +43,10 @@ export function EntryPhotoSlot({ label, file, onCapture }: EntryPhotoSlotProps) 
         accept="image/*"
         capture="environment"
         className="hidden"
-        onChange={(e) => onCapture(e.target.files?.[0] ?? null)}
+        onChange={async (e) => {
+          const file = e.target.files?.[0] ?? null;
+          onCapture(file ? await compressImage(file) : null);
+        }}
       />
     </label>
   );

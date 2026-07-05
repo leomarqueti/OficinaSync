@@ -4,6 +4,7 @@ import type { BateriaData } from "./testTypes";
 import { emptyBateriaData, testTypeLabels } from "./testTypes";
 
 type BateriaFormProps = {
+  initial?: { title: string; data: BateriaData; verdict: string; notes: string };
   onSave: (payload: {
     title: string;
     data: BateriaData;
@@ -37,11 +38,11 @@ function NumberField({
   );
 }
 
-export function BateriaForm({ onSave, onCancel, saving }: BateriaFormProps) {
-  const [title, setTitle] = useState(testTypeLabels.bateria);
-  const [data, setData] = useState<BateriaData>(emptyBateriaData());
-  const [verdict, setVerdict] = useState("");
-  const [notes, setNotes] = useState("");
+export function BateriaForm({ initial, onSave, onCancel, saving }: BateriaFormProps) {
+  const [title, setTitle] = useState(initial?.title ?? testTypeLabels.bateria);
+  const [data, setData] = useState<BateriaData>(initial?.data ?? emptyBateriaData());
+  const [verdict, setVerdict] = useState(initial?.verdict ?? "");
+  const [notes, setNotes] = useState(initial?.notes ?? "");
 
   const updateField = (field: keyof BateriaData, value: string) => {
     setData((prev) => ({ ...prev, [field]: value }));

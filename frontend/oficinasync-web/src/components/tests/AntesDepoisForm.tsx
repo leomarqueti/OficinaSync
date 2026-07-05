@@ -6,6 +6,7 @@ import { emptyAntesDepoisData, testTypeLabels } from "./testTypes";
 
 type AntesDepoisFormProps = {
   sectionId: number;
+  initial?: { title: string; data: AntesDepoisData; verdict: string; notes: string };
   onSave: (payload: {
     title: string;
     data: AntesDepoisData;
@@ -17,11 +18,17 @@ type AntesDepoisFormProps = {
 };
 
 /** Compara duas fotos lado a lado — usável em qualquer etapa (limpeza, reparo, pintura, etc). */
-export function AntesDepoisForm({ sectionId, onSave, onCancel, saving }: AntesDepoisFormProps) {
-  const [title, setTitle] = useState(testTypeLabels.antes_depois);
-  const [data, setData] = useState<AntesDepoisData>(emptyAntesDepoisData());
-  const [verdict, setVerdict] = useState("");
-  const [notes, setNotes] = useState("");
+export function AntesDepoisForm({
+  sectionId,
+  initial,
+  onSave,
+  onCancel,
+  saving,
+}: AntesDepoisFormProps) {
+  const [title, setTitle] = useState(initial?.title ?? testTypeLabels.antes_depois);
+  const [data, setData] = useState<AntesDepoisData>(initial?.data ?? emptyAntesDepoisData());
+  const [verdict, setVerdict] = useState(initial?.verdict ?? "");
+  const [notes, setNotes] = useState(initial?.notes ?? "");
 
   return (
     <TestFormShell

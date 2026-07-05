@@ -1,4 +1,3 @@
-import { toast } from "sonner";
 import {
   Sidebar,
   SidebarContent,
@@ -21,8 +20,6 @@ import {
   Wrench,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-
-const comingSoon = () => toast.info("Essa área ainda está em construção.");
 
 export function DashboardSidebar() {
   const navigate = useNavigate();
@@ -66,28 +63,28 @@ export function DashboardSidebar() {
               </SidebarMenuItem>
 
               <SidebarMenuItem>
-                <SidebarMenuButton onClick={comingSoon} className="opacity-60">
+                <SidebarMenuButton onClick={() => navigate("/clientes")}>
                   <Users />
                   <span>Clientes</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
 
               <SidebarMenuItem>
-                <SidebarMenuButton onClick={comingSoon} className="opacity-60">
+                <SidebarMenuButton onClick={() => navigate("/veiculos")}>
                   <Car />
                   <span>Veículos</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
 
               <SidebarMenuItem>
-                <SidebarMenuButton onClick={comingSoon} className="opacity-60">
+                <SidebarMenuButton onClick={() => navigate("/equipe")}>
                   <Wrench />
                   <span>Equipe</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
 
               <SidebarMenuItem>
-                <SidebarMenuButton onClick={comingSoon} className="opacity-60">
+                <SidebarMenuButton onClick={() => navigate("/configuracoes")}>
                   <Settings />
                   <span>Config.</span>
                 </SidebarMenuButton>

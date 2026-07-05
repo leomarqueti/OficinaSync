@@ -5,6 +5,10 @@ import { Email_verificationsModule } from '../email_verifications/email_verifica
 import { UsersModule } from '../users/users.module';
 import { UsersService } from '../users/users.service';
 import { Email_verificationsService } from '../email_verifications/email_verifications.service';
+import { PasswordResetsModule } from '../password_resets/password_resets.module';
+import { PasswordResetsService } from '../password_resets/password_resets.service';
+import { EmailModule } from '../emailResend/emailResend.module';
+import { EmailService } from '../emailResend/emailResend.service';
 import { AuthController } from './authModule.controller';
 import { AuthService } from './authService.service';
 import { ConfigModule, ConfigService } from '@nestjs/config';
@@ -22,12 +26,16 @@ import { JwtAuthGuard } from './jwt-auth.guard';
       }),
     }),
     Email_verificationsModule,
+    PasswordResetsModule,
+    EmailModule,
     UsersModule,
   ],
   controllers: [AuthController],
   providers: [
     UsersService,
     Email_verificationsService,
+    PasswordResetsService,
+    EmailService,
     AuthService,
     JwtAuthGuard,
   ],
