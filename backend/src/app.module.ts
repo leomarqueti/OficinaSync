@@ -52,7 +52,15 @@ export const PASSWORD_PEPPER = 'PASSWORD_PEPPER';
         password: config.get('DB_PASSWORD'), //Pega a senha do bando dentro da .env
         database: config.get('DB_NAME'), //Pega o nome do bando dentro da .env
         entities: [__dirname + '/**/*.entity{.ts,.js}'], //Aqui diz para o typeOrm onde estão as entidades do projeto, para ele poder criar as tabelas no banco de dados, e fazer o mapeamento objeto relacional. 10/03/2026
-        synchronize: true, //Aqui diz para o typeOrm sincronizar as entidades com o banco de dados, ou seja, criar as tabelas no banco de dados, caso elas não existam, ou atualizar as tabelas caso elas já existam, mas tenham sido alteradas. 10/03/2026
+        // O schema agora é versionado por MIGRATIONS (src/migrations), não mais
+        // sincronizado automaticamente. synchronize: true era arriscado em
+        // produção (podia dropar/recriar coluna e perder dado). migrationsRun
+        // roda as migrations pendentes na subida — em banco já existente é
+        // preciso rodar o baseline uma vez (scripts/baseline-migration.ts) pra
+        // marcar a InitialSchema como aplicada sem recriar as tabelas. 05/07/2026
+        synchronize: false,
+        migrations: [__dirname + '/migrations/*{.ts,.js}'],
+        migrationsRun: true,
         options: {
           encrypt: false, //Aqui diz para o typeOrm não criptografar a conexão com o banco de dados, isso é necessário para o SQL Server, caso contrário, ele não vai conseguir se conectar. 10/03/2026
           trustServerCertificate: true, //Aqui diz para o typeOrm confiar no certificado do servidor, isso é necessário para o SQL Server, caso contrário, ele não vai conseguir se conectar. 10/03/2026.

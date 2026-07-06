@@ -335,7 +335,15 @@ DB_NAME=...
 FRONTEND_URL=http://localhost:5173
 ```
 
-**ATENÇÃO:** hoje está com `synchronize: true` no TypeORM. Em produção precisa trocar por migrations antes de ir pro ar (risco aceito conscientemente no primeiro deploy, ver `DEPLOY.md`).
+### Migrations do TypeORM (feito — `synchronize: false`)
+
+O schema agora é versionado por **migrations**, não mais sincronizado automaticamente. `synchronize: true` era arriscado em produção (podia dropar/recriar coluna e perder dado — ex: renomear uma coluna vira DROP + ADD).
+
+- `app.module.ts`: `synchronize: false`, `migrations: [__dirname + '/migrations/*{.ts,.js}']`, `migrationsRun: true` (roda as pendentes na subida — o deploy continua sendo só `git pull` + rebuild, as migrations rodam sozinhas).
+- `src/data-source.ts` (novo): DataSource usado **só pelo CLI** do TypeORM (`migration:generate`/`run`/`revert`/`show`), lê as mesmas env vars via `dotenv`. Scripts no `package.json`: `npm run migration:generate -- src/migrations/Nome`, `migration:run`, `migration:revert`, `migration:show`.
+- **Baseline de banco existente**: a `InitialSchema` (retrato fiel do schema atual, gerado com zero drift contra o dev real) tem uma guarda no topo do `up()` — `if (await queryRunner.hasTable('users')) return;`. Em banco já provisionado (dev e produção, criados pelo synchronize antigo) ela **não recria nada**, só é registrada como aplicada; em banco vazio (novo), cria tudo. Assim `migrationsRun: true` funciona em qualquer ambiente sem passo manual de baseline. Testado: dev real (11 users / 21 cars) intacto após rodar; banco vazio recria as 11 tabelas + FKs + checks + índices.
+- **Gotcha de build resolvido de passagem**: o `nest build` local aninhava o output em `dist/src/` quando `scripts/` era compilado junto (rootDir subia pra raiz) — no Docker isso não acontecia porque o `.dockerignore` exclui `scripts`, mas o `dist/migrations/*.js` precisava ficar em `dist/migrations` (não `dist/src/migrations`) pro `migrationsRun` achar. Adicionado `scripts` ao `exclude` do `tsconfig.build.json` pra o build local ficar plano e determinístico, igual ao Docker (`dist/main.js` + `dist/migrations/*.js`).
+- **Como criar uma migration nova daqui pra frente**: mudar a entidade → `npm run migration:generate -- src/migrations/DescricaoDaMudanca` (gera o diff automático contra o banco dev) → conferir o `up()`/`down()` gerado → commitar. No deploy o `migrationsRun` aplica sozinho. **Não usar mais `@Check`/`ALTER TABLE` manual** pra enums — a migration cuida disso agora (resolve o gotcha histórico de `@Check` que o synchronize não atualizava).
 
 ## Deploy em produção
 
@@ -353,8 +361,8 @@ FRONTEND_URL=http://localhost:5173
 
 1. ~~`PATCH /sections/:id` para editar `notes`~~ — feito, junto com a `TestsModule` (testes estruturados: bateria, compressão, vazão de bicos etc., com dado esperado/obtido e veredito aprovado/reprovado/inconclusivo)
 2. ~~**Cadastro de funcionários**~~ — feito. Tabela `invites`, `POST /invites` (só OWNER), aceite público em `/convite?token=` cria a conta já com tenant/cargo certos e loga automaticamente (ver seção "Cadastro de funcionários via convite" acima).
-3. **Deploy** em produção — hoje só roda localhost
-4. **Migrar `synchronize: true`** para migrations do TypeORM
+3. ~~**Deploy** em produção~~ — feito, rodando na VPS (`oficinasync.com.br`)
+4. ~~**Migrar `synchronize: true`** para migrations do TypeORM~~ — feito, ver seção "Migrations do TypeORM (feito — `synchronize: false`)" acima
 5. ~~**Gerar PDF do relatório**~~ — feito. `ReportModule` com Puppeteer, `GET /service_orders/:id/report.pdf`, botão "Baixar laudo PDF" no `OsWorkPage` e `OsFinishPage`. Reaproveita `tests` e `medias`. Gerado sob demanda, não persistido (fast-follow: salvar como `Media` pra aparecer também na página pública, precisa liberar `application/pdf` na whitelist do MinIO).
 6. ~~**Vídeo de divulgação automático**~~ — feito. `VideoModule` com `fluent-ffmpeg`, `POST /service_orders/:id/promo-video` (assíncrono, polling via `promo_video_status`), botão "Gerar vídeo de divulgação" no `OsWorkPage`. Testado ponta a ponta com clipes sintéticos. Fast-follow possível: overlay de texto por seção, transições, escolher manualmente quais clipes entram.
 7. ~~**Testes especializados (Fase 4)**~~ — feito. Leonardo trouxe um spec externo (`oficinasync_testes_spec.md`, ~50 tipos de teste, stack diferente — só a ideia foi aproveitada) propondo formulário/card/PDF dedicados por tipo. Decisão: híbrido — 4 tipos prioritários da oficina (Compressão Mecânica, Leitura de DTC, Bateria, Injetores no Banco) ganharam UI dedicada com captura de foto direto da câmera do celular (`capture="environment"`); os outros ~46 tipos continuam no formulário genérico. Testado ponta a ponta incluindo geração de PDF com os blocos especializados. ~~Edição de testes especializados já criados (antes só criar/excluir)~~ — feito depois, ver seção "Edição de testes especializados já criados". Fast-follow restante: mais tipos do catálogo conforme demanda real da oficina.
