@@ -116,13 +116,77 @@ fazer nada aqui — só confirme que não apareceu erro relacionado a bucket nos
 
 ---
 
-## Riscos conhecidos (não bloqueiam o deploy, mas fique ciente)
+## 9. Atualizar produção (deploy de nova versão)
 
-- **`synchronize: true` no TypeORM**: hoje o banco é criado/atualizado automaticamente a partir das entidades,
-  sem migrations. Isso é seguro pra esse primeiro deploy (banco vazio), mas depois de estar em produção, qualquer
-  mudança de schema feita sem migration pode alterar/derrubar dados. Recomendo migrar pra TypeORM migrations logo
-  depois de estabilizar o uso real — é a pendência #4 do CLAUDE.md.
-- **Sem tela de trocar senha**: os funcionários criados com senha temporária não têm como trocar sozinhos ainda
-  (chip já sinalizado, ver seção de pendências).
-- **Backup**: os volumes `sqlserver_data` e `minio_data` guardam todos os dados (OS, fotos, vídeos). Vale configurar
-  um backup periódico desses volumes assim que possível — não faz parte deste primeiro deploy.
+Sempre que houver código novo no GitHub, o deploy é entrar na VPS e rodar `git pull` + rebuild. **Antes de
+qualquer deploy que mexa no banco (migration nova), faça o backup primeiro** — leva 30 segundos e é a sua
+rede de segurança.
+
+Entrar na VPS (o domínio resolve pro IP, então serve pra SSH também):
+
+```bash
+ssh root@oficinasync.com.br
+cd /opt/oficinasync
+```
+
+### 9.1. Backup do banco (faça antes de deploys com migration)
+
+Gera o `.bak` dentro do container e copia pro disco da VPS. Usa a senha de dentro do próprio container
+(`$SA_PASSWORD`), você não digita nada:
+
+```bash
+# gera o backup dentro do container
+docker compose -f docker-compose.prod.yml exec sqlserver bash -c '/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "$SA_PASSWORD" -C -Q "BACKUP DATABASE [oficinasync] TO DISK = N'\''/var/opt/mssql/oficinasync_backup.bak'\'' WITH INIT, FORMAT"'
+
+# copia o .bak pra fora do container (pro disco da VPS, com a data no nome)
+docker cp oficinasync-db:/var/opt/mssql/oficinasync_backup.bak /opt/oficinasync/oficinasync_backup_$(date +%Y%m%d).bak
+ls -lh /opt/oficinasync/oficinasync_backup_*.bak
+```
+
+### 9.2. Deploy
+
+```bash
+git pull
+docker compose -f docker-compose.prod.yml --env-file .env.production up -d --build
+```
+
+O backend roda as migrations pendentes sozinho na subida (`migrationsRun: true`). Num banco que já existe, a
+migration inicial não recria nada — só se registra (ver "Migrations do TypeORM" no `CLAUDE.md`).
+
+### 9.3. Conferir que deu certo
+
+```bash
+# 1. migrations aplicadas (IMPORTANTE: o -d oficinasync aponta pro banco certo; sem ele, o sqlcmd cai no 'master' e dá "Invalid object name")
+docker compose -f docker-compose.prod.yml exec sqlserver bash -c '/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "$SA_PASSWORD" -C -d oficinasync -Q "SELECT name FROM migrations"'
+
+# 2. dados no lugar
+docker compose -f docker-compose.prod.yml exec sqlserver bash -c '/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "$SA_PASSWORD" -C -d oficinasync -Q "SELECT COUNT(*) AS clientes FROM clients; SELECT COUNT(*) AS ordens FROM service_orders"'
+
+# 3. app no ar
+curl -s https://api.oficinasync.com.br/health
+```
+
+### 9.4. Restaurar o backup (só se algo der muito errado)
+
+Precisa de acesso exclusivo ao banco, então derruba as conexões primeiro. **Só use em emergência** — sobrescreve
+o banco atual pelo do `.bak`:
+
+```bash
+# copia o .bak de volta pra dentro do container (ajuste a data do arquivo)
+docker cp /opt/oficinasync/oficinasync_backup_AAAAMMDD.bak oficinasync-db:/var/opt/mssql/restore.bak
+
+docker compose -f docker-compose.prod.yml exec sqlserver bash -c '/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "$SA_PASSWORD" -C -Q "ALTER DATABASE [oficinasync] SET SINGLE_USER WITH ROLLBACK IMMEDIATE; RESTORE DATABASE [oficinasync] FROM DISK = N'\''/var/opt/mssql/restore.bak'\'' WITH REPLACE; ALTER DATABASE [oficinasync] SET MULTI_USER"'
+
+# reinicia o backend pra reconectar
+docker compose -f docker-compose.prod.yml restart backend
+```
+
+---
+
+## Riscos conhecidos / pendências de infra
+
+- **Backup automático**: hoje o backup do banco é manual (seção 9.1) e os volumes `sqlserver_data` /
+  `minio_data` (fotos, vídeos) não têm rotina automática. Vale configurar um cron de backup + cópia pra fora
+  da VPS (ex: outro servidor ou storage) quando der — protege contra perda do disco da VPS inteira.
+- **Monitoramento**: o endpoint `GET /health` existe pra isso — recomendado um monitor gratuito (ex: UptimeRobot)
+  batendo nele a cada minuto pra avisar por email/WhatsApp se o sistema cair.
