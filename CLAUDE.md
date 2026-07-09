@@ -140,11 +140,17 @@ Dono do projeto: Leonardo (mecânico há 11 anos, formado em ADS). Objetivo atua
 - O vídeo final vira um `Media` (`label: 'Vídeo de divulgação'`) anexado à section `final` (criada automaticamente se ainda não existir, via `SectionsService.create`)
 - Testado ponta a ponta com clipes sintéticos de resoluções diferentes (640x480 e 1280x720) — saída normalizada corretamente pra 1080x1920, áudio combinado, duração batendo com a soma dos clipes
 
-### `ObdModule` (recém-criado, incompleto)
+### `ObdModule` (Fase 1 do scanner próprio — feito; plano completo no plan file `happy-sprouting-panda.md`)
 
-- Entidade `ObdDevices` criada (campos: device_id, name, device_token, mac_address, is_active, last_ip, last_seen_at, created_at, tenant)
-- **Pendente:** rotas `POST /obd/heartbeat` (ESP32 registra IP) e `GET /obd/scan` (frontend puxa dados)
-- **Pausado a pedido do Leonardo** — foco em testes estruturados/PDF/vídeo primeiro
+Scanner OBD da oficina (ESP32 + ELM327). Arquitetura invertida em relação ao firmware v1 (`Iot/OficinaSync_OBD_v1/`): o ESP32 é **cliente** e EMPURRA dados pra API com um token de dispositivo — nunca o contrário (página HTTPS não pode chamar `http://ip-local` por mixed content, e a VPS não enxerga a LAN da oficina).
+
+- **Entidade `ObdDevices`** (`obd_devices`, via migration): `device_id`, `name`, `device_token` (unique, `randomBytes(32).hex`, mostrado UMA vez na criação — igual convite), `is_active`, `last_ip`, `last_seen_at`, `last_reading` (simple-json — só o último snapshot, efêmero; o que importa vira `Test` na OS), `last_reading_at`, `pending_command`, `tenant` (indexado). Sem tabela de readings histórica de propósito.
+- **Rotas do dispositivo** (autenticadas por header `X-Device-Token`, throttled 30/min): `POST /obd/heartbeat` e `POST /obd/reading` — ambas devolvem `{ok, command}` e limpam o `pending_command` ao entregar (**canal de comandos**: a UI seta via `POST /obd/devices/:id/command` (`read_dtc`/`clear_dtc`), o ESP recebe no próximo push — é o que permite "ler códigos agora" e futuramente orquestrar teste de bateria).
+- **Rotas JWT**: `POST/GET/PATCH/DELETE /obd/devices` (lista calcula `online` = `last_seen_at` < 90s; nunca vaza o token), `GET /obd/devices/:id/latest` (snapshot pro tempo real), `POST /obd/capture` (`{device_id, service_order_id}` → valida tenant de ambos → exige leitura fresca < 60s senão 409 → find-or-create da section `obd_scan` (padrão do VideoModule) → cria `Test` `test_type: 'obd_snapshot'`).
+- **`obd_snapshot`** é o 7º `test_type` (migration atualizou o `@Check` — atenção: o `migration:generate` NÃO detecta mudança no corpo de um `@Check` existente, compara por nome; o DROP/ADD foi adicionado à mão na migration `ObdDevicesAndObdSnapshotTestType`). `data`: `{collected_at, device_name, voltage, params: {rpm, temp, ...}, dtcs: [{code, description}]}` — a **descrição do DTC é resolvida na captura** (`backend/src/modules/obd/dtcCatalog.ts`, espelho de `src/lib/dtcCodes.ts` no front) pra página do cliente, PDF e histórico exibirem o mesmo texto.
+- Frontend: `ScannerPage.tsx` (`/scanner`, item "Scanner" na sidebar) — cadastro de device (token uma vez + copiar) e lista com badge online (poll 15s); `StoryObdSnapshot.tsx` (grade de parâmetros com `obdParamLabels` + DTCs com descrição) plugado no `StoryTestBlock` (mecânico + cliente); bloco espelho no `report.template.ts` (PDF); botão **"Coletar dados OBD"** no cabeçalho do `OsWorkPage` (aparece só com device online, poll 15s). Teste `obd_snapshot` não tem botão Editar (dado de máquina) — só Excluir.
+- **Testado ponta a ponta com dispositivo simulado via curl** (sem hardware): token errado 401, outro tenant 403 (latest e capture), leitura velha 409, comando entregue exatamente uma vez, seção `obd_scan` invisível na página pública até publicar, PDF com o bloco (params + códigos), captura pela UI real com toast. **Gotcha de teste**: pra envelhecer `last_reading_at` no banco em teste, subtrair do valor armazenado (`DATEADD(second,-120,last_reading_at)`) — usar `GETDATE()` cru desloca 3h porque o TypeORM grava datetime em convenção local e lê de volta convertendo, enquanto `GETDATE()` do container é UTC.
+- **Próximas fases (plano aprovado)**: Fase 2 = tela dedicada do Scanner (tempo real, escolher parâmetros, modo gráfico, ler/apagar códigos); Fase 3 = firmware v2 (`Iot/OficinaSync_OBD_v2/`, push HTTPS + token no setup + `SerialBT.discover()` pra achar o dongle sem digitar MAC) — validação na bancada do Leonardo; Fase 4 = OBD na abertura da OS (wizard) + "puxar do scanner" no `LeituraDtcForm`; Fase 5 = teste de bateria orquestrado, compressão relativa, falha de cilindro, rodagem georreferenciada.
 
 ## Frontend web (páginas já implementadas)
 
@@ -369,11 +375,7 @@ O schema agora é versionado por **migrations**, não mais sincronizado automati
 
 ### Médio prazo — features validadas
 
-8. **OBD:** de momento pausado a pedido do Leonardo (foco em testes estruturados/PDF/vídeo primeiro)
-   - `POST /obd/heartbeat` no backend (ESP32 registra IP)
-   - `GET /obd/scan` no backend (busca dados do ESP32 via HTTP)
-   - Adicionar heartbeat no firmware do ESP32
-   - Adicionar suporte a PDF na whitelist do MinioService
+8. **OBD:** retomado — **Fase 1 feita** (ver seção `ObdModule` acima: backend completo + ScannerPage + captura pra OS, testado com dispositivo simulado). Próximo: Fase 2 (tela dedicada com tempo real/gráfico) → Fase 3 (firmware v2 na bancada) → Fase 4 (wizard + LeituraDtcForm) — plano completo no plan file `happy-sprouting-panda.md`
 9. **Anexar relatórios em PDF** dentro das sections (reaproveitar `medias`, adicionar `application/pdf` na whitelist) — depende do item 5 (geração de PDF)
 10. **Mobile** (React Native) para o mecânico usar no chão de oficina
 

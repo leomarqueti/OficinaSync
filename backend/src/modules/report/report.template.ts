@@ -186,6 +186,70 @@ function renderDtcBlock(data: Record<string, any>) {
   return `${scannerLine}${table}${systemsBlock}`;
 }
 
+// Rótulos dos parâmetros que o scanner OBD envia (espelho do frontend
+// obdParamLabels em testTypes.ts — combinar os dois se um dia mudar).
+const obdParamLabels: Record<string, { label: string; unit: string }> = {
+  rpm: { label: 'Rotação', unit: 'rpm' },
+  speed: { label: 'Velocidade', unit: 'km/h' },
+  temp: { label: 'Temp. motor', unit: '°C' },
+  load: { label: 'Carga do motor', unit: '%' },
+  throttle: { label: 'Borboleta', unit: '%' },
+  iat: { label: 'Temp. admissão', unit: '°C' },
+  maf: { label: 'MAF', unit: 'g/s' },
+  fuel: { label: 'Combustível', unit: '%' },
+  map: { label: 'MAP', unit: 'kPa' },
+  baro: { label: 'Pressão barométrica', unit: 'kPa' },
+  timing: { label: 'Avanço de ignição', unit: '°' },
+  stft1: { label: 'STFT B1', unit: '%' },
+  ltft1: { label: 'LTFT B1', unit: '%' },
+  stft2: { label: 'STFT B2', unit: '%' },
+  ltft2: { label: 'LTFT B2', unit: '%' },
+};
+
+function renderObdSnapshotBlock(data: Record<string, any>) {
+  const collectedLine = `<p class="muted">Coletado direto da central do veículo${
+    data.device_name ? ` · ${data.device_name}` : ''
+  }${
+    data.collected_at
+      ? ` · ${new Date(data.collected_at).toLocaleString('pt-BR')}`
+      : ''
+  }</p>`;
+
+  const entries: Array<[string, any]> = Object.entries(data.params ?? {}).filter(
+    ([, value]) => value !== null && value !== undefined,
+  );
+
+  const paramRows = entries
+    .map(([key, value]) => {
+      const meta = obdParamLabels[key] ?? { label: key, unit: '' };
+      return `<tr><td>${meta.label}</td><td>${Number(value).toLocaleString('pt-BR', { maximumFractionDigits: 1 })} ${meta.unit}</td></tr>`;
+    })
+    .join('');
+
+  const voltageRow =
+    data.voltage !== null && data.voltage !== undefined
+      ? `<tr><td>Tensão da bateria</td><td>${Number(data.voltage).toLocaleString('pt-BR', { maximumFractionDigits: 1 })} V</td></tr>`
+      : '';
+
+  const paramsTable =
+    paramRows || voltageRow
+      ? `<table class="measurements"><thead><tr><th>Parâmetro</th><th>Valor lido</th></tr></thead><tbody>${voltageRow}${paramRows}</tbody></table>`
+      : '';
+
+  const dtcRows = ((data.dtcs ?? []) as Record<string, any>[])
+    .map(
+      (dtc) =>
+        `<tr><td>${dtc.code}</td><td>${dtc.description || '-'}</td></tr>`,
+    )
+    .join('');
+
+  const dtcBlock = dtcRows
+    ? `<table class="measurements"><thead><tr><th>Código de falha</th><th>Descrição</th></tr></thead><tbody>${dtcRows}</tbody></table>`
+    : `<p class="systems-ok">Nenhum código de falha presente no momento da leitura.</p>`;
+
+  return `${collectedLine}${paramsTable}${dtcBlock}`;
+}
+
 function renderBateriaBlock(data: Record<string, any>) {
   const toolLine = data.tool ? `<p class="muted">Ferramenta: ${data.tool}</p>` : '';
 
@@ -306,6 +370,9 @@ function renderTest(step: ReportProcedureStep, number: number, photoLookup: Map<
       break;
     case 'leitura_dtc':
       body = renderDtcBlock(step.data ?? {});
+      break;
+    case 'obd_snapshot':
+      body = renderObdSnapshotBlock(step.data ?? {});
       break;
     case 'bateria':
       body = renderBateriaBlock(step.data ?? {});

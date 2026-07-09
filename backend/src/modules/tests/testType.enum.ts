@@ -5,4 +5,5 @@ export enum TestTypeCategory {
   INJETORES_BANCO = 'injetores_banco',
   ACHADO_ADICIONAL = 'achado_adicional',
   ANTES_DEPOIS = 'antes_depois',
+  OBD_SNAPSHOT = 'obd_snapshot',
 }

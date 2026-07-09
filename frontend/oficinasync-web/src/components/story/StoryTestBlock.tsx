@@ -6,6 +6,7 @@ import type {
   CompressaoMecanicaData,
   InjetoresBancoData,
   LeituraDtcData,
+  ObdSnapshotData,
   TestTypeCategory,
 } from "@/components/tests/testTypes";
 import type { LightboxMedia } from "@/components/media/Lightbox";
@@ -16,6 +17,7 @@ import { StoryBateria } from "./StoryBateria";
 import { StoryCompressao } from "./StoryCompressao";
 import { StoryDtc } from "./StoryDtc";
 import { StoryInjetores } from "./StoryInjetores";
+import { StoryObdSnapshot } from "./StoryObdSnapshot";
 import { VerdictChip } from "./chips";
 
 export type StoryTest = {
@@ -118,6 +120,10 @@ export function StoryTestBlock({ test, sectionMedias, onOpenMedia }: StoryTestBl
             sectionMedias={sectionMedias}
             onOpenMedia={onOpenMedia}
           />
+        )}
+
+        {test.test_type === "obd_snapshot" && test.data && (
+          <StoryObdSnapshot data={test.data as unknown as ObdSnapshotData} />
         )}
 
         {!test.test_type && test.measurements && test.measurements.length > 0 && (

@@ -15,6 +15,7 @@ import {
   ClipboardList,
   Home,
   LogOut,
+  Radio,
   Settings,
   Users,
   Wrench,
@@ -80,6 +81,13 @@ export function DashboardSidebar() {
                 <SidebarMenuButton onClick={() => navigate("/equipe")}>
                   <Wrench />
                   <span>Equipe</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+
+              <SidebarMenuItem>
+                <SidebarMenuButton onClick={() => navigate("/scanner")}>
+                  <Radio />
+                  <span>Scanner</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
 

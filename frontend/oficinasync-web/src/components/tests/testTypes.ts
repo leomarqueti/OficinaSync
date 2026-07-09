@@ -4,7 +4,8 @@ export type TestTypeCategory =
   | "bateria"
   | "injetores_banco"
   | "antes_depois"
-  | "achado_adicional";
+  | "achado_adicional"
+  | "obd_snapshot";
 
 export const testTypeLabels: Record<TestTypeCategory, string> = {
   compressao_mecanica: "Compressão Mecânica",
@@ -13,6 +14,7 @@ export const testTypeLabels: Record<TestTypeCategory, string> = {
   injetores_banco: "Injetores no Banco",
   antes_depois: "Antes e Depois",
   achado_adicional: "Achado Adicional",
+  obd_snapshot: "Leitura OBD (scanner)",
 };
 
 export const testTypeIcons: Record<TestTypeCategory, string> = {
@@ -22,6 +24,7 @@ export const testTypeIcons: Record<TestTypeCategory, string> = {
   injetores_banco: "💉",
   antes_depois: "📸",
   achado_adicional: "⚠️",
+  obd_snapshot: "📡",
 };
 
 // Status por item (cilindro/injetor) reaproveita o mesmo vocabulário do veredito geral.
@@ -255,6 +258,38 @@ export function emptyAntesDepoisData(): AntesDepoisData {
     description: "",
   };
 }
+
+// --- Leitura OBD (scanner próprio) ---
+
+/** Snapshot capturado do dongle ESP32+ELM327 — criado pelo backend no
+ *  POST /obd/capture, nunca digitado à mão (não tem formulário de edição). */
+export interface ObdSnapshotData {
+  collected_at: string;
+  device_name: string;
+  voltage: number | null;
+  params: Record<string, number | null>;
+  /** description vem resolvida do backend na captura; fallback local em dtcCodes.ts */
+  dtcs: { code: string; description?: string }[];
+}
+
+/** Rótulo e unidade dos parâmetros que o firmware envia. */
+export const obdParamLabels: Record<string, { label: string; unit: string }> = {
+  rpm: { label: "Rotação", unit: "rpm" },
+  speed: { label: "Velocidade", unit: "km/h" },
+  temp: { label: "Temp. motor", unit: "°C" },
+  load: { label: "Carga do motor", unit: "%" },
+  throttle: { label: "Borboleta", unit: "%" },
+  iat: { label: "Temp. admissão", unit: "°C" },
+  maf: { label: "MAF", unit: "g/s" },
+  fuel: { label: "Combustível", unit: "%" },
+  map: { label: "MAP", unit: "kPa" },
+  baro: { label: "Pressão barométrica", unit: "kPa" },
+  timing: { label: "Avanço de ignição", unit: "°" },
+  stft1: { label: "STFT B1", unit: "%" },
+  ltft1: { label: "LTFT B1", unit: "%" },
+  stft2: { label: "STFT B2", unit: "%" },
+  ltft2: { label: "LTFT B2", unit: "%" },
+};
 
 // --- Achado Adicional ---
 

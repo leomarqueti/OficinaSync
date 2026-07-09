@@ -19,6 +19,7 @@ const AcceptInvitePage = lazy(() => import('./pages/AcceptInvitePage').then((m) 
 const ClientsPage = lazy(() => import('./pages/ClientsPage').then((m) => ({ default: m.ClientsPage })))
 const CarsPage = lazy(() => import('./pages/CarsPage').then((m) => ({ default: m.CarsPage })))
 const CarHistoryPage = lazy(() => import('./pages/CarHistoryPage').then((m) => ({ default: m.CarHistoryPage })))
+const ScannerPage = lazy(() => import('./pages/ScannerPage').then((m) => ({ default: m.ScannerPage })))
 const DashboardPage = lazy(() => import('./pages/dashBoardPage').then((m) => ({ default: m.DashboardPage })))
 const OsCreateWizardPage = lazy(() => import('./pages/OsCreateWizardPage').then((m) => ({ default: m.OsCreateWizardPage })))
 const PublicServiceOrderPage = lazy(() => import('./pages/PublicServiceOrderPage').then((m) => ({ default: m.PublicServiceOrderPage })))
@@ -91,6 +92,14 @@ function App() {
             element={
               <SidebarProvider>
                 <CarHistoryPage />
+              </SidebarProvider>
+            }
+          />
+          <Route
+            path="/scanner"
+            element={
+              <SidebarProvider>
+                <ScannerPage />
               </SidebarProvider>
             }
           />

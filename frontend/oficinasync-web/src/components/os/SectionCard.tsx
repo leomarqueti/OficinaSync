@@ -155,10 +155,13 @@ export function SectionCard({
                 onOpenMedia={onOpenMedia}
               />
               <div className="mt-1.5 flex justify-end gap-2">
-                <Button variant="ghost" size="sm" onClick={() => onEditTest(test)}>
-                  <FilePenLine className="mr-1.5 h-3.5 w-3.5" />
-                  Editar
-                </Button>
+                {/* Leitura OBD é dado de máquina — não tem formulário de edição */}
+                {test.test_type !== "obd_snapshot" && (
+                  <Button variant="ghost" size="sm" onClick={() => onEditTest(test)}>
+                    <FilePenLine className="mr-1.5 h-3.5 w-3.5" />
+                    Editar
+                  </Button>
+                )}
                 <Button
                   variant="ghost"
                   size="sm"

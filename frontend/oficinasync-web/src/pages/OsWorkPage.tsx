@@ -9,6 +9,7 @@ import {
   FileText,
   Flag,
   Loader2,
+  Radio,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -79,6 +80,12 @@ export function OsWorkPage() {
   const [triggeringVideo, setTriggeringVideo] = useState(false);
   const [lightboxMedia, setLightboxMedia] = useState<LightboxMedia | null>(null);
 
+  // scanner OBD da oficina — o botão de coleta só aparece com um dongle online
+  const [obdDevices, setObdDevices] = useState<
+    { device_id: number; name: string; online: boolean }[]
+  >([]);
+  const [capturingObd, setCapturingObd] = useState(false);
+
   const fetchOrder = useCallback(async () => {
     if (!id) return;
 
@@ -105,6 +112,50 @@ export function OsWorkPage() {
     const interval = setInterval(fetchOrder, 4000);
     return () => clearInterval(interval);
   }, [data?.promo_video_status, fetchOrder]);
+
+  // status dos scanners OBD (badge/botão atualizam sozinhos)
+  useEffect(() => {
+    const loadDevices = async () => {
+      try {
+        const result = await apiFetch<
+          { device_id: number; name: string; online: boolean }[]
+        >("/obd/devices", { silent: true });
+        setObdDevices(result);
+      } catch {
+        // sem scanner cadastrado / sem permissão — botão simplesmente não aparece
+      }
+    };
+
+    loadDevices();
+    const interval = setInterval(loadDevices, 15000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const onlineObdDevice = useMemo(
+    () => obdDevices.find((device) => device.online) ?? null,
+    [obdDevices],
+  );
+
+  const captureObd = async () => {
+    if (!onlineObdDevice || !data) return;
+
+    try {
+      setCapturingObd(true);
+      await apiFetch("/obd/capture", {
+        method: "POST",
+        json: {
+          device_id: onlineObdDevice.device_id,
+          service_order_id: data.service_order_id,
+        },
+      });
+      toast.success("Leitura OBD anexada à etapa Scanner/OBD!");
+      await fetchOrder();
+    } catch {
+      // apiFetch já mostrou o toast de erro (ex: leitura antiga demais)
+    } finally {
+      setCapturingObd(false);
+    }
+  };
 
   const intakeSection = useMemo(
     () => data?.sections.find((s) => s.type === "intake") ?? null,
@@ -330,6 +381,22 @@ export function OsWorkPage() {
                   : videoStatus === "failed"
                     ? "Vídeo falhou — tentar de novo"
                     : "Gerar vídeo"}
+              </Button>
+            )}
+
+            {onlineObdDevice && (
+              <Button
+                variant="outline"
+                className="h-11 border-brand/40 text-brand hover:bg-brand/10"
+                onClick={captureObd}
+                disabled={capturingObd}
+              >
+                {capturingObd ? (
+                  <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+                ) : (
+                  <Radio className="mr-1.5 h-4 w-4" />
+                )}
+                {capturingObd ? "Coletando..." : "Coletar dados OBD"}
               </Button>
             )}
 
