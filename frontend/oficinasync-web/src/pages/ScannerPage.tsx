@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { Copy, Loader2, Plus, Radio, Trash2 } from "lucide-react";
 import { SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
 import { DashboardSidebar } from "@/components/DashboardSidebar";
 import { Button } from "@/components/ui/button";
+import { ObdLivePanel } from "@/components/obd/ObdLivePanel";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -38,6 +40,9 @@ type CreatedDevice = {
 
 export function ScannerPage() {
   useDarkTheme();
+  const [searchParams] = useSearchParams();
+  // vindo de uma OS ("ver ao vivo") — habilita o atalho "Anexar à OS #X"
+  const osId = searchParams.get("os") ? Number(searchParams.get("os")) : null;
 
   const [name, setName] = useState("");
   const [creating, setCreating] = useState(false);
@@ -45,11 +50,17 @@ export function ScannerPage() {
   const [loading, setLoading] = useState(true);
   const [createdDevice, setCreatedDevice] = useState<CreatedDevice | null>(null);
   const [deletingDevice, setDeletingDevice] = useState<ObdDevice | null>(null);
+  const [selectedDeviceId, setSelectedDeviceId] = useState<number | null>(null);
 
   const loadDevices = async () => {
     try {
       const result = await apiFetch<ObdDevice[]>("/obd/devices", { silent: true });
       setDevices(result);
+      // auto-seleciona o primeiro online (ou o primeiro da lista) pro painel ao vivo
+      setSelectedDeviceId((current) => {
+        if (current && result.some((d) => d.device_id === current)) return current;
+        return (result.find((d) => d.online) ?? result[0])?.device_id ?? null;
+      });
     } catch {
       // silencioso — badge fica como estava
     } finally {
@@ -208,7 +219,18 @@ export function ScannerPage() {
                   devices.map((device) => (
                     <div
                       key={device.device_id}
-                      className="flex items-center justify-between rounded-2xl bg-muted/20 p-3"
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => setSelectedDeviceId(device.device_id)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ")
+                          setSelectedDeviceId(device.device_id);
+                      }}
+                      className={`flex cursor-pointer items-center justify-between rounded-2xl p-3 transition ${
+                        selectedDeviceId === device.device_id
+                          ? "border border-brand/40 bg-brand/5"
+                          : "border border-transparent bg-muted/20 hover:bg-muted/30"
+                      }`}
                     >
                       <div className="flex items-center gap-3">
                         <span
@@ -240,7 +262,10 @@ export function ScannerPage() {
                           variant="ghost"
                           size="sm"
                           className="text-red-400 hover:text-red-300"
-                          onClick={() => setDeletingDevice(device)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDeletingDevice(device);
+                          }}
                         >
                           <Trash2 className="h-3.5 w-3.5" />
                         </Button>
@@ -249,6 +274,11 @@ export function ScannerPage() {
                   ))}
               </div>
             </div>
+
+            {/* painel ao vivo do dispositivo selecionado */}
+            {selectedDeviceId !== null && (
+              <ObdLivePanel deviceId={selectedDeviceId} osId={osId} />
+            )}
           </div>
         </div>
       </SidebarInset>

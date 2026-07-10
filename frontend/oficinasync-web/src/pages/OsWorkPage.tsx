@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import {
+  Activity,
   ArrowLeft,
   Clapperboard,
   Copy,
@@ -397,6 +398,16 @@ export function OsWorkPage() {
                   <Radio className="mr-1.5 h-4 w-4" />
                 )}
                 {capturingObd ? "Coletando..." : "Coletar dados OBD"}
+              </Button>
+            )}
+            {onlineObdDevice && (
+              <Button
+                variant="outline"
+                className="h-11"
+                onClick={() => navigate(`/scanner?os=${data.service_order_id}`)}
+              >
+                <Activity className="mr-1.5 h-4 w-4" />
+                Scanner ao vivo
               </Button>
             )}
 
