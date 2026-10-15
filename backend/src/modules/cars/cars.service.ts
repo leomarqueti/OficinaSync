@@ -36,7 +36,7 @@ export class CarsService {
     const idClientTenant = client.tenant.id;
 
     if (idTenat != idClientTenant) {
-      throw new UnauthorizedException();
+      throw new ForbiddenException('Esse cliente não pertence ao tenant do usuário.');
     }
 
     newCar.tenant = user.tenant;
@@ -72,7 +72,7 @@ export class CarsService {
     }
 
     if (user.tenant.id !== client.tenant.id) {
-      throw new UnauthorizedException();
+      throw new ForbiddenException('Esse cliente não pertence ao tenant do usuário.');
     }
 
     return this.carsRepository.find({

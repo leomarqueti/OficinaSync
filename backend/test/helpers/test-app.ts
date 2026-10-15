@@ -1,12 +1,9 @@
-import {
-  ClassSerializerInterceptor,
-  INestApplication,
-  ValidationPipe,
-} from '@nestjs/common';
+import { ClassSerializerInterceptor, INestApplication } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { Test } from '@nestjs/testing';
 import * as sql from 'mssql';
 import { AppModule } from '../../src/app.module';
+import { appValidationPipe } from '../../src/common/validation';
 
 async function ensureTestDatabase(): Promise<void> {
   const pool = await new sql.ConnectionPool({
@@ -35,7 +32,7 @@ export async function createTestApp(): Promise<INestApplication> {
   }).compile();
 
   const app = moduleRef.createNestApplication();
-  app.useGlobalPipes(new ValidationPipe());
+  app.useGlobalPipes(appValidationPipe());
   app.useGlobalInterceptors(
     new ClassSerializerInterceptor(app.get(Reflector), {
       excludeExtraneousValues: true,

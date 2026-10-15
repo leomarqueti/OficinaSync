@@ -15,6 +15,7 @@ import { plainToInstance } from 'class-transformer';
 import { JwtAuthGuard } from '../AuthModule/jwt-auth.guard';
 import { MediaService } from './media.service';
 import { HARD_UPLOAD_LIMIT_BYTES } from '../minio/upload-limits';
+import { UploadConcurrencyInterceptor } from './upload-concurrency.interceptor';
 import { CreateMediaDto } from './dto/create-media-dto';
 import { ResponseMediaDto } from './dto/response-media-dto';
 
@@ -25,6 +26,7 @@ export class MediaController {
   @Post()
   @UseGuards(JwtAuthGuard)
   @UseInterceptors(
+    UploadConcurrencyInterceptor,
     FileInterceptor('file', { limits: { fileSize: HARD_UPLOAD_LIMIT_BYTES } }),
   )
   @HttpCode(HttpStatus.CREATED)

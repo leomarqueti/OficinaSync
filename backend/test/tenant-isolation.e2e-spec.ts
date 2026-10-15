@@ -120,6 +120,25 @@ describe('isolamento entre oficinas (tenants)', () => {
         as(a, 'patch', `/obd/devices/${bw.deviceId}`).send({ name: 'hack' }),
     },
     {
+      name: 'POST /cars usando o cliente da B',
+      run: () =>
+        as(a, 'post', '/cars').send({
+          plate: 'AAA1A11',
+          brand: 'Fiat',
+          model: 'Uno',
+          year: 2012,
+          fuel_type: 'flex',
+          chassis: '9BWZZZ377VT004251',
+          color: 'Preto',
+          mileage_in: 1,
+          client_id: bw.clientId,
+        }),
+    },
+    {
+      name: 'GET /cars?client_id=<cliente da B>',
+      run: () => as(a, 'get', `/cars?client_id=${bw.clientId}`),
+    },
+    {
       name: 'POST /obd/capture (device da B + OS da B)',
       run: () =>
         as(a, 'post', '/obd/capture').send({
@@ -155,6 +174,21 @@ describe('isolamento entre oficinas (tenants)', () => {
   it.each(attacks)('A não consegue: $name (403/404)', async ({ run }) => {
     const res = await run();
     expect([403, 404]).toContain(res.status);
+    // 404 de rota digitada errada ("Cannot GET /x") não conta como proteção
+    expect(String(res.body?.message ?? '')).not.toMatch(/^Cannot (GET|POST|PATCH|DELETE)/);
+  });
+
+  it('promo-video na OS da B é barrado por TENANT mesmo com a flag ligada (não pela flag)', async () => {
+    process.env.PROMO_VIDEO_ENABLED = 'true';
+    try {
+      const res = await as(a, 'post', `/service_orders/${bw.orderId}/promo-video`);
+      expect(res.status).toBe(403);
+      expect(res.body.message).toBe(
+        'Essa ordem de serviço não pertence ao tenant do usuário.',
+      );
+    } finally {
+      delete process.env.PROMO_VIDEO_ENABLED;
+    }
   });
 
   it('A não enxerga dados da B nas listas', async () => {
@@ -218,6 +252,21 @@ describe('isolamento entre oficinas (tenants)', () => {
     expect(Object.keys(res.body.client).sort()).toEqual(['name', 'phone']);
     expect(res.body.sections).toEqual([]); // checkin ainda é rascunho
     expect(JSON.stringify(res.body)).not.toContain(bw.cpf);
+  });
+
+  it('depois de todos os ataques, os dados da B continuam intactos', async () => {
+    const car = await as(b, 'get', `/cars/${bw.carId}`).expect(200);
+    expect(car.body.color).toBe('Prata');
+    expect(car.body.plate).toBe(bw.plate);
+
+    const order = await as(b, 'get', `/service_orders/${bw.orderId}`).expect(200);
+    expect(order.body.client.name).toBe(bw.clientName);
+    expect(order.body.status).toBe('open');
+    expect(JSON.stringify(order.body.sections)).toContain('Teste da oficina');
+    expect(JSON.stringify(order.body.sections)).toContain('"notes":null');
+
+    const devices = await as(b, 'get', '/obd/devices').expect(200);
+    expect(JSON.stringify(devices.body)).toContain(bw.deviceName);
   });
 
   it.each([
