@@ -365,7 +365,7 @@ export function OsWorkPage() {
                 <Clapperboard className="mr-1.5 h-4 w-4" />
                 Baixar vídeo
               </Button>
-            ) : (
+            ) : data.features?.promo_video ? (
               <Button
                 variant="outline"
                 className="h-11"
@@ -383,7 +383,7 @@ export function OsWorkPage() {
                     ? "Vídeo falhou — tentar de novo"
                     : "Gerar vídeo"}
               </Button>
-            )}
+            ) : null}
 
             {onlineObdDevice && (
               <Button

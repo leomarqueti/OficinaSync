@@ -51,6 +51,8 @@ export type ServiceOrderData = {
   created_at: string;
   finished_at?: string | null;
   promo_video_status?: "none" | "processing" | "ready" | "failed";
+  /** Recursos liberados pelo servidor (ex: geração do vídeo de divulgação). */
+  features?: { promo_video: boolean };
   public_token: string;
   public_url: string;
   /** KM do veículo nessa visita — cai pro mileage_in do carro em OS antigas. */

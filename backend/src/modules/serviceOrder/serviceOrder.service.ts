@@ -112,6 +112,9 @@ export class ServiceOrdersService {
       promo_video_status: serviceOrder.promo_video_status,
       public_token: serviceOrder.public_token,
       public_url: `${frontendUrl}/servico/${serviceOrder.public_token}`,
+      features: {
+        promo_video: process.env.PROMO_VIDEO_ENABLED === 'true',
+      },
       // KM da OS (visita atual) — cai pro mileage_in do carro em OS antigas, que não tinham esse campo.
       mileage_in: serviceOrder.mileage_in ?? serviceOrder.car.mileage_in,
 

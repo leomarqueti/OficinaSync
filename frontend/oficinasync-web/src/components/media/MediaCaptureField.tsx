@@ -1,10 +1,14 @@
 import { useEffect, useMemo } from "react";
 import { Camera, FolderOpen, X } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { AudioRecorder } from "./AudioRecorder";
 import { compressImage } from "@/lib/imageCompression";
 
 export type MediaCaptureType = "photo" | "video" | "audio";
+
+// Espelha o limite de vídeo do backend (backend/src/modules/minio/upload-limits.ts).
+const MAX_VIDEO_MB = 100;
 
 type MediaCaptureFieldProps = {
   type: MediaCaptureType;
@@ -51,6 +55,10 @@ export function MediaCaptureField({ type, value, onChange }: MediaCaptureFieldPr
   const handleFile = async (file: File | null) => {
     if (!file) {
       onChange(null);
+      return;
+    }
+    if (type === "video" && file.size > MAX_VIDEO_MB * 1024 * 1024) {
+      toast.error(`Vídeo muito grande. O limite é ${MAX_VIDEO_MB} MB.`);
       return;
     }
     onChange(type === "photo" ? await compressImage(file) : file);

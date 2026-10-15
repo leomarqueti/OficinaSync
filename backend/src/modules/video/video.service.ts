@@ -1,4 +1,10 @@
-import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  HttpException,
+  HttpStatus,
+  Injectable,
+} from '@nestjs/common';
 import * as os from 'os';
 import * as path from 'path';
 import * as fs from 'fs/promises';
@@ -14,6 +20,7 @@ import { MinioService } from '../minio/minio.service';
 import { PromoVideoStatus } from '../serviceOrder/promoVideoStatus.enum';
 import { SectionType } from '../sections/typeSection.enum';
 import { Sections } from '../sections/section.entity';
+import { ConcurrencyLimiter } from './concurrency-limiter';
 import { ServiceOrders } from '../serviceOrder/serviceOrder.entity';
 
 ffmpeg.setFfmpegPath(ffmpegPath as unknown as string);
@@ -36,6 +43,9 @@ const extensionByMime: Record<string, string> = {
 
 @Injectable()
 export class VideoService {
+  // ffmpeg é pesado: no máximo 1 geração por vez neste processo.
+  private readonly limiter = new ConcurrencyLimiter(1);
+
   constructor(
     private readonly serviceOrdersService: ServiceOrdersService,
     private readonly usersService: UsersService,
@@ -57,6 +67,12 @@ export class VideoService {
       );
     }
 
+    if (process.env.PROMO_VIDEO_ENABLED !== 'true') {
+      throw new ForbiddenException(
+        'A geração de vídeo de divulgação não está disponível no seu plano.',
+      );
+    }
+
     const hasVideo = (order.sections ?? []).some((section) =>
       (section.medias ?? []).some((media) => media.type === 'video'),
     );
@@ -67,14 +83,28 @@ export class VideoService {
       );
     }
 
-    await this.serviceOrdersService.setPromoVideoStatus(
-      orderId,
-      PromoVideoStatus.PROCESSING,
-    );
+    if (!this.limiter.tryAcquire()) {
+      throw new HttpException(
+        'Já existe um vídeo sendo gerado. Tente de novo em alguns minutos.',
+        HttpStatus.TOO_MANY_REQUESTS,
+      );
+    }
 
-    this.generate(orderId, userId).catch((error) => {
-      console.error('Erro ao gerar vídeo de divulgação', error);
-    });
+    try {
+      await this.serviceOrdersService.setPromoVideoStatus(
+        orderId,
+        PromoVideoStatus.PROCESSING,
+      );
+    } catch (error) {
+      this.limiter.release();
+      throw error;
+    }
+
+    this.generate(orderId, userId)
+      .catch((error) => {
+        console.error('Erro ao gerar vídeo de divulgação', error);
+      })
+      .finally(() => this.limiter.release());
 
     return PromoVideoStatus.PROCESSING;
   }
