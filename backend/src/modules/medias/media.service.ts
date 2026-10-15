@@ -5,8 +5,10 @@ import {
   ForbiddenException,
   Injectable,
   NotFoundException,
+  PayloadTooLargeException,
   UnauthorizedException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Media } from './media.entity';
@@ -14,6 +16,7 @@ import { CreateMediaDto } from './dto/create-media-dto';
 import { UsersService } from '../users/users.service';
 import { SectionsService } from '../sections/section.service';
 import { MinioService } from '../minio/minio.service';
+import { exceedsQuota } from '../minio/upload-limits';
 import { ExceptionsHandler } from '@nestjs/core/exceptions/exceptions-handler';
 
 @Injectable()
@@ -24,7 +27,22 @@ export class MediaService {
     private readonly usersService: UsersService,
     private readonly sectionsService: SectionsService,
     private readonly minioService: MinioService,
+    private readonly configService: ConfigService,
   ) {}
+
+  /** Bytes de mídia da oficina. CAST pra BIGINT: SUM(int) estoura em 2 GB no SQL Server. */
+  async getTenantUsageBytes(tenantId: number): Promise<number> {
+    const row = await this.mediaRepository
+      .createQueryBuilder('m')
+      .innerJoin('m.section', 's')
+      .innerJoin('s.serviceOrder', 'so')
+      .innerJoin('so.tenant', 't')
+      .where('t.id = :tenantId', { tenantId })
+      .select('COALESCE(SUM(CAST(m.size AS BIGINT)), 0)', 'total')
+      .getRawOne<{ total: string | number }>();
+
+    return Number(row?.total ?? 0);
+  }
 
   async create(
     file: Express.Multer.File,
@@ -44,6 +62,18 @@ export class MediaService {
     if (section.serviceOrder.tenant.id !== user.tenant.id) {
       throw new ForbiddenException(
         'Essa section não pertence ao tenant do usuário.',
+      );
+    }
+
+    const quotaBytes =
+      Number(this.configService.get('TENANT_STORAGE_QUOTA_MB') ?? 2048) *
+      1024 *
+      1024;
+    const usedBytes = await this.getTenantUsageBytes(user.tenant.id);
+
+    if (exceedsQuota(usedBytes, file?.size ?? 0, quotaBytes)) {
+      throw new PayloadTooLargeException(
+        'Limite de armazenamento da oficina atingido. Fale com o suporte para ampliar.',
       );
     }
 
