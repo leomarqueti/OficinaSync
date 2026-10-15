@@ -1,4 +1,4 @@
-import { ForbiddenException, Injectable, UnauthorizedException } from '@nestjs/common';
+import { ForbiddenException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Cars } from './cars.entity';
 import { CreateCarDto } from './dto/create.cars.dto';
@@ -57,7 +57,7 @@ export class CarsService {
     });
 
     if (!client) {
-      throw new Error('Carro nao encontrado!');
+      throw new NotFoundException('Carro não encontrado!');
     }
 
     return client;

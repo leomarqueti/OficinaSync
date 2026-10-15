@@ -2,6 +2,7 @@ import {
   ConflictException,
   ForbiddenException,
   Injectable,
+  NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -101,7 +102,7 @@ export class ClientsService {
     });
 
     if (!client) {
-      throw new Error('Usuario nao encontrado!');
+      throw new NotFoundException('Cliente não encontrado!');
     }
 
     return client;
