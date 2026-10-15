@@ -73,8 +73,8 @@ export class ServiceOrdersController {
   @Get(':id')
   @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.OK)
-  findById(@Param('id', ParseIntPipe) id: number) {
-    return this.serviceOrdersService.findById(id);
+  findById(@Param('id', ParseIntPipe) id: number, @Req() req: any) {
+    return this.serviceOrdersService.findById(id, req.user.sub);
   }
 
   @Patch('/:id/finish')

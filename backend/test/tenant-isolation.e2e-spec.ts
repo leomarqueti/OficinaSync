@@ -187,6 +187,16 @@ describe('isolamento entre oficinas (tenants)', () => {
     await as(b, 'get', `/service_orders/by-car/${bw.carId}`).expect(200);
   });
 
+  it('GET /service_orders/:id — A não lê a OS da B, B lê a própria', async () => {
+    const attack = await as(a, 'get', `/service_orders/${bw.orderId}`);
+    expect([403, 404]).toContain(attack.status);
+    expect(JSON.stringify(attack.body)).not.toContain(bw.cpf);
+
+    const own = await as(b, 'get', `/service_orders/${bw.orderId}`).expect(200);
+    expect(own.body.service_order_id).toBe(bw.orderId);
+    expect(own.body.client.cpf).toBe(bw.cpf);
+  });
+
   it('página pública não vaza CPF/e-mail do cliente nem etapa não publicada', async () => {
     const res = await request(server())
       .get(`/service_orders/public/${bw.publicToken}`)

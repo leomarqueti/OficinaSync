@@ -82,8 +82,15 @@ export class ServiceOrdersService {
     return serviceOrder;
   }
 
-  async findById(id: number) {
+  async findById(id: number, userId: number) {
     const serviceOrder = await this.findEntityById(id);
+    const user = await this.usersService.findById(userId);
+
+    if (!user.tenant || serviceOrder.tenant.id !== user.tenant.id) {
+      throw new ForbiddenException(
+        'Essa ordem de serviço não pertence ao tenant do usuário.',
+      );
+    }
 
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
 
