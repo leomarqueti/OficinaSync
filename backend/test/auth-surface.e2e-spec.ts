@@ -74,6 +74,17 @@ describe('superfície de autenticação', () => {
     await request(server()).get('/users/me').set(bearer(legacy)).expect(200);
   });
 
+  it('POST /users (cadastro público sem throttle) não existe mais', async () => {
+    await request(server())
+      .post('/users')
+      .send({
+        name: 'Intruso',
+        email: `intruso-${randomUUID().slice(0, 8)}@teste.local`,
+        password: 'Teste@12345',
+      })
+      .expect(404);
+  });
+
   it('usuário ativo sem oficina recebe 401/403 nas rotas de tenant — nunca 500 nem dados', async () => {
     const email = `semtenant-${randomUUID().slice(0, 8)}@teste.local`;
     const password = 'Teste@12345';
