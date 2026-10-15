@@ -16,6 +16,7 @@ import { TenantsService } from './tenants.service';
 import { ResponseTenantDto } from './dto/response-tenants.dto';
 import { plainToInstance } from 'class-transformer';
 import { JwtAuthGuard } from '../AuthModule/jwt-auth.guard';
+import { RequireTokenScope } from '../AuthModule/token-scope.decorator';
 
 @Controller('tenants')
 export class TenantsController {
@@ -24,6 +25,7 @@ export class TenantsController {
   //Metodo post para criar a oficina, usando dto e httpcode com status created
   @Post()
   @UseGuards(JwtAuthGuard)
+  @RequireTokenScope('onboarding')
   @HttpCode(HttpStatus.CREATED)
   async create(
     @Body() createTenantDto: CreateTenantDto,

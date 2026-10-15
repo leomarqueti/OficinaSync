@@ -2,30 +2,26 @@
 /* eslint-disable @typescript-eslint/no-unsafe-call */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable prettier/prettier */
-/* eslint-disable @typescript-eslint/no-unused-vars */
-/* eslint-disable @typescript-eslint/no-wrapper-object-types */
 import {
   CanActivate,
   ExecutionContext,
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
 import { JwtService } from '@nestjs/jwt';
 import type { Request } from 'express';
+import { TOKEN_SCOPE_KEY } from './token-scope.decorator';
 
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
-  constructor(private readonly jwtService: JwtService) {}
+  constructor(
+    private readonly jwtService: JwtService,
+    private readonly reflector: Reflector,
+  ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    // Vamos pegar a requisisão atual
     const request = context.switchToHttp().getRequest<Request>();
-
-    /*
-        Alem de pegar a requisição vamos ter que pegar a autorização
-        com ela conseguimos validar de é validade ou não, essa autorizaçao
-        ficar dentro do header
-    */
 
     const authHeader = request.get('authorization');
 
@@ -33,23 +29,36 @@ export class JwtAuthGuard implements CanActivate {
       throw new UnauthorizedException('Token ausente');
     }
 
-    // vamos separar o tipo e token
     const [type, token] = authHeader.split(' ');
 
-    //vamos fazer uma verificação se nao for do tipo bearer ou sem token , invalidamos
     if (type !== 'Bearer' || !token) {
       throw new UnauthorizedException('Formato do token invalido!');
     }
 
+    let payload: any;
+
     try {
-      // agora vamos validar se o token é valido e nao esta expirado
-      const payload = await this.jwtService.verifyAsync(token);
-
-      (request as any).user = payload;
-
-      return true;
+      payload = await this.jwtService.verifyAsync(token);
     } catch {
       throw new UnauthorizedException('Token invalido ou expirado!');
     }
+
+    // Token de onboarding (cadastro em 2 etapas) só vale em rotas que o pedem
+    // explicitamente; todas as outras exigem 'access'. Token antigo sem scope
+    // conta como 'access' (compatibilidade até expirar).
+    const requiredScope =
+      this.reflector.getAllAndOverride<string>(TOKEN_SCOPE_KEY, [
+        context.getHandler(),
+        context.getClass(),
+      ]) ?? 'access';
+    const tokenScope = payload.scope ?? 'access';
+
+    if (tokenScope !== requiredScope) {
+      throw new UnauthorizedException('Token sem permissão para esta rota.');
+    }
+
+    (request as any).user = payload;
+
+    return true;
   }
 }
