@@ -1,0 +1,15 @@
+{
+  "moduleFileExtensions": ["js", "json", "ts"],
+  "rootDir": ".",
+  "testEnvironment": "node",
+  "testRegex": ".e2e-spec.ts$",
+  "transform": { "^.+\\.(t|j)s$": "ts-jest" },
+  "moduleNameMapper": {
+    "^file-type$": "<rootDir>/stubs/file-type.ts",
+    "^puppeteer$": "<rootDir>/stubs/puppeteer.ts",
+    "^src/(.*)$": "<rootDir>/../src/$1"
+  },
+  "setupFiles": ["<rootDir>/helpers/test-env.ts"],
+  "maxWorkers": 1,
+  "testTimeout": 60000
+}
