@@ -197,6 +197,19 @@ describe('isolamento entre oficinas (tenants)', () => {
     expect(own.body.client.cpf).toBe(bw.cpf);
   });
 
+  it('POST /service_orders — A não abre OS usando o carro da B', async () => {
+    const attack = await as(a, 'post', '/service_orders').send({
+      car_id: bw.carId,
+      client_complaint: 'tentativa de vazamento',
+    });
+    expect([403, 404]).toContain(attack.status);
+
+    const own = await as(b, 'post', '/service_orders')
+      .send({ car_id: bw.carId, client_complaint: 'OS legítima' })
+      .expect(201);
+    expect(own.body.service_order_id).toBeGreaterThan(0);
+  });
+
   it('página pública não vaza CPF/e-mail do cliente nem etapa não publicada', async () => {
     const res = await request(server())
       .get(`/service_orders/public/${bw.publicToken}`)

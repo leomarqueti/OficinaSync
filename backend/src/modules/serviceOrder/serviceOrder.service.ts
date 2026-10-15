@@ -47,6 +47,12 @@ export class ServiceOrdersService {
       throw new UnauthorizedException();
     }
 
+    if (car.tenant.id !== user.tenant.id) {
+      throw new ForbiddenException(
+        'Esse veículo não pertence ao tenant do usuário.',
+      );
+    }
+
     serviceOrder.tenant = user.tenant;
     serviceOrder.user = user;
     serviceOrder.public_token = token;
