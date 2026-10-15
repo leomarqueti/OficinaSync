@@ -14,6 +14,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { plainToInstance } from 'class-transformer';
 import { JwtAuthGuard } from '../AuthModule/jwt-auth.guard';
 import { MediaService } from './media.service';
+import { HARD_UPLOAD_LIMIT_BYTES } from '../minio/upload-limits';
 import { CreateMediaDto } from './dto/create-media-dto';
 import { ResponseMediaDto } from './dto/response-media-dto';
 
@@ -23,7 +24,9 @@ export class MediaController {
 
   @Post()
   @UseGuards(JwtAuthGuard)
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(
+    FileInterceptor('file', { limits: { fileSize: HARD_UPLOAD_LIMIT_BYTES } }),
+  )
   @HttpCode(HttpStatus.CREATED)
   async create(
     @UploadedFile() file: Express.Multer.File,

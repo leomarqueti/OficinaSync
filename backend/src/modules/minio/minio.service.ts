@@ -3,11 +3,17 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/no-unsafe-call */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
-import { BadRequestException, Injectable, OnModuleInit } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  OnModuleInit,
+  PayloadTooLargeException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as Minio from 'minio';
 import { fileTypeFromBuffer } from 'file-type';
 import { randomUUID } from 'crypto';
+import { checkUploadSize } from './upload-limits';
 
 @Injectable()
 export class MinioService implements OnModuleInit {
@@ -104,6 +110,12 @@ export class MinioService implements OnModuleInit {
       throw new BadRequestException(
         'Tipo de arquivo não permitido. Envie apenas imagem, áudio ou vídeo válidos.',
       );
+    }
+
+    const sizeError = checkUploadSize(detectedMimeType, file.size);
+
+    if (sizeError) {
+      throw new PayloadTooLargeException(sizeError);
     }
 
     const objectName = `orders/${randomUUID()}.${extension}`;
