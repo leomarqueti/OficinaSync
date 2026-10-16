@@ -19,24 +19,27 @@ export class CarsService {
   async create(
     createCarsDto: CreateCarDto,
     userId: number,
-    clientId: number,
+    clientId?: number,
   ): Promise<Cars> {
-    const newCar = this.carsRepository.create(createCarsDto);
+    const { client_id: _ignored, ...carFields } = createCarsDto;
+    const newCar = this.carsRepository.create(carFields);
 
     const user = await this.usersService.findById(userId);
-
-    const client = await this.clientsService.findById(clientId);
 
     if (!user.tenant) {
       throw new UnauthorizedException();
     }
 
-    const idTenat = user.tenant?.id;
+    // Carro pode ser aberto sem cliente (abertura rápida de OS) — o cliente entra depois.
+    const client =
+      clientId !== undefined
+        ? await this.clientsService.findById(clientId)
+        : null;
 
-    const idClientTenant = client.tenant.id;
-
-    if (idTenat != idClientTenant) {
-      throw new ForbiddenException('Esse cliente não pertence ao tenant do usuário.');
+    if (client && user.tenant.id != client.tenant.id) {
+      throw new ForbiddenException(
+        'Esse cliente não pertence ao tenant do usuário.',
+      );
     }
 
     newCar.tenant = user.tenant;

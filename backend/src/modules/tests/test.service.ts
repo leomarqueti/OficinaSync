@@ -142,7 +142,12 @@ export class TestsService {
       notes: string | null;
       created_at: Date;
       service_order_id: number;
-      car: { brand: string; model: string; year: number; plate: string };
+      car: {
+        brand: string | null;
+        model: string | null;
+        year: number | null;
+        plate: string;
+      };
     }[]
   > {
     const user = await this.usersService.findById(userId);

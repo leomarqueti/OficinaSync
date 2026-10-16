@@ -143,3 +143,44 @@ export async function createWorld(
     deviceName,
   };
 }
+
+/** OS "rápida": carro só com a placa; cliente opcional só com o nome. */
+export async function createPartialOrder(
+  app: INestApplication,
+  token: string,
+  opts: { plate?: string; clientName?: string } = {},
+) {
+  const server = app.getHttpServer();
+  const auth = { Authorization: `Bearer ${token}` };
+
+  let clientId: number | null = null;
+  if (opts.clientName) {
+    const client = await request(server)
+      .post('/clients')
+      .set(auth)
+      .send({ name: opts.clientName })
+      .expect(201);
+    clientId = client.body.client_id;
+  }
+
+  const plate = opts.plate ?? randomPlate();
+  const car = await request(server)
+    .post('/cars')
+    .set(auth)
+    .send({ plate, ...(clientId !== null ? { client_id: clientId } : {}) })
+    .expect(201);
+
+  const order = await request(server)
+    .post('/service_orders')
+    .set(auth)
+    .send({ car_id: car.body.car_id, client_complaint: 'Não pega de manhã' })
+    .expect(201);
+
+  return {
+    carId: car.body.car_id as number,
+    clientId,
+    plate,
+    orderId: order.body.service_order_id as number,
+    publicToken: order.body.public_token as string,
+  };
+}

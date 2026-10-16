@@ -73,13 +73,13 @@ export interface ReportData {
   tenantName: string;
   tenantCnpj: string;
   car: {
-    brand: string;
-    model: string;
-    year: number;
+    brand: string | null;
+    model: string | null;
+    year: number | null;
     plate: string;
-    color: string;
-    fuel_type: string;
-    mileage_in: number;
+    color: string | null;
+    fuel_type: string | null;
+    mileage_in: number | null;
   };
   clientName: string | null;
   clientComplaint: string | null;

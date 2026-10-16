@@ -9,16 +9,16 @@ export class ResponseClientDto {
   name: string;
 
   @Expose()
-  phone: string;
+  phone: string | null;
 
   @Expose()
-  cpf: string;
+  cpf: string | null;
 
   @Expose()
   email: string | null;
 
   @Expose()
-  address: string;
+  address: string | null;
 
   @Expose()
   created_at: Date;

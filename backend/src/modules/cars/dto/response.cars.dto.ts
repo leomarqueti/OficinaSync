@@ -19,25 +19,25 @@ export class ResponseCarDto {
   plate: string;
 
   @Expose()
-  brand: string;
+  brand: string | null;
 
   @Expose()
-  model: string;
+  model: string | null;
 
   @Expose()
-  year: number;
+  year: number | null;
 
   @Expose()
-  fuel_type: FuelType;
+  fuel_type: FuelType | null;
 
   @Expose()
-  chassis: string;
+  chassis: string | null;
 
   @Expose()
-  color: string;
+  color: string | null;
 
   @Expose()
-  mileage_in: number;
+  mileage_in: number | null;
 
   @Expose()
   created_at: Date;

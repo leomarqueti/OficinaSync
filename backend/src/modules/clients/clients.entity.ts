@@ -20,18 +20,18 @@ export class Clients {
   @Column({ length: 150, type: 'varchar' })
   name: string;
 
-  @Column({ length: 20, type: 'varchar' })
-  phone: string;
+  @Column({ length: 20, type: 'varchar', nullable: true })
+  phone: string | null;
 
   @Column({ length: 100, type: 'varchar', nullable: true })
   email: string | null;
 
   @Index()
-  @Column()
-  cpf: string;
+  @Column({ type: 'nvarchar', length: 255, nullable: true })
+  cpf: string | null;
 
-  @Column({ length: 200, type: 'varchar' })
-  address: string;
+  @Column({ length: 200, type: 'varchar', nullable: true })
+  address: string | null;
 
   @Column({ type: 'date', nullable: true })
   date_of_birth: Date;

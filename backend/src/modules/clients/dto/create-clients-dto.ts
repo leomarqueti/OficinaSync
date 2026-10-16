@@ -6,10 +6,11 @@ export class CreateClientDto {
   @MaxLength(100)
   name: string;
 
+  @IsOptional()
   @IsString()
   @MaxLength(20)
   @IsPhoneNumber()
-  phone: string;
+  phone?: string;
 
   @IsOptional()
   @IsString()
@@ -17,10 +18,12 @@ export class CreateClientDto {
   @IsEmail()
   email?: string;
 
+  @IsOptional()
   @IsCPF({ message: 'Invalid CPF number' })
-  cpf: string;
+  cpf?: string;
 
+  @IsOptional()
   @IsString()
   @MaxLength(200)
-  address: string;
+  address?: string;
 }

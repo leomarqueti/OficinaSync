@@ -28,50 +28,56 @@ export class Cars {
 
   @Column({
     type: 'varchar',
+    nullable: true,
   })
-  brand: string;
-
-  @Column({
-    type: 'varchar',
-  })
-  model: string;
-
-  @Column({
-    type: 'integer',
-  })
-  year: number;
-
-  @Column({
-    type: 'varchar',
-    enum: FuelType,
-  })
-  fuel_type: FuelType;
+  brand: string | null;
 
   @Column({
     type: 'varchar',
     nullable: true,
   })
-  chassis: string;
-
-  @Column({
-    type: 'varchar',
-  })
-  color: string;
+  model: string | null;
 
   @Column({
     type: 'integer',
+    nullable: true,
   })
-  mileage_in: number;
+  year: number | null;
+
+  @Column({
+    type: 'varchar',
+    enum: FuelType,
+    nullable: true,
+  })
+  fuel_type: FuelType | null;
+
+  @Column({
+    type: 'varchar',
+    nullable: true,
+  })
+  chassis: string | null;
+
+  @Column({
+    type: 'varchar',
+    nullable: true,
+  })
+  color: string | null;
+
+  @Column({
+    type: 'integer',
+    nullable: true,
+  })
+  mileage_in: number | null;
 
   @CreateDateColumn()
   created_at: Date;
 
   @ManyToOne(() => Clients, (client) => client.cars, {
-    nullable: false,
+    nullable: true,
     onDelete: 'CASCADE',
   })
   @JoinColumn({ name: 'client_id' })
-  client: Clients;
+  client: Clients | null;
 
   // SQL Server não indexa FKs automaticamente — toda query do sistema filtra por tenant.
   @Index()

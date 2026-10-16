@@ -139,12 +139,16 @@ export class ServiceOrdersService {
         fuel_type: serviceOrder.car.fuel_type,
       },
 
-      client: {
-        name: serviceOrder.car.client.name,
-        phone: serviceOrder.car.client.phone,
-        email: serviceOrder.car.client.email,
-        cpf: serviceOrder.car.client.cpf,
-      },
+      client: serviceOrder.car.client
+        ? {
+            client_id: serviceOrder.car.client.client_id,
+            name: serviceOrder.car.client.name,
+            phone: serviceOrder.car.client.phone,
+            email: serviceOrder.car.client.email,
+            cpf: serviceOrder.car.client.cpf,
+            address: serviceOrder.car.client.address,
+          }
+        : null,
 
       sections: await Promise.all(
         (serviceOrder.sections ?? []).map(async (section) => ({
@@ -252,10 +256,12 @@ export class ServiceOrdersService {
         color: serviceOrder.car.color,
         fuel_type: serviceOrder.car.fuel_type,
       },
-      client: {
-        name: serviceOrder.car.client.name,
-        phone: serviceOrder.car.client.phone,
-      },
+      client: serviceOrder.car.client
+        ? {
+            name: serviceOrder.car.client.name,
+            phone: serviceOrder.car.client.phone,
+          }
+        : null,
       sections: publishedSections,
     };
   }
@@ -326,10 +332,12 @@ export class ServiceOrdersService {
         color: serviceOrder.car.color,
         fuel_type: serviceOrder.car.fuel_type,
       },
-      client: {
-        name: serviceOrder.car.client.name,
-        phone: serviceOrder.car.client.phone,
-      },
+      client: serviceOrder.car.client
+        ? {
+            name: serviceOrder.car.client.name,
+            phone: serviceOrder.car.client.phone,
+          }
+        : null,
     }));
   }
 

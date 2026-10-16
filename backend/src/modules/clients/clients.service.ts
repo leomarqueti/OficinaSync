@@ -34,18 +34,22 @@ export class ClientsService {
 
     const tenant = user.tenant;
 
-    const checkClientExistence = await this.clientsRepository.findOne({
-      where: {
-        cpf: createClientDto.cpf,
-        tenant: {
-          id: tenant.id,
+    // Sem CPF não há o que comparar. Atenção: `where: { cpf: undefined }` do TypeORM IGNORA
+    // a condição e acharia qualquer cliente do tenant (falso conflito).
+    if (createClientDto.cpf) {
+      const checkClientExistence = await this.clientsRepository.findOne({
+        where: {
+          cpf: createClientDto.cpf,
+          tenant: {
+            id: tenant.id,
+          },
         },
-      },
-      relations: ['tenant'],
-    });
+        relations: ['tenant'],
+      });
 
-    if (checkClientExistence) {
-      throw new ConflictException('Usuario ja cadastrado!');
+      if (checkClientExistence) {
+        throw new ConflictException('Usuario ja cadastrado!');
+      }
     }
 
     if (user.tenant == null) {
