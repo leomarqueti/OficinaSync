@@ -25,6 +25,14 @@ import {
   isValidYear,
   onlyDigits,
 } from "@/lib/validators";
+import {
+  buildQuickCarPayload,
+  buildQuickClientPayload,
+  pendingLabels,
+  quickCarValid,
+  quickClientValid,
+} from "@/lib/quickOpen";
+import { carTitle, clientLabel } from "@/lib/display";
 
 const inputClass =
   "h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring";
@@ -66,22 +74,22 @@ type ExtraPhotoItem = {
 type ExistingClient = {
   client_id: number;
   name: string;
-  phone: string;
-  cpf: string;
+  phone: string | null;
+  cpf: string | null;
   email: string | null;
-  address: string;
+  address: string | null;
 };
 
 type ExistingCar = {
   car_id: number;
   plate: string;
-  brand: string;
-  model: string;
-  year: number;
-  fuel_type: string;
-  color: string;
-  chassis: string;
-  mileage_in: number;
+  brand: string | null;
+  model: string | null;
+  year: number | null;
+  fuel_type: string | null;
+  color: string | null;
+  chassis: string | null;
+  mileage_in: number | null;
 };
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -103,6 +111,8 @@ export function OsCreateWizardPage() {
   const navigate = useNavigate();
   const [step, setStep] = useState(0);
   const [submitting, setSubmitting] = useState(false);
+  // modo rápido: abre a OS só com a placa; o resto é cobrado ao finalizar (o backend garante)
+  const [quickMode, setQuickMode] = useState(false);
 
   // passo 1 — cliente
   const [name, setName] = useState("");
@@ -230,10 +240,10 @@ export function OsCreateWizardPage() {
   const selectClient = (client: ExistingClient) => {
     setSelectedClientId(client.client_id);
     setName(client.name);
-    setPhone(client.phone);
-    setCpf(client.cpf);
+    setPhone(client.phone ?? "");
+    setCpf(client.cpf ?? "");
     setEmail(client.email ?? "");
-    setAddress(client.address);
+    setAddress(client.address ?? "");
     setClientResults([]);
     setClientSearch("");
   };
@@ -251,22 +261,35 @@ export function OsCreateWizardPage() {
   const selectCar = (car: ExistingCar) => {
     setSelectedCarId(car.car_id);
     setPlate(car.plate);
-    setBrand(car.brand);
-    setModel(car.model);
-    setYear(String(car.year));
-    setFuelType(car.fuel_type);
-    setColor(car.color);
-    setChassis(car.chassis);
-    setMileageIn(String(car.mileage_in));
+    setBrand(car.brand ?? "");
+    setModel(car.model ?? "");
+    setYear(car.year != null ? String(car.year) : "");
+    setFuelType(car.fuel_type ?? (quickMode ? "" : "flex"));
+    setColor(car.color ?? "");
+    setChassis(car.chassis ?? "");
+    setMileageIn(car.mileage_in != null ? String(car.mileage_in) : "");
     // ponto de partida razoável — o mecânico ajusta pro KM real dessa visita
-    setCurrentMileage(String(car.mileage_in));
+    setCurrentMileage(car.mileage_in != null ? String(car.mileage_in) : "");
   };
 
   const complaintValid = complaint.trim().length >= 5;
 
   const photosValid = Object.values(photos).every((f) => f !== null);
 
-  const canAdvance = [clientValid, carValid, complaintValid, photosValid, true][step];
+  const quickClient = { name, phone, cpf, email, address };
+  const quickCar = { plate, brand, model, year, fuelType, color, chassis, mileageIn };
+
+  const canAdvance = [
+    quickMode ? selectedClientId !== null || quickClientValid(quickClient) : clientValid,
+    quickMode
+      ? carMode === "existing"
+        ? selectedCarId !== null
+        : quickCarValid(quickCar)
+      : carValid,
+    complaintValid,
+    quickMode || photosValid,
+    true,
+  ][step];
 
   const goBack = () => {
     if (step === 0) {
@@ -326,20 +349,33 @@ export function OsCreateWizardPage() {
     try {
       setSubmitting(true);
 
-      const clientId =
-        selectedClientId ??
-        (
+      const createClientQuick = async (): Promise<number | null> => {
+        const payload = buildQuickClientPayload(quickClient);
+        if (!payload) return null;
+        return (
           await apiFetch<{ client_id: number }>("/clients", {
             method: "POST",
-            json: {
-              name: name.trim(),
-              phone,
-              ...(email.trim() ? { email: email.trim() } : {}),
-              cpf: onlyDigits(cpf),
-              address: address.trim(),
-            },
+            json: payload,
           })
         ).client_id;
+      };
+
+      const clientId: number | null =
+        selectedClientId ??
+        (quickMode
+          ? await createClientQuick()
+          : (
+              await apiFetch<{ client_id: number }>("/clients", {
+                method: "POST",
+                json: {
+                  name: name.trim(),
+                  phone,
+                  ...(email.trim() ? { email: email.trim() } : {}),
+                  cpf: onlyDigits(cpf),
+                  address: address.trim(),
+                },
+              })
+            ).client_id);
 
       const carId =
         carMode === "existing" && selectedCarId !== null
@@ -347,24 +383,25 @@ export function OsCreateWizardPage() {
           : (
               await apiFetch<{ car_id: number }>("/cars", {
                 method: "POST",
-                json: {
-                  plate: plate.toUpperCase().replace(/[^A-Z0-9]/g, ""),
-                  brand: brand.trim(),
-                  model: model.trim(),
-                  year: Number(year),
-                  fuel_type: fuelType,
-                  chassis: chassis.trim().toUpperCase(),
-                  color: color.trim(),
-                  mileage_in: Number(mileageIn),
-                  client_id: clientId,
-                },
+                json: quickMode
+                  ? buildQuickCarPayload(quickCar, clientId)
+                  : {
+                      plate: plate.toUpperCase().replace(/[^A-Z0-9]/g, ""),
+                      brand: brand.trim(),
+                      model: model.trim(),
+                      year: Number(year),
+                      fuel_type: fuelType,
+                      chassis: chassis.trim().toUpperCase(),
+                      color: color.trim(),
+                      mileage_in: Number(mileageIn),
+                      client_id: clientId,
+                    },
               })
             ).car_id;
 
-      const orderMileageIn =
-        carMode === "existing" && selectedCarId !== null
-          ? Number(currentMileage)
-          : Number(mileageIn);
+      const rawMileage =
+        carMode === "existing" && selectedCarId !== null ? currentMileage : mileageIn;
+      const orderMileageIn = rawMileage ? Number(rawMileage) : undefined;
 
       const serviceOrder = await apiFetch<{ service_order_id: number }>("/service_orders", {
         method: "POST",
@@ -401,29 +438,35 @@ export function OsCreateWizardPage() {
         await apiFetch(`/sections/${intakeSection.section_id}/publish`, { method: "PATCH" });
       }
 
-      const section = await apiFetch<{ section_id: number }>("/sections", {
-        method: "POST",
-        json: {
-          service_order_id: serviceOrder.service_order_id,
-          type: "checkin",
-          notes: "Registro fotográfico da entrada do veículo.",
-        },
-      });
-
       const filledExtraPhotos = extraPhotos.filter(
         (p): p is ExtraPhotoItem & { file: File } => p.file !== null,
       );
+      const filledEntryPhotos = (Object.keys(photoLabels) as PhotoKey[]).filter(
+        (key) => photos[key] !== null,
+      );
 
-      await Promise.all([
-        ...(Object.keys(photoLabels) as PhotoKey[]).map((key) =>
-          uploadMedia(photos[key] as File, photoLabels[key], section.section_id, "photo"),
-        ),
-        ...filledExtraPhotos.map((p) =>
-          uploadMedia(p.file, p.label.trim() || "Detalhe adicional", section.section_id, "photo"),
-        ),
-      ]);
+      // no modo rápido as fotos de entrada são opcionais: sem nenhuma, não cria a etapa de check-in
+      if (filledEntryPhotos.length > 0 || filledExtraPhotos.length > 0) {
+        const section = await apiFetch<{ section_id: number }>("/sections", {
+          method: "POST",
+          json: {
+            service_order_id: serviceOrder.service_order_id,
+            type: "checkin",
+            notes: "Registro fotográfico da entrada do veículo.",
+          },
+        });
 
-      await apiFetch(`/sections/${section.section_id}/publish`, { method: "PATCH" });
+        await Promise.all([
+          ...filledEntryPhotos.map((key) =>
+            uploadMedia(photos[key] as File, photoLabels[key], section.section_id, "photo"),
+          ),
+          ...filledExtraPhotos.map((p) =>
+            uploadMedia(p.file, p.label.trim() || "Detalhe adicional", section.section_id, "photo"),
+          ),
+        ]);
+
+        await apiFetch(`/sections/${section.section_id}/publish`, { method: "PATCH" });
+      }
 
       toast.success("OS criada com sucesso!");
       navigate(`/os/${serviceOrder.service_order_id}`);
@@ -446,6 +489,44 @@ export function OsCreateWizardPage() {
         nextDisabled={!canAdvance}
       >
         <div className="space-y-4">
+          <label
+            htmlFor="quick-mode"
+            className="flex cursor-pointer items-start gap-3 rounded-2xl border border-border bg-muted/20 p-4"
+          >
+            <input
+              id="quick-mode"
+              type="checkbox"
+              checked={quickMode}
+              onChange={(e) => {
+                setQuickMode(e.target.checked);
+                // no modo rápido o combustível começa em branco (não vale "chutar" flex)
+                setFuelType(e.target.checked ? "" : "flex");
+              }}
+              className="mt-1 h-5 w-5 accent-lime-400"
+            />
+            <span>
+              <span className="block text-sm font-semibold">Abertura rápida</span>
+              <span className="block text-xs text-muted-foreground">
+                Só a placa é obrigatória. O resto você completa depois — o sistema cobra ao
+                finalizar a OS.
+              </span>
+            </span>
+          </label>
+
+          {quickMode && selectedClientId === null && (
+            <Button
+              type="button"
+              variant="outline"
+              className="h-11 w-full"
+              onClick={() => {
+                clearClientSelection();
+                setStep(1);
+              }}
+            >
+              Pular cliente
+            </Button>
+          )}
+
           {selectedClientId !== null ? (
             <div className="flex items-start justify-between gap-3 rounded-2xl border border-brand/30 bg-brand/[0.06] p-4">
               <div>
@@ -455,8 +536,9 @@ export function OsCreateWizardPage() {
                 </p>
                 <p className="mt-1.5 font-medium text-foreground">{name}</p>
                 <p className="text-sm text-muted-foreground">
-                  {formatPhone(e164ToDigits(phone))}
-                  {cpf && ` · CPF ${cpf}`}
+                  {[phone ? formatPhone(e164ToDigits(phone)) : "", cpf ? `CPF ${cpf}` : ""]
+                    .filter(Boolean)
+                    .join(" · ")}
                 </p>
                 {address && <p className="text-sm text-muted-foreground">{address}</p>}
               </div>
@@ -495,7 +577,9 @@ export function OsCreateWizardPage() {
                       <span>
                         <span className="block text-sm font-medium">{client.name}</span>
                         <span className="block text-xs text-muted-foreground">
-                          {formatPhone(e164ToDigits(client.phone))} · CPF {client.cpf}
+                          {[client.phone ? formatPhone(e164ToDigits(client.phone)) : "", client.cpf ? `CPF ${client.cpf}` : ""]
+                            .filter(Boolean)
+                            .join(" · ")}
                         </span>
                       </span>
                       <Plus className="h-4 w-4 text-brand" />
@@ -595,10 +679,10 @@ export function OsCreateWizardPage() {
                       <Car className="h-4 w-4 text-muted-foreground" />
                       <span>
                         <span className="block text-sm font-medium">
-                          {car.brand} {car.model} · {car.year}
+                          {carTitle(car)}{car.year ? ` · ${car.year}` : ""}
                         </span>
                         <span className="block text-xs text-muted-foreground">
-                          {car.plate} · {car.color}
+                          {[car.plate, car.color].filter(Boolean).join(" · ")}
                         </span>
                       </span>
                     </span>
@@ -722,6 +806,7 @@ export function OsCreateWizardPage() {
               onChange={(e) => setFuelType(e.target.value)}
               className={inputClass}
             >
+              {quickMode && <option value="">Não informado</option>}
               {fuelOptions.map((option) => (
                 <option key={option.value} value={option.value}>
                   {option.label}
@@ -972,6 +1057,22 @@ export function OsCreateWizardPage() {
       loading={submitting}
     >
       <div className="space-y-4">
+        {quickMode &&
+          pendingLabels(quickClient, quickCar, selectedClientId !== null).length > 0 && (
+            <div className="rounded-2xl border border-amber-400/30 bg-amber-400/10 p-4">
+              <p className="text-[11px] font-bold uppercase tracking-widest text-amber-300">
+                Vai ficar pendente
+              </p>
+              <p className="mt-1 text-sm text-foreground/90">
+                {pendingLabels(quickClient, quickCar, selectedClientId !== null).join(", ")}.
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Você completa na tela da OS; o sistema só deixa finalizar quando estiver tudo
+                preenchido.
+              </p>
+            </div>
+          )}
+
         <div className="rounded-2xl border border-border bg-card p-4">
           <p className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
             Cliente
@@ -979,7 +1080,7 @@ export function OsCreateWizardPage() {
               <span className="rounded-full bg-brand/10 px-2 py-0.5 text-brand">já cadastrado</span>
             )}
           </p>
-          <p className="mt-1 text-sm text-foreground">{name}</p>
+          <p className="mt-1 text-sm text-foreground">{clientLabel(name)}</p>
           <p className="text-sm text-muted-foreground">
             {[formatPhone(e164ToDigits(phone)), email].filter(Boolean).join(" · ")}
           </p>
@@ -993,7 +1094,7 @@ export function OsCreateWizardPage() {
             )}
           </p>
           <p className="mt-1 text-sm text-foreground">
-            {brand} {model} · {year} · {color}
+            {[carTitle({ brand, model }), year, color].filter(Boolean).join(" · ")}
           </p>
           <p className="text-sm text-muted-foreground">
             {plate.toUpperCase()} ·{" "}
@@ -1002,9 +1103,9 @@ export function OsCreateWizardPage() {
                 carMode === "existing" && selectedCarId !== null
                   ? currentMileage
                   : mileageIn;
-              return km ? Number(km).toLocaleString("pt-BR") : 0;
+              return km ? `${Number(km).toLocaleString("pt-BR")} km` : "KM não informado";
             })()}{" "}
-            km {carMode === "existing" && selectedCarId !== null && "nessa visita"}
+            {carMode === "existing" && selectedCarId !== null && "nessa visita"}
           </p>
         </div>
 
