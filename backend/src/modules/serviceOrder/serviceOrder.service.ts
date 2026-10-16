@@ -514,6 +514,15 @@ export class ServiceOrdersService {
       );
     }
 
+    const missing = computeMissingData(order.car, order.car.client);
+
+    if (!isComplete(missing)) {
+      throw new ConflictException({
+        message: 'Faltam dados do cliente ou do veículo para finalizar a OS.',
+        missing_data: missing,
+      });
+    }
+
     order.status = Status.DONE;
     order.finished_at = new Date();
 
