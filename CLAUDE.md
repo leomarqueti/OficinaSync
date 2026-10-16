@@ -425,6 +425,7 @@ O schema agora é versionado por **migrations**, não mais sincronizado automati
 - **Tenants isolados:** toda query sensível filtra por `tenant_id` do usuário logado (segurança multi-tenant)
 - **Nunca confiar no frontend:** `service_order_id` do body sempre validado contra tenant do token
 - **`public_token` gerado no backend** via `randomBytes(32).hex`, nunca no frontend
+- **Todo bug corrigido ganha um teste de regressão (regra do Leonardo, 2026-10-15):** escreva o teste que reproduz o bug, veja-o FALHAR pelo motivo certo, corrija, veja-o passar e rode a suíte inteira. O teste é commitado junto com a correção (e a mensagem do commit o cita). Backend: unitário em `backend/src/**/*.spec.ts` (`npm test`) ou e2e em `backend/test/*.e2e-spec.ts` (`npm run test:e2e`); script de deploy: `bash deploy/test-deploy.sh`. Se for impossível testar automaticamente, diga isso explicitamente e o motivo — não pule em silêncio.
 
 ## Estilo de comunicação com Leonardo
 
