@@ -162,6 +162,11 @@ export class TestsService {
 
     const car = await this.carsService.findOneScoped(carId, userId);
 
+    // Carro aberto no modo rápido ainda não tem marca/modelo — sem o que comparar.
+    if (!car.brand || !car.model) {
+      return [];
+    }
+
     const qb = this.testsRepository
       .createQueryBuilder('test')
       .leftJoinAndSelect('test.section', 'section')

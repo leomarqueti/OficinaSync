@@ -694,12 +694,12 @@ export function buildReportHtml(data: ReportData): string {
 
   <section class="grid">
     <div class="field"><div class="field-label">Cliente</div><div class="field-value">${data.clientName ?? '-'}</div></div>
-    <div class="field"><div class="field-label">Veículo</div><div class="field-value">${data.car.brand} ${data.car.model}</div></div>
-    <div class="field"><div class="field-label">Ano</div><div class="field-value">${data.car.year}</div></div>
+    <div class="field"><div class="field-label">Veículo</div><div class="field-value">${[data.car.brand, data.car.model].filter(Boolean).join(' ') || '-'}</div></div>
+    <div class="field"><div class="field-label">Ano</div><div class="field-value">${data.car.year ?? '-'}</div></div>
     <div class="field"><div class="field-label">Placa</div><div class="field-value">${data.car.plate}</div></div>
-    <div class="field"><div class="field-label">Cor</div><div class="field-value">${data.car.color}</div></div>
-    <div class="field"><div class="field-label">Combustível</div><div class="field-value">${data.car.fuel_type}</div></div>
-    <div class="field"><div class="field-label">Quilometragem</div><div class="field-value">${(data.car.mileage_in ?? 0).toLocaleString('pt-BR')} km</div></div>
+    <div class="field"><div class="field-label">Cor</div><div class="field-value">${data.car.color ?? '-'}</div></div>
+    <div class="field"><div class="field-label">Combustível</div><div class="field-value">${data.car.fuel_type ?? '-'}</div></div>
+    <div class="field"><div class="field-label">Quilometragem</div><div class="field-value">${data.car.mileage_in != null ? `${data.car.mileage_in.toLocaleString('pt-BR')} km` : '-'}</div></div>
     <div class="field"><div class="field-label">Data de abertura</div><div class="field-value">${formatDate(data.createdAt)}</div></div>
     <div class="field"><div class="field-label">Data do laudo</div><div class="field-value">${formatDate(data.finishedAt ?? new Date())}</div></div>
   </section>

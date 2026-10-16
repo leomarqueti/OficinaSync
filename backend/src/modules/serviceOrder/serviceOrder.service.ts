@@ -19,6 +19,7 @@ import { UsersService } from '../users/users.service';
 import { CarsService } from '../cars/cars.service';
 import { MinioService } from '../minio/minio.service';
 import { Status } from './status.enum';
+import { computeMissingData, isComplete } from './missing-data';
 import { SectionType } from '../sections/typeSection.enum';
 
 // Mesmo label usado em OsCreateWizardPage.tsx pra foto fixa de entrada "front".
@@ -99,6 +100,10 @@ export class ServiceOrdersService {
     }
 
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    const missing = computeMissingData(
+      serviceOrder.car,
+      serviceOrder.car.client,
+    );
 
     return {
       service_order_id: serviceOrder.service_order_id,
@@ -149,6 +154,8 @@ export class ServiceOrdersService {
             address: serviceOrder.car.client.address,
           }
         : null,
+      missing_data: missing,
+      is_complete: isComplete(missing),
 
       sections: await Promise.all(
         (serviceOrder.sections ?? []).map(async (section) => ({
@@ -310,35 +317,44 @@ export class ServiceOrdersService {
       }),
     );
 
-    return serviceOrders.map((serviceOrder, index) => ({
-      service_order_id: serviceOrder.service_order_id,
-      status: serviceOrder.status,
-      client_complaint: serviceOrder.client_complaint,
-      created_at: serviceOrder.created_at,
-      public_token: serviceOrder.public_token,
-      public_url: `${frontendUrl}/servico/${serviceOrder.public_token}`,
-      mileage_in: serviceOrder.mileage_in ?? serviceOrder.car.mileage_in,
-      photo_url: photoUrls[index],
-      tenant: {
-        name: serviceOrder.tenant.name,
-      },
-      car: {
-        car_id: serviceOrder.car.car_id,
-        brand: serviceOrder.car.brand,
-        model: serviceOrder.car.model,
-        year: serviceOrder.car.year,
-        plate: serviceOrder.car.plate,
-        mileage_in: serviceOrder.car.mileage_in,
-        color: serviceOrder.car.color,
-        fuel_type: serviceOrder.car.fuel_type,
-      },
-      client: serviceOrder.car.client
-        ? {
-            name: serviceOrder.car.client.name,
-            phone: serviceOrder.car.client.phone,
-          }
-        : null,
-    }));
+    return serviceOrders.map((serviceOrder, index) => {
+      const missing = computeMissingData(
+        serviceOrder.car,
+        serviceOrder.car.client,
+      );
+
+      return {
+        service_order_id: serviceOrder.service_order_id,
+        status: serviceOrder.status,
+        client_complaint: serviceOrder.client_complaint,
+        created_at: serviceOrder.created_at,
+        public_token: serviceOrder.public_token,
+        public_url: `${frontendUrl}/servico/${serviceOrder.public_token}`,
+        mileage_in: serviceOrder.mileage_in ?? serviceOrder.car.mileage_in,
+        photo_url: photoUrls[index],
+        tenant: {
+          name: serviceOrder.tenant.name,
+        },
+        car: {
+          car_id: serviceOrder.car.car_id,
+          brand: serviceOrder.car.brand,
+          model: serviceOrder.car.model,
+          year: serviceOrder.car.year,
+          plate: serviceOrder.car.plate,
+          mileage_in: serviceOrder.car.mileage_in,
+          color: serviceOrder.car.color,
+          fuel_type: serviceOrder.car.fuel_type,
+        },
+        client: serviceOrder.car.client
+          ? {
+              name: serviceOrder.car.client.name,
+              phone: serviceOrder.car.client.phone,
+            }
+          : null,
+        missing_data: missing,
+        is_complete: isComplete(missing),
+      };
+    });
   }
 
   async findByCar(carId: number, userId: number) {
@@ -346,7 +362,9 @@ export class ServiceOrdersService {
     const car = await this.carsService.findById(carId);
 
     if (!user.tenant || car.tenant.id !== user.tenant.id) {
-      throw new ForbiddenException('Esse veículo não pertence ao tenant do usuário.');
+      throw new ForbiddenException(
+        'Esse veículo não pertence ao tenant do usuário.',
+      );
     }
 
     const serviceOrders = await this.serviceOrdersRepository.find({
