@@ -3,7 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Cars } from './cars.entity';
 import { CreateCarDto } from './dto/create.cars.dto';
 import { UpdateCarDto } from './dto/update.cars.dto';
-import { ILike, Repository } from 'typeorm';
+import { ILike, Raw, Repository } from 'typeorm';
 import { UsersService } from '../users/users.service';
 import { ClientsService } from '../clients/clients.service';
 
@@ -32,7 +32,7 @@ export class CarsService {
 
     // Carro pode ser aberto sem cliente (abertura rápida de OS) — o cliente entra depois.
     const client =
-      clientId !== undefined
+      clientId != null
         ? await this.clientsService.findById(clientId)
         : null;
 
@@ -103,9 +103,15 @@ export class CarsService {
       });
     }
 
+    // Raw: com ILike o mssql tipa o parâmetro como varchar(7) (tamanho da coluna plate) e
+    // '%PLACA%' estoura com 500 — buscar a placa inteira nunca funcionava.
+    const plateLike = Raw((alias) => `LOWER(${alias}) LIKE LOWER(:plateTerm)`, {
+      plateTerm: `%${term}%`,
+    });
+
     return this.carsRepository.find({
       where: [
-        { tenant: { id: tenantId }, plate: ILike(`%${term}%`) },
+        { tenant: { id: tenantId }, plate: plateLike },
         { tenant: { id: tenantId }, model: ILike(`%${term}%`) },
         { tenant: { id: tenantId }, brand: ILike(`%${term}%`) },
       ],

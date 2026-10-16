@@ -404,7 +404,8 @@ export class ServiceOrdersService {
       );
     }
 
-    if (dto.client_id !== undefined && dto.client) {
+    // null chega aqui como "não enviado" (@IsOptional deixa null passar)
+    if (dto.client_id != null && dto.client) {
       throw new BadRequestException(
         'Envie client_id (usar cliente já cadastrado) OU client (dados do cliente), não os dois.',
       );
@@ -422,7 +423,7 @@ export class ServiceOrdersService {
       });
       let client: Clients | null = car.client ?? null;
 
-      if (dto.client_id !== undefined) {
+      if (dto.client_id != null) {
         const existing = await clientRepo.findOne({
           where: { client_id: dto.client_id },
           relations: { tenant: true },
@@ -463,11 +464,11 @@ export class ServiceOrdersService {
           client = clientRepo.create({ name: input.name.trim(), tenant });
         }
 
-        if (input.name !== undefined) client.name = input.name.trim();
-        if (input.phone !== undefined) client.phone = input.phone;
-        if (input.cpf !== undefined) client.cpf = input.cpf;
-        if (input.address !== undefined) client.address = input.address.trim();
-        if (input.email !== undefined) client.email = input.email;
+        if (input.name != null) client.name = input.name.trim();
+        if (input.phone != null) client.phone = input.phone;
+        if (input.cpf != null) client.cpf = input.cpf;
+        if (input.address != null) client.address = input.address.trim();
+        if (input.email != null) client.email = input.email;
 
         client = await clientRepo.save(client);
       }
@@ -475,15 +476,15 @@ export class ServiceOrdersService {
       if (dto.car) {
         const input = dto.car;
 
-        if (input.brand !== undefined) car.brand = input.brand.trim();
-        if (input.model !== undefined) car.model = input.model.trim();
-        if (input.year !== undefined) car.year = input.year;
-        if (input.fuel_type !== undefined) car.fuel_type = input.fuel_type;
-        if (input.color !== undefined) car.color = input.color.trim();
-        if (input.chassis !== undefined) {
+        if (input.brand != null) car.brand = input.brand.trim();
+        if (input.model != null) car.model = input.model.trim();
+        if (input.year != null) car.year = input.year;
+        if (input.fuel_type != null) car.fuel_type = input.fuel_type;
+        if (input.color != null) car.color = input.color.trim();
+        if (input.chassis != null) {
           car.chassis = input.chassis.trim().toUpperCase();
         }
-        if (input.mileage_in !== undefined) car.mileage_in = input.mileage_in;
+        if (input.mileage_in != null) car.mileage_in = input.mileage_in;
       }
 
       car.client = client;

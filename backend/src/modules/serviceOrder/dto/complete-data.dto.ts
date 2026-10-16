@@ -57,6 +57,7 @@ export class CompleteCarDto {
   @IsOptional()
   @Type(() => Number)
   @IsInt()
+  @Min(1900)
   year?: number;
 
   @IsOptional()

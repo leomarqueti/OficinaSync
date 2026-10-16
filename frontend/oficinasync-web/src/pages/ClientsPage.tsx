@@ -14,10 +14,10 @@ const inputClass =
 type Client = {
   client_id: number;
   name: string;
-  phone: string;
-  cpf: string;
+  phone: string | null;
+  cpf: string | null;
   email: string | null;
-  address: string;
+  address: string | null;
   created_at: string;
 };
 
@@ -98,9 +98,13 @@ export function ClientsPage() {
                   <div className="min-w-0 flex-1">
                     <p className="font-medium">{client.name}</p>
                     <p className="truncate text-sm text-muted-foreground">
-                      {formatPhone(e164ToDigits(client.phone))}
-                      {client.cpf && ` · CPF ${client.cpf}`}
-                      {client.email && ` · ${client.email}`}
+                      {[
+                        client.phone ? formatPhone(e164ToDigits(client.phone)) : "",
+                        client.cpf ? `CPF ${client.cpf}` : "",
+                        client.email ?? "",
+                      ]
+                        .filter(Boolean)
+                        .join(" · ") || "Dados pendentes"}
                     </p>
                     {client.address && (
                       <p className="truncate text-xs text-muted-foreground">{client.address}</p>

@@ -22,10 +22,10 @@ const inputClass =
 export type EditableClient = {
   client_id: number;
   name: string;
-  phone: string;
-  cpf: string;
+  phone: string | null;
+  cpf: string | null;
   email: string | null;
-  address: string;
+  address: string | null;
 };
 
 type EditClientSheetProps = {
@@ -45,10 +45,10 @@ export function EditClientSheet({ client, onClose, onSaved }: EditClientSheetPro
   useEffect(() => {
     if (!client) return;
     setName(client.name);
-    setPhone(client.phone);
-    setCpf(client.cpf);
+    setPhone(client.phone ?? "");
+    setCpf(client.cpf ?? "");
     setEmail(client.email ?? "");
-    setAddress(client.address);
+    setAddress(client.address ?? "");
   }, [client]);
 
   const submit = async () => {
@@ -60,10 +60,11 @@ export function EditClientSheet({ client, onClose, onSaved }: EditClientSheetPro
         method: "PATCH",
         json: {
           name: name.trim(),
-          phone,
-          cpf: onlyDigits(cpf),
+          // campo em branco não é enviado (cliente aberto no modo rápido pode não ter nada disso ainda)
+          ...(phone ? { phone } : {}),
+          ...(cpf ? { cpf: onlyDigits(cpf) } : {}),
           email: email.trim() || null,
-          address: address.trim(),
+          ...(address.trim() ? { address: address.trim() } : {}),
         },
       });
       toast.success("Cliente atualizado!");

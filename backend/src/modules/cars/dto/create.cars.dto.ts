@@ -6,6 +6,7 @@ import {
   IsOptional,
   IsString,
   Length,
+  Min,
 } from 'class-validator';
 import { FuelType } from '../fuelType.enum';
 
@@ -28,6 +29,7 @@ export class CreateCarDto {
   @IsOptional()
   @Type(() => Number)
   @IsInt()
+  @Min(1900)
   year?: number;
 
   @IsOptional()

@@ -48,7 +48,7 @@ export function computeMissingData(
   const carMissing: MissingItem[] = [];
   if (!filled(car?.brand)) carMissing.push({ field: 'brand', label: 'marca' });
   if (!filled(car?.model)) carMissing.push({ field: 'model', label: 'modelo' });
-  if (typeof car?.year !== 'number') {
+  if (typeof car?.year !== 'number' || car.year < 1900) {
     carMissing.push({ field: 'year', label: 'ano' });
   }
   if (!filled(car?.fuel_type)) {

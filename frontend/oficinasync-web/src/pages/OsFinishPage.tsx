@@ -456,6 +456,8 @@ export function OsFinishPage() {
         </div>
       </div>
 
+      {/* só monta aberto: o sheet liga o tema escuro no body e esta página é clara */}
+      {completeOpen && (
       <CompleteDataSheet
         orderId={data.service_order_id}
         open={completeOpen}
@@ -467,6 +469,7 @@ export function OsFinishPage() {
           toast.success("Dados completos — agora é só finalizar.");
         }}
       />
+      )}
     </div>
   );
 }

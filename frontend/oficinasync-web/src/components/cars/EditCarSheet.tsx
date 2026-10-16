@@ -47,7 +47,7 @@ export function EditCarSheet({ car, onClose, onSaved }: EditCarSheetProps) {
   const [brand, setBrand] = useState("");
   const [model, setModel] = useState("");
   const [year, setYear] = useState("");
-  const [fuelType, setFuelType] = useState("flex");
+  const [fuelType, setFuelType] = useState("");
   const [color, setColor] = useState("");
   const [mileageIn, setMileageIn] = useState("");
   const [saving, setSaving] = useState(false);
@@ -58,7 +58,7 @@ export function EditCarSheet({ car, onClose, onSaved }: EditCarSheetProps) {
     setBrand(car.brand ?? "");
     setModel(car.model ?? "");
     setYear(car.year != null ? String(car.year) : "");
-    setFuelType(car.fuel_type ?? "flex");
+    setFuelType(car.fuel_type ?? "");
     setColor(car.color ?? "");
     setMileageIn(car.mileage_in != null ? String(car.mileage_in) : "");
   }, [car]);
@@ -72,12 +72,13 @@ export function EditCarSheet({ car, onClose, onSaved }: EditCarSheetProps) {
         method: "PATCH",
         json: {
           plate: plate.toUpperCase().replace(/[^A-Z0-9]/g, ""),
-          brand: brand.trim(),
-          model: model.trim(),
-          year: Number(year),
-          fuel_type: fuelType,
-          color: color.trim(),
-          mileage_in: Number(mileageIn),
+          // só o que foi preenchido — carro aberto no modo rápido não vira "ano 0 / 0 km / flex"
+          ...(brand.trim() ? { brand: brand.trim() } : {}),
+          ...(model.trim() ? { model: model.trim() } : {}),
+          ...(year ? { year: Number(year) } : {}),
+          ...(fuelType ? { fuel_type: fuelType } : {}),
+          ...(color.trim() ? { color: color.trim() } : {}),
+          ...(mileageIn ? { mileage_in: Number(mileageIn) } : {}),
         },
       });
       toast.success("Veículo atualizado!");
@@ -129,6 +130,7 @@ export function EditCarSheet({ car, onClose, onSaved }: EditCarSheetProps) {
               onChange={(e) => setFuelType(e.target.value)}
               className={inputClass}
             >
+              <option value="">Não informado</option>
               {fuelOptions.map((option) => (
                 <option key={option.value} value={option.value}>
                   {option.label}

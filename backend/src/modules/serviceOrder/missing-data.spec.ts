@@ -99,6 +99,12 @@ describe('computeMissingData', () => {
     ).toEqual(['mileage_in']);
   });
 
+  it('ano 0 (ou antes de 1900) conta como faltando', () => {
+    expect(
+      fields(computeMissingData({ ...fullCar, year: 0 }, fullClient).car),
+    ).toEqual(['year']);
+  });
+
   it('ano null ou ausente falta', () => {
     expect(
       fields(computeMissingData({ ...fullCar, year: null }, fullClient).car),
