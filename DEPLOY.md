@@ -183,6 +183,72 @@ docker compose -f docker-compose.prod.yml restart backend
 
 ---
 
+## 10. Deploy automático (GitHub Actions)
+
+Em vez de entrar na VPS e rodar `git pull` + `docker compose up` (seção 9), o GitHub faz isso sozinho
+**quando você empurra pra branch `production`**. Push na `main` não publica nada.
+
+**Fluxo do dia a dia** (na sua máquina, com a `main` já testada e commitada):
+
+```bash
+git push origin main:production
+```
+
+O GitHub então: (1) sobe SQL Server e MinIO de teste e roda os testes unitários, os e2e (incluindo o
+teste de isolamento entre oficinas) e os builds; (2) se tudo passar, conecta na VPS e roda
+`deploy/deploy.sh`, que faz **backup do banco → atualiza o código → reconstrói os containers →
+confere o `/health`**. Se o `/health` não responder, volta o código ao commit anterior e a execução
+fica vermelha (você recebe e-mail do GitHub). Acompanhe em *Actions* no repositório.
+
+> O rollback desfaz só o **código**. Migrations já aplicadas ao banco não são desfeitas — nesse caso
+> restaure o backup indicado no log (seção 9.4). Os 7 últimos backups ficam em `/opt/oficinasync-backups`.
+
+### 10.1. Configuração (uma vez só)
+
+**a) Chave de deploy, só pra isso.** Na sua máquina (não na VPS):
+
+```bash
+ssh-keygen -t ed25519 -f oficinasync-deploy -C "github-deploy" -N ""
+```
+
+Isso cria `oficinasync-deploy` (privada) e `oficinasync-deploy.pub` (pública). **Nunca** commite nem
+reaproveite essa chave pra outra coisa.
+
+**b) Na VPS, autorizar a chave com comando forçado** — ela só consegue rodar o `deploy.sh`, nada mais
+(sem shell, sem copiar arquivo, sem túnel). Edite `/root/.ssh/authorized_keys` e acrescente **uma linha**
+(troque o final pelo conteúdo do `oficinasync-deploy.pub`):
+
+```
+command="/opt/oficinasync/deploy/deploy.sh",no-pty,no-port-forwarding,no-agent-forwarding,no-X11-forwarding ssh-ed25519 AAAA... github-deploy
+```
+
+**c) Na VPS, passar a usar a branch `production`** (o `deploy.sh` faz isso sozinho no primeiro deploy,
+mas o arquivo precisa existir antes): `cd /opt/oficinasync && git fetch && git checkout production`
+(depois de você ter feito o primeiro `git push origin main:production`). Confira com
+`git status` que **não há arquivos rastreados alterados** — o script recusa publicar se houver.
+
+**d) No GitHub** (*Settings → Secrets and variables → Actions → New repository secret*), crie 4 segredos:
+
+| Nome | Valor |
+|---|---|
+| `VPS_HOST` | `oficinasync.com.br` |
+| `VPS_USER` | `root` |
+| `VPS_SSH_KEY` | o conteúdo **inteiro** do arquivo `oficinasync-deploy` (a chave privada) |
+| `VPS_KNOWN_HOSTS` | saída de `ssh-keyscan -t ed25519 oficinasync.com.br` (a identidade da VPS, pra ninguém se passar por ela) |
+
+Depois apague a chave privada da sua máquina (ela já está no GitHub).
+
+**e) Proteja a branch** (recomendado): *Settings → Branches → Add rule* em `production` exigindo que o
+check **"Testes e builds"** passe, e sem force-push.
+
+### 10.2. Rodar à mão / emergência
+
+- Republicar sem novo commit: *Actions → Testar e publicar → Run workflow* (branch `production`).
+- Na VPS, direto: `sudo /opt/oficinasync/deploy/deploy.sh` (mesmo comportamento, com o mesmo backup e rollback).
+- Testar o próprio `deploy.sh` sem servidor: `bash deploy/test-deploy.sh` (usa `docker` e `curl` falsos).
+
+---
+
 ## Riscos conhecidos / pendências de infra
 
 - **Backup automático**: hoje o backup do banco é manual (seção 9.1) e os volumes `sqlserver_data` /

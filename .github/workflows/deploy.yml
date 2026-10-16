@@ -1,0 +1,127 @@
+name: Testar e publicar
+
+# Publica em produção só quando alguém empurra pra branch `production`:
+#   git push origin main:production
+# Push na `main` NÃO publica nada. O botão "Run workflow" (workflow_dispatch) republica a `production`.
+on:
+  push:
+    branches: [production]
+  workflow_dispatch:
+
+# Um deploy por vez; um segundo disparo espera o primeiro terminar (nunca cancela um deploy no meio).
+concurrency:
+  group: deploy-producao
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  testar:
+    name: Testes e builds
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    # Valores descartáveis, só pro CI (não são segredos de verdade).
+    env:
+      DB_HOST: localhost
+      DB_PORT: "1433"
+      DB_USER: sa
+      DB_PASSWORD: Ci_Teste_Senha_123!
+      MINIO_ENDPOINT: localhost
+      MINIO_PORT: "9000"
+      MINIO_USE_SSL: "false"
+      MINIO_ACCESS_KEY: ci-minio
+      MINIO_SECRET_KEY: ci-minio-secret
+      PASSWORD_PEPPER: ci-pepper-descartavel
+      JWT_SECRET: ci-jwt-secret-descartavel
+      JWT_EXPIRES_IN: 1d
+      JWT_ONBOARDING_EXPIRES_IN: "900"
+      RESEND_KEY: re_ci_descartavel
+      FRONTEND_URL: http://localhost:5173
+      PUPPETEER_SKIP_DOWNLOAD: "true"
+
+    services:
+      sqlserver:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        env:
+          ACCEPT_EULA: "Y"
+          MSSQL_SA_PASSWORD: Ci_Teste_Senha_123!
+        ports:
+          - 1433:1433
+        options: >-
+          --health-cmd "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'Ci_Teste_Senha_123!' -C -Q 'SELECT 1'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Subir MinIO
+        run: |
+          docker run -d --name minio -p 9000:9000 \
+            -e MINIO_ROOT_USER=ci-minio -e MINIO_ROOT_PASSWORD=ci-minio-secret \
+            minio/minio server /data
+          for _ in $(seq 1 30); do
+            curl -sf http://localhost:9000/minio/health/live && exit 0
+            sleep 2
+          done
+          echo "MinIO não subiu" >&2
+          docker logs minio
+          exit 1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Backend — instalar, testes unitários, build e e2e
+        working-directory: backend
+        run: |
+          npm ci
+          npm test
+          npm run build
+          npm run test:e2e
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: frontend/oficinasync-web/package-lock.json
+
+      - name: Frontend — instalar e build
+        working-directory: frontend/oficinasync-web
+        run: |
+          npm ci
+          npm run build
+
+  publicar:
+    name: Publicar na VPS
+    needs: testar
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    if: github.ref == 'refs/heads/production'
+
+    steps:
+      - name: Preparar SSH
+        env:
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          VPS_KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          printf '%s\n' "$VPS_KNOWN_HOSTS" > ~/.ssh/known_hosts
+
+      # A chave só consegue rodar o deploy.sh (comando forçado no authorized_keys da VPS);
+      # o texto abaixo é ignorado pelo servidor e serve só de legenda.
+      - name: Rodar deploy.sh na VPS
+        env:
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+        run: |
+          ssh -i ~/.ssh/deploy_key \
+            -o BatchMode=yes -o StrictHostKeyChecking=yes -o ServerAliveInterval=30 \
+            "$VPS_USER@$VPS_HOST" deploy

@@ -334,6 +334,14 @@ Primeira parte do "Lançamento enxuto" (spec `docs/superpowers/specs/2026-10-11-
 - **Vídeo de divulgação** (ffmpeg) fica **desligado por padrão** (`PROMO_VIDEO_ENABLED=true` liga; 1 geração por vez via `ConcurrencyLimiter`). `GET /service_orders/:id` devolve `features.promo_video` e o `OsWorkPage` esconde o botão "Gerar vídeo" quando desligado. A captura de vídeo na OS não muda.
 - **Pendente do lançamento** (Planos B e C): guard de assinatura/trial 14 dias, painel super-admin, cobrança manual (§4.3–4.5), termos/privacidade/landing e backup/uptime (§4.6–4.7).
 
+### Deploy automático (GitHub Actions) (feito, aguardando configuração dos segredos)
+
+- `.github/workflows/deploy.yml`: push na branch **`production`** (`git push origin main:production`) roda os testes (unitários + e2e com SQL Server e MinIO de teste + builds) e, se passarem, publica na VPS via SSH. Push na `main` **não** publica. `workflow_dispatch` republica a `production`.
+- `deploy/deploy.sh` (roda na VPS): lock → recusa se há arquivo rastreado alterado → **backup do banco (aborta se falhar)** → `git fetch` + `merge --ff-only` → `docker compose up -d --build` → espera `/health` → se não responder, **rollback do código** (migrations NÃO são desfeitas; o log aponta o backup) → mantém os 7 últimos backups em `/opt/oficinasync-backups`. Corpo todo dentro de `main()` porque o `git pull` pode trocar o próprio arquivo durante a execução.
+- A chave SSH do GitHub é só pra isso: `authorized_keys` com `command="/opt/oficinasync/deploy/deploy.sh"` (sem shell). Passo a passo e os 4 segredos (`VPS_HOST`, `VPS_USER`, `VPS_SSH_KEY`, `VPS_KNOWN_HOSTS`) em `DEPLOY.md` seção 10.
+- Verificado localmente: `bash deploy/test-deploy.sh` (22 checagens com `docker`/`curl` falsos: sucesso, rollback, nada novo, árvore suja, backup falhando, rotação), `shellcheck` e `actionlint` limpos, e a suíte inteira passando **sem** `backend/.env` (só variáveis de ambiente, como no CI). **O workflow em si ainda não rodou no GitHub** — a primeira execução real pode pedir ajuste.
+- O primeiro deploy leva tudo da `main`, **incluindo o OBD** (decisão do Leonardo em 2026-10-15: as correções de segurança não podem esperar; o OBD fica inerte sem dongle — cria a tabela `obd_devices` por migration).
+
 ## Configuração (.env do backend)
 
 ```
