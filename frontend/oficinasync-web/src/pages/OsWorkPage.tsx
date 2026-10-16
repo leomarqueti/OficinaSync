@@ -33,6 +33,7 @@ import { AddTestSheet } from "@/components/os/AddTestSheet";
 import { AddFindingSheet } from "@/components/os/AddFindingSheet";
 import { MediaUploadSheet } from "@/components/os/MediaUploadSheet";
 import { EditNotesSheet } from "@/components/os/EditNotesSheet";
+import { CompleteDataSheet } from "@/components/os/CompleteDataSheet";
 import { carTitle, clientLabel, kmLabel } from "@/lib/display";
 import { EditTestSheet } from "@/components/os/EditTestSheet";
 import { CreateSectionSheet } from "@/components/os/CreateSectionSheet";
@@ -79,6 +80,7 @@ export function OsWorkPage() {
   const [confirm, setConfirm] = useState<Confirm>(null);
   const [confirmBusy, setConfirmBusy] = useState(false);
   const [downloadingReport, setDownloadingReport] = useState(false);
+  const [completeOpen, setCompleteOpen] = useState(false);
   const [triggeringVideo, setTriggeringVideo] = useState(false);
   const [lightboxMedia, setLightboxMedia] = useState<LightboxMedia | null>(null);
 
@@ -329,6 +331,26 @@ export function OsWorkPage() {
             {kmLabel(data.mileage_in)}
           </p>
 
+          {!data.is_complete && (
+            <div className="rounded-2xl border border-amber-400/30 bg-amber-400/10 p-4">
+              <p className="text-sm font-semibold text-amber-300">Dados pendentes</p>
+              <p className="mt-1 text-sm text-foreground/90">
+                Falta:{" "}
+                {[...data.missing_data.client, ...data.missing_data.car]
+                  .map((i) => i.label)
+                  .join(", ")}
+                .
+              </p>
+              <Button
+                variant="outline"
+                className="mt-3 h-10"
+                onClick={() => setCompleteOpen(true)}
+              >
+                Completar dados
+              </Button>
+            </div>
+          )}
+
           {/* ações principais */}
           <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
             <Button
@@ -482,6 +504,14 @@ export function OsWorkPage() {
       </div>
 
       {/* ---------- sheets ---------- */}
+      <CompleteDataSheet
+        orderId={data.service_order_id}
+        open={completeOpen}
+        missing={data.missing_data}
+        currentClient={data.client}
+        onClose={() => setCompleteOpen(false)}
+        onCompleted={fetchOrder}
+      />
       <AddTestSheet
         sectionId={addTestSectionId}
         carId={data.car.car_id}

@@ -4,6 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { API_URL } from "@/lib/api";
 import { carTitle, clientLabel } from "@/lib/display";
+import { CompleteDataSheet } from "@/components/os/CompleteDataSheet";
+import type { MissingData, OrderClient } from "@/components/os/types";
+import { toast } from "sonner";
 
 type SectionItem = {
   section_id: number;
@@ -13,14 +16,14 @@ type SectionItem = {
 
 type ServiceOrderData = {
   service_order_id: number;
-  client: {
-    name: string;
-  } | null;
+  client: OrderClient | null;
   car: {
     brand: string | null;
     model: string | null;
     plate: string;
   };
+  is_complete: boolean;
+  missing_data: MissingData;
   sections: SectionItem[];
 };
 
@@ -39,6 +42,7 @@ export function OsFinishPage() {
   const [conclusion, setConclusion] = useState("");
   const [finalVerdict, setFinalVerdict] = useState("");
   const [downloadingReport, setDownloadingReport] = useState(false);
+  const [completeOpen, setCompleteOpen] = useState(false);
 
   const [frontPhoto, setFrontPhoto] = useState<File | null>(null);
   const [rearPhoto, setRearPhoto] = useState<File | null>(null);
@@ -120,6 +124,13 @@ export function OsFinishPage() {
 
     if (!token || !id || !data) {
       alert("Dados não encontrados.");
+      return;
+    }
+
+    // dados pendentes? completa ANTES de subir foto ou publicar etapa — senão a OS fica
+    // meio-finalizada se o backend recusar (409).
+    if (!data.is_complete) {
+      setCompleteOpen(true);
       return;
     }
 
@@ -444,6 +455,18 @@ export function OsFinishPage() {
           </Button>
         </div>
       </div>
+
+      <CompleteDataSheet
+        orderId={data.service_order_id}
+        open={completeOpen}
+        missing={data.missing_data}
+        currentClient={data.client}
+        onClose={() => setCompleteOpen(false)}
+        onCompleted={async () => {
+          await fetchServiceOrder();
+          toast.success("Dados completos — agora é só finalizar.");
+        }}
+      />
     </div>
   );
 }

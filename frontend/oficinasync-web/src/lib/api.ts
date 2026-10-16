@@ -4,10 +4,13 @@ export const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
 
 export class ApiError extends Error {
   status: number;
+  /** Corpo JSON da resposta de erro (ex: `existing_client` do 409 de CPF duplicado). */
+  body: unknown;
 
-  constructor(message: string, status: number) {
+  constructor(message: string, status: number, body?: unknown) {
     super(message);
     this.status = status;
+    this.body = body;
   }
 }
 
@@ -83,7 +86,7 @@ export async function apiFetch<T = unknown>(
         : "Algo deu errado. Tente novamente.");
 
     if (!silent) toast.error(message);
-    throw new ApiError(message, response.status);
+    throw new ApiError(message, response.status, payload);
   }
 
   return payload as T;

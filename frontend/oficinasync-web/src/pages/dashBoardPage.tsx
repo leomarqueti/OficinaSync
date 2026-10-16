@@ -412,6 +412,11 @@ export function DashboardPage() {
                           >
                             {formatStatus(order.status)}
                           </span>
+                          {order.is_complete === false && (
+                            <span className="inline-flex w-fit items-center rounded-full border border-amber-400/30 bg-amber-400/10 px-3 py-1 text-xs font-semibold text-amber-300">
+                              Dados pendentes
+                            </span>
+                          )}
 
                           <div className="rounded-2xl bg-muted/40 p-3 text-sm">
                             <p className="font-medium">KM entrada</p>
