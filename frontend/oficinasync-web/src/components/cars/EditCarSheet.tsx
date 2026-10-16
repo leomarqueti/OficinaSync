@@ -28,12 +28,12 @@ const fuelOptions = [
 export type EditableCar = {
   car_id: number;
   plate: string;
-  brand: string;
-  model: string;
-  year: number;
-  fuel_type: string;
-  color: string;
-  mileage_in: number;
+  brand: string | null;
+  model: string | null;
+  year: number | null;
+  fuel_type: string | null;
+  color: string | null;
+  mileage_in: number | null;
 };
 
 type EditCarSheetProps = {
@@ -55,12 +55,12 @@ export function EditCarSheet({ car, onClose, onSaved }: EditCarSheetProps) {
   useEffect(() => {
     if (!car) return;
     setPlate(car.plate);
-    setBrand(car.brand);
-    setModel(car.model);
-    setYear(String(car.year));
-    setFuelType(car.fuel_type);
-    setColor(car.color);
-    setMileageIn(String(car.mileage_in));
+    setBrand(car.brand ?? "");
+    setModel(car.model ?? "");
+    setYear(car.year != null ? String(car.year) : "");
+    setFuelType(car.fuel_type ?? "flex");
+    setColor(car.color ?? "");
+    setMileageIn(car.mileage_in != null ? String(car.mileage_in) : "");
   }, [car]);
 
   const submit = async () => {

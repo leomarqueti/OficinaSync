@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { apiFetch } from "@/lib/api";
+import { carTitle } from "@/lib/display";
 import type { TestMeasurement } from "./types";
 
 type HistoryEntry = {
@@ -13,7 +14,7 @@ type HistoryEntry = {
   notes: string | null;
   created_at: string;
   service_order_id: number;
-  car: { brand: string; model: string; year: number; plate: string };
+  car: { brand: string | null; model: string | null; year: number | null; plate: string };
 };
 
 type TestHistoryPanelProps = {
@@ -94,7 +95,7 @@ export function TestHistoryPanel({ carId, title, testType }: TestHistoryPanelPro
             <div key={entry.test_id} className="rounded-xl bg-muted/30 p-2.5 text-xs">
               <div className="flex flex-wrap items-center justify-between gap-1">
                 <span className="font-medium">
-                  {entry.car.brand} {entry.car.model} {entry.car.year} · {entry.car.plate}
+                  {[carTitle(entry.car), entry.car.year, entry.car.plate].filter(Boolean).join(" · ")}
                 </span>
                 <span className="text-muted-foreground">
                   {new Date(entry.created_at).toLocaleDateString("pt-BR")}

@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { API_URL } from "@/lib/api";
+import { carTitle, clientLabel } from "@/lib/display";
 
 type SectionItem = {
   section_id: number;
@@ -14,10 +15,10 @@ type ServiceOrderData = {
   service_order_id: number;
   client: {
     name: string;
-  };
+  } | null;
   car: {
-    brand: string;
-    model: string;
+    brand: string | null;
+    model: string | null;
     plate: string;
   };
   sections: SectionItem[];
@@ -341,7 +342,7 @@ export function OsFinishPage() {
             </p>
 
             <div className="mt-4 text-sm text-white/80">
-              {data.client.name} • {data.car.brand} {data.car.model} •{" "}
+              {clientLabel(data.client?.name)} • {carTitle(data.car)} •{" "}
               {data.car.plate}
             </div>
           </CardContent>

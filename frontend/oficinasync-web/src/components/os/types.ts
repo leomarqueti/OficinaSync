@@ -44,6 +44,18 @@ export type SectionItem = {
   tests: TestItem[];
 };
 
+export type MissingItem = { field: string; label: string };
+export type MissingData = { client: MissingItem[]; car: MissingItem[] };
+
+export type OrderClient = {
+  client_id: number;
+  name: string;
+  phone: string | null;
+  email: string | null;
+  cpf: string | null;
+  address: string | null;
+};
+
 export type ServiceOrderData = {
   service_order_id: number;
   status: string;
@@ -56,20 +68,22 @@ export type ServiceOrderData = {
   public_token: string;
   public_url: string;
   /** KM do veículo nessa visita — cai pro mileage_in do carro em OS antigas. */
-  mileage_in: number;
+  mileage_in: number | null;
   tenant: { name: string };
   user: { user_id: number; name: string; email: string };
   car: {
     car_id: number;
-    brand: string;
-    model: string;
-    year: number;
+    brand: string | null;
+    model: string | null;
+    year: number | null;
     plate: string;
-    mileage_in: number;
-    color: string;
-    fuel_type: string;
+    mileage_in: number | null;
+    color: string | null;
+    fuel_type: string | null;
   };
-  client: { name: string; phone: string; email: string; cpf: string };
+  client: OrderClient | null;
+  is_complete: boolean;
+  missing_data: MissingData;
   sections: SectionItem[];
 };
 

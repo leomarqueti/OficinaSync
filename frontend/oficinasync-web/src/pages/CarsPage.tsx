@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { EditCarSheet } from "@/components/cars/EditCarSheet";
 import { apiFetch } from "@/lib/api";
 import { useDarkTheme } from "@/hooks/useDarkTheme";
+import { carTitle } from "@/lib/display";
 
 const inputClass =
   "h-11 w-full rounded-md border border-input bg-background pl-9 pr-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring";
@@ -14,12 +15,12 @@ const inputClass =
 type CarItem = {
   car_id: number;
   plate: string;
-  brand: string;
-  model: string;
-  year: number;
-  color: string;
-  fuel_type: string;
-  mileage_in: number;
+  brand: string | null;
+  model: string | null;
+  year: number | null;
+  color: string | null;
+  fuel_type: string | null;
+  mileage_in: number | null;
   client_id: number | null;
   client_name: string | null;
 };
@@ -109,10 +110,10 @@ export function CarsPage() {
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="font-medium">
-                      {car.brand} {car.model} · {car.year}
+                      {carTitle(car)}{car.year ? ` · ${car.year}` : ""}
                     </p>
                     <p className="truncate text-sm text-muted-foreground">
-                      {car.plate} · {car.color}
+                      {[car.plate, car.color].filter(Boolean).join(" · ")}
                       {car.client_name && ` · dono: ${car.client_name}`}
                     </p>
                   </div>

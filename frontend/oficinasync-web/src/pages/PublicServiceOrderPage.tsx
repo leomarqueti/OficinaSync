@@ -16,6 +16,7 @@ import { Stagger, StaggerItem } from "@/components/motion/Stagger";
 import { CountUp } from "@/components/motion/CountUp";
 import { Lightbox, type LightboxMedia } from "@/components/media/Lightbox";
 import { StoryTestBlock, type StoryTest } from "@/components/story/StoryTestBlock";
+import { greeting, kmLabel } from "@/lib/display";
 
 /* ------------------------------------------------------------------ */
 /* Tipos (formato exato do GET /service_orders/public/:token)          */
@@ -48,15 +49,15 @@ type PublicServiceOrder = {
   final_verdict: "resolved" | "not_resolved" | "partial" | null;
   tenant: { name: string };
   car: {
-    brand: string;
-    model: string;
-    year: number;
+    brand: string | null;
+    model: string | null;
+    year: number | null;
     plate: string;
-    mileage_in: number;
-    color: string;
-    fuel_type: string;
+    mileage_in: number | null;
+    color: string | null;
+    fuel_type: string | null;
   };
-  client: { name: string; phone: string };
+  client: { name: string; phone: string | null } | null;
   sections: SectionItem[];
 };
 
@@ -82,11 +83,6 @@ const chapterTitles: Record<string, { title: string; technical: string }> = {
 };
 
 const PROMO_LABEL = "Vídeo de divulgação";
-
-function firstName(fullName: string) {
-  const first = fullName.trim().split(/\s+/)[0] ?? "";
-  return first.charAt(0).toUpperCase() + first.slice(1).toLowerCase();
-}
 
 function formatDate(value?: string | null) {
   if (!value) return null;
@@ -376,7 +372,7 @@ export function PublicServiceOrderPage() {
           </motion.p>
 
           <motion.p {...heroItem(0.15)} className="mt-8 text-lg text-white/50">
-            Olá, {firstName(data.client.name)}.
+            {greeting(data.client?.name)}
           </motion.p>
 
           <motion.h1
@@ -385,12 +381,12 @@ export function PublicServiceOrderPage() {
           >
             {isDone ? (
               <>
-                Seu {data.car.model} está{" "}
+                Seu {data.car.model ?? "veículo"} está{" "}
                 <span className="text-brand">pronto.</span>
               </>
             ) : (
               <>
-                Seu {data.car.model} está em{" "}
+                Seu {data.car.model ?? "veículo"} está em{" "}
                 <span className="text-brand">boas mãos.</span>
               </>
             )}
@@ -413,11 +409,11 @@ export function PublicServiceOrderPage() {
               {data.car.plate}
             </span>
             <span className="text-white/40">
-              {data.car.brand} · {data.car.year} · {data.car.color}
+              {[data.car.brand, data.car.year, data.car.color].filter(Boolean).join(" · ")}
             </span>
             <span className="flex items-center gap-1.5 text-white/40">
               <Gauge className="h-4 w-4" />
-              {data.car.mileage_in?.toLocaleString("pt-BR")} km
+              {kmLabel(data.car.mileage_in)}
             </span>
           </motion.div>
         </div>

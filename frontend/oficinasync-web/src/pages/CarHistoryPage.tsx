@@ -5,16 +5,17 @@ import { SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
 import { DashboardSidebar } from "@/components/DashboardSidebar";
 import { apiFetch } from "@/lib/api";
 import { useDarkTheme } from "@/hooks/useDarkTheme";
+import { carTitle, kmLabel } from "@/lib/display";
 
 type CarSummary = {
   car_id: number;
   plate: string;
-  brand: string;
-  model: string;
-  year: number;
-  color: string;
-  fuel_type: string;
-  mileage_in: number;
+  brand: string | null;
+  model: string | null;
+  year: number | null;
+  color: string | null;
+  fuel_type: string | null;
+  mileage_in: number | null;
   client_id: number | null;
   client_name: string | null;
 };
@@ -25,7 +26,7 @@ type OrderHistoryItem = {
   client_complaint: string;
   created_at: string;
   finished_at: string | null;
-  mileage_in: number;
+  mileage_in: number | null;
 };
 
 function formatStatus(status: string) {
@@ -127,10 +128,10 @@ export function CarHistoryPage() {
                   </div>
                   <div>
                     <h1 className="text-2xl font-bold tracking-tight">
-                      {car.brand} {car.model} · {car.year}
+                      {carTitle(car)}{car.year ? ` · ${car.year}` : ""}
                     </h1>
                     <p className="text-sm text-muted-foreground">
-                      {car.plate} · {car.color}
+                      {[car.plate, car.color].filter(Boolean).join(" · ")}
                       {car.client_name && ` · dono: ${car.client_name}`}
                     </p>
                   </div>
@@ -174,7 +175,7 @@ export function CarHistoryPage() {
                           {order.client_complaint}
                         </p>
                         <p className="mt-2 text-xs text-muted-foreground">
-                          {formatDate(order.created_at)} · KM {order.mileage_in.toLocaleString("pt-BR")}
+                          {formatDate(order.created_at)} · {kmLabel(order.mileage_in)}
                           {order.finished_at && ` · Concluída em ${formatDate(order.finished_at)}`}
                         </p>
                       </div>

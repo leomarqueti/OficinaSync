@@ -33,6 +33,7 @@ import { AddTestSheet } from "@/components/os/AddTestSheet";
 import { AddFindingSheet } from "@/components/os/AddFindingSheet";
 import { MediaUploadSheet } from "@/components/os/MediaUploadSheet";
 import { EditNotesSheet } from "@/components/os/EditNotesSheet";
+import { carTitle, clientLabel, kmLabel } from "@/lib/display";
 import { EditTestSheet } from "@/components/os/EditTestSheet";
 import { CreateSectionSheet } from "@/components/os/CreateSectionSheet";
 import {
@@ -320,12 +321,12 @@ export function OsWorkPage() {
           </div>
 
           <p className="text-sm text-muted-foreground">
-            <span className="font-medium text-foreground">{data.client.name}</span>
+            <span className="font-medium text-foreground">{clientLabel(data.client?.name)}</span>
             {" · "}
-            {data.car.brand} {data.car.model} ·{" "}
+            {carTitle(data.car)} ·{" "}
             <span className="font-mono">{data.car.plate}</span>
             {" · "}
-            {data.mileage_in.toLocaleString("pt-BR")} km
+            {kmLabel(data.mileage_in)}
           </p>
 
           {/* ações principais */}

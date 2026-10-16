@@ -6,6 +6,7 @@ import { Car, Clock3, ClipboardList, Plus, Search, User } from "lucide-react";
 import { DashboardSidebar } from "@/components/DashboardSidebar";
 import { apiFetch } from "@/lib/api";
 import { useDarkTheme } from "@/hooks/useDarkTheme";
+import { carDetails, carTitle, clientLabel, kmLabel } from "@/lib/display";
 
 type OpenServiceOrder = {
   service_order_id: number;
@@ -15,21 +16,22 @@ type OpenServiceOrder = {
   public_token?: string;
   public_url?: string;
   /** KM do veículo nessa visita — cai pro mileage_in do carro em OS antigas. */
-  mileage_in: number;
+  mileage_in: number | null;
   /** Foto "Frente do veículo" do check-in, se já tiver sido enviada. */
   photo_url: string | null;
   tenant: { name: string };
   car: {
     car_id: number;
-    brand: string;
-    model: string;
-    year: number;
+    brand: string | null;
+    model: string | null;
+    year: number | null;
     plate: string;
-    mileage_in: number;
-    color: string;
-    fuel_type: string;
+    mileage_in: number | null;
+    color: string | null;
+    fuel_type: string | null;
   };
-  client: { name: string; phone: string };
+  client: { name: string; phone: string | null } | null;
+  is_complete?: boolean;
 };
 
 type Me = {
@@ -164,7 +166,7 @@ export function DashboardPage() {
     statusFilter === "done" ? "OS concluídas" : statusFilter === "all" ? "Total de OS" : "Ordens abertas";
 
   const metrics = useMemo(() => {
-    const uniqueClients = new Set(orders.map((o) => o.client.name)).size;
+    const uniqueClients = new Set(orders.map((o) => o.client?.name).filter(Boolean)).size;
     const uniqueCars = new Set(orders.map((o) => o.car.plate)).size;
 
     const today = new Date().toDateString();
@@ -189,7 +191,7 @@ export function DashboardPage() {
     return orders.filter((order) => {
       const plate = order.car.plate.toLowerCase().replace(/[^a-z0-9]/g, "");
       return (
-        order.client.name.toLowerCase().includes(term) ||
+        (order.client?.name ?? "").toLowerCase().includes(term) ||
         plate.includes(digitsTerm) ||
         String(order.service_order_id).includes(term)
       );
@@ -359,7 +361,7 @@ export function DashboardPage() {
                             {order.photo_url ? (
                               <img
                                 src={order.photo_url}
-                                alt={`${order.car.brand} ${order.car.model}`}
+                                alt={carTitle(order.car)}
                                 className="h-full w-full object-cover"
                                 onError={(e) => {
                                   e.currentTarget.style.display = "none";
@@ -384,12 +386,12 @@ export function DashboardPage() {
                             <p className="text-xs uppercase text-muted-foreground">
                               Cliente / Veículo
                             </p>
-                            <p className="mt-1 font-semibold">{order.client.name}</p>
+                            <p className="mt-1 font-semibold">{clientLabel(order.client?.name)}</p>
                             <p className="text-sm text-muted-foreground">
-                              {order.car.brand} {order.car.model}
+                              {carTitle(order.car)}
                             </p>
                             <p className="text-sm text-muted-foreground">
-                              {order.car.year} · {order.car.color} · {order.car.plate}
+                              {carDetails(order.car)}
                             </p>
                           </div>
 
@@ -414,7 +416,7 @@ export function DashboardPage() {
                           <div className="rounded-2xl bg-muted/40 p-3 text-sm">
                             <p className="font-medium">KM entrada</p>
                             <p className="text-muted-foreground">
-                              {order.mileage_in.toLocaleString("pt-BR")}
+                              {kmLabel(order.mileage_in)}
                             </p>
                           </div>
 
