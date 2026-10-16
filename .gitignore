@@ -16,3 +16,5 @@ build/
 # OS
 .DS_Store
 Thumbs.db
+# Configuracao pessoal do Claude Code neste projeto
+.claude/settings.local.json

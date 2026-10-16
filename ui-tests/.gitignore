@@ -2,3 +2,7 @@ node_modules/
 test-results/
 playwright-report/
 e2e/.auth/
+.persona-env.json
+.persona-output/
+.backend.log
+.frontend.log

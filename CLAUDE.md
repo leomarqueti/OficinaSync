@@ -359,6 +359,11 @@ Definições em `.claude/agents/` (carregam ao abrir a sessão; `/agents` lista)
 | `devops-deploy` | `.github/`, `deploy/`, Docker, backup | nunca age na VPS nem faz push sozinho |
 | `produto-receita` | planos, cobrança, LGPD, landing, specs | produz specs/planos; não implementa |
 | `dev-mobile-iot` | `mobile/` (Android) e `Iot/` (OBD) | OBD pausado por decisão do Leonardo |
+| `marketing-estrategia` | posicionamento, oferta, canais, textos de venda | nunca inventa número/cliente/depoimento; trabalha em dupla com o designer |
+| `designer-ux` | identidade (Cinema Escuro), landing, fluxos, microtexto, acessibilidade | usa o plugin Design; entrega specs pro `dev-frontend` |
+| `persona-seu-ze`, `persona-rafa`, `persona-dona-cida` | mecânicos/recepcionista **simulados** que usam o sistema de teste e dão feedback | Playwright MCP (`@playwright/mcp@0.0.83`) inline, só em `localhost:5183`; geram hipóteses, não prova |
+
+**Protocolo do time** (fluxo por tema, pasta `docs/equipe/<tema>/`, regras, entrega ao Leonardo): `docs/equipe/README.md`. **Mecânicos simulados:** o coordenador sobe o ambiente de teste com `bash ui-tests/scripts/start-env.sh` (backend 3100 + frontend 5183 + oficina falsa; credenciais em `ui-tests/.persona-env.json`) e para com `bash ui-tests/scripts/stop-env.sh`; rode o `start-env.sh` com `run_in_background` (os servidores ficam vivos). **Agent teams** (agentes se falando direto) está ligado em `.claude/settings.local.json` (`CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`, experimental, só sessão interativa, fora do git). O plugin **Marketing** (Anthropic) foi oferecido para instalar; as skills de design (plugin Design) já estão ativas. **Não verificado ainda:** os agentes novos só carregam em sessão nova, então as personas ainda não rodaram de ponta a ponta.
 
 ## Configuração (.env do backend)
 
