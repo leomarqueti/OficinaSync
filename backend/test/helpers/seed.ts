@@ -1,5 +1,5 @@
 import { randomUUID } from 'crypto';
-import type { INestApplication } from '@nestjs/common';
+import type { INestApplication, INestApplicationContext } from '@nestjs/common';
 import request from 'supertest';
 import { DataSource } from 'typeorm';
 import { Tenants } from '../../src/modules/tenants/tenants.entity';
@@ -20,11 +20,13 @@ function randomCnpjLike(): string {
   return String(Math.floor(Math.random() * 1e14)).padStart(14, '0');
 }
 
-/** Cria oficina + dono ativo direto no banco (sem e-mail) e faz login de verdade pra pegar o JWT. */
-export async function createTenantWithOwner(
-  app: INestApplication,
+export type OwnerRecords = Omit<Owner, 'token'>;
+
+/** Cria oficina + dono ativo direto no banco (sem e-mail, sem HTTP). Serve também a scripts fora do Jest. */
+export async function createOwnerRecords(
+  app: INestApplicationContext,
   label: string,
-): Promise<Owner> {
+): Promise<OwnerRecords> {
   const ds = app.get(DataSource);
   const tenantRepo = ds.getRepository(Tenants);
   const userRepo = ds.getRepository(Users);
@@ -50,6 +52,16 @@ export async function createTenantWithOwner(
   user.tenant = tenant;
   user.is_active = true;
   await userRepo.save(user);
+
+  return { tenant, user, email, password };
+}
+
+/** Cria oficina + dono ativo e faz login de verdade pra pegar o JWT. */
+export async function createTenantWithOwner(
+  app: INestApplication,
+  label: string,
+): Promise<Owner> {
+  const { tenant, user, email, password } = await createOwnerRecords(app, label);
 
   const login = await request(app.getHttpServer())
     .post('/auth/login')

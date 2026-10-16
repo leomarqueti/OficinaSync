@@ -1,0 +1,16 @@
+{
+  "name": "oficinasync-ui-tests",
+  "private": true,
+  "version": "0.0.1",
+  "type": "module",
+  "description": "Testes de tela (Playwright) e de logica pura do frontend (Vitest) do OficinaSync",
+  "scripts": {
+    "test:unit": "vitest run",
+    "test:ui": "playwright test",
+    "test": "vitest run && playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.64.1",
+    "vitest": "^5.0.5"
+  }
+}

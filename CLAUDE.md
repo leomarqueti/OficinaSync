@@ -342,6 +342,10 @@ Primeira parte do "Lançamento enxuto" (spec `docs/superpowers/specs/2026-10-11-
 - Verificado localmente: `bash deploy/test-deploy.sh` (22 checagens com `docker`/`curl` falsos: sucesso, rollback, nada novo, árvore suja, backup falhando, rotação), `shellcheck` e `actionlint` limpos, e a suíte inteira passando **sem** `backend/.env` (só variáveis de ambiente, como no CI). **O workflow em si ainda não rodou no GitHub** — a primeira execução real pode pedir ajuste.
 - O primeiro deploy leva tudo da `main`, **incluindo o OBD** (decisão do Leonardo em 2026-10-15: as correções de segurança não podem esperar; o OBD fica inerte sem dongle — cria a tabela `obd_devices` por migration).
 
+### Testes de tela e de lógica do frontend (`ui-tests/`) (feito)
+
+Pacote separado na raiz (não mexe no `package.json` do frontend). **Playwright** (`e2e/`): sobe o backend compilado (`backend/dist`) no banco de TESTE na porta 3100 + o frontend em dev na 5183 (portas próprias, não colidem com o dia a dia), cria uma oficina+dono novos (`backend/test/ui-seed.ts`) e começa logado via `storageState`. Cobre login (erro visível, sucesso), rota raiz (regressão da tela branca do Android — provado: com o `App.tsx` antigo os 3 testes falham), e o wizard de abrir OS inteiro (4 fotos obrigatórias, botão travado com CPF inválido). **Vitest** (`unit/`): `validators.ts` (CPF, CNPJ, telefone/E.164, placa, ano, km, senha) e `viaCep.ts` (fetch simulado). Rodar: `cd ui-tests && npm run test:unit` e `npm run test:ui` (pré-requisitos no cabeçalho do `playwright.config.ts`: Docker com SQL Server+MinIO, `npm run build` no backend). O login é limitado a 5/min por IP: o `global-setup` faz 1 login e o `login.spec.ts` 2 — rerodar em menos de 1 minuto pode dar 429. **Ainda não está no CI** (workflow só roda backend + builds); entra quando o `.github/workflows` ganhar um job `telas`.
+
 ## Configuração (.env do backend)
 
 ```

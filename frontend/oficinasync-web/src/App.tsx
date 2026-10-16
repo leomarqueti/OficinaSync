@@ -1,5 +1,5 @@
 import { Suspense, lazy } from 'react'
-import { BrowserRouter, Route, Routes } from 'react-router-dom'
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { Toaster } from 'sonner'
 import './App.css'
 import { SidebarProvider } from '@/components/ui/sidebar'
@@ -40,6 +40,10 @@ function App() {
       <Toaster position="top-center" richColors closeButton theme="dark" />
       <Suspense fallback={<PageLoader />}>
         <Routes>
+          <Route
+            path="/"
+            element={<Navigate to={localStorage.getItem('token') ? '/dashboard' : '/login'} replace />}
+          />
           <Route path="/register" element={<UserRegisterPage />} />
           <Route path="/tenant-register" element={<TenantRegisterPage />} />
           <Route path="/email-send" element={<EmailSendPage />} />
@@ -109,6 +113,8 @@ function App() {
           <Route path="/os/:id" element={<OsWorkPage />} />
 
           <Route path="/os/:id/finalizar" element={<OsFinishPage />} />
+
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Suspense>
     </BrowserRouter>
