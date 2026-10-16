@@ -17,7 +17,7 @@ export class UpdateClientDto {
   @IsString()
   @MaxLength(150)
   @IsEmail()
-  email?: string;
+  email?: string | null;
 
   @IsOptional()
   @IsCPF({ message: 'Invalid CPF number' })

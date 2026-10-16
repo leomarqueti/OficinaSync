@@ -6,6 +6,7 @@ import { WizardShell } from "@/components/wizard/WizardShell";
 import { EntryPhotoSlot } from "@/components/wizard/EntryPhotoSlot";
 import { PhoneField } from "@/components/fields/PhoneField";
 import { CpfField } from "@/components/fields/CpfField";
+import { CepField } from "@/components/fields/CepField";
 import { PlateField } from "@/components/fields/PlateField";
 import { YearField } from "@/components/fields/YearField";
 import { KmField } from "@/components/fields/KmField";
@@ -67,7 +68,7 @@ type ExistingClient = {
   name: string;
   phone: string;
   cpf: string;
-  email: string;
+  email: string | null;
   address: string;
 };
 
@@ -155,7 +156,7 @@ export function OsCreateWizardPage() {
     (name.trim().length >= 2 &&
       isValidPhone(e164ToDigits(phone)) &&
       isValidCpf(cpf) &&
-      emailRegex.test(email) &&
+      (email.trim().length === 0 || emailRegex.test(email)) &&
       address.trim().length >= 3);
 
   const carValid =
@@ -333,7 +334,7 @@ export function OsCreateWizardPage() {
             json: {
               name: name.trim(),
               phone,
-              email: email.trim(),
+              ...(email.trim() ? { email: email.trim() } : {}),
               cpf: onlyDigits(cpf),
               address: address.trim(),
             },
@@ -528,7 +529,7 @@ export function OsCreateWizardPage() {
             <PhoneField value={phone} onChange={setPhone} />
             <CpfField value={cpf} onChange={setCpf} />
 
-            <FieldShell label="Email" htmlFor="email">
+            <FieldShell label="Email" htmlFor="email" optional>
               <input
                 id="email"
                 type="email"
@@ -538,6 +539,8 @@ export function OsCreateWizardPage() {
                 className={inputClass}
               />
             </FieldShell>
+
+            <CepField onAddressFound={setAddress} />
 
             <FieldShell label="Endereço" htmlFor="address">
               <input
@@ -978,7 +981,7 @@ export function OsCreateWizardPage() {
           </p>
           <p className="mt-1 text-sm text-foreground">{name}</p>
           <p className="text-sm text-muted-foreground">
-            {formatPhone(e164ToDigits(phone))} · {email}
+            {[formatPhone(e164ToDigits(phone)), email].filter(Boolean).join(" · ")}
           </p>
         </div>
 

@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { FieldShell } from "@/components/fields/FieldShell";
 import { PhoneField } from "@/components/fields/PhoneField";
 import { CpfField } from "@/components/fields/CpfField";
+import { CepField } from "@/components/fields/CepField";
 import { apiFetch } from "@/lib/api";
 import { onlyDigits } from "@/lib/validators";
 
@@ -23,7 +24,7 @@ export type EditableClient = {
   name: string;
   phone: string;
   cpf: string;
-  email: string;
+  email: string | null;
   address: string;
 };
 
@@ -46,7 +47,7 @@ export function EditClientSheet({ client, onClose, onSaved }: EditClientSheetPro
     setName(client.name);
     setPhone(client.phone);
     setCpf(client.cpf);
-    setEmail(client.email);
+    setEmail(client.email ?? "");
     setAddress(client.address);
   }, [client]);
 
@@ -61,7 +62,7 @@ export function EditClientSheet({ client, onClose, onSaved }: EditClientSheetPro
           name: name.trim(),
           phone,
           cpf: onlyDigits(cpf),
-          email: email.trim(),
+          email: email.trim() || null,
           address: address.trim(),
         },
       });
@@ -97,7 +98,7 @@ export function EditClientSheet({ client, onClose, onSaved }: EditClientSheetPro
           <PhoneField value={phone} onChange={setPhone} />
           <CpfField value={cpf} onChange={setCpf} />
 
-          <FieldShell label="Email" htmlFor="edit-email">
+          <FieldShell label="Email" htmlFor="edit-email" optional>
             <input
               id="edit-email"
               type="email"
@@ -106,6 +107,8 @@ export function EditClientSheet({ client, onClose, onSaved }: EditClientSheetPro
               className={inputClass}
             />
           </FieldShell>
+
+          <CepField onAddressFound={setAddress} />
 
           <FieldShell label="Endereço" htmlFor="edit-address">
             <input

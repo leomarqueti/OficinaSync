@@ -99,3 +99,15 @@ test('o botão Continuar fica travado enquanto o cliente é inválido', async ({
   await page.locator('#cpf').fill(generateCpf());
   await expect(continuar).toBeEnabled();
 });
+
+test('o e-mail do cliente é opcional: sem e-mail o Continuar libera', async ({ page }) => {
+  await page.goto('/os-client-create');
+  const continuar = page.getByRole('button', { name: 'Continuar' });
+
+  await page.locator('#name').fill('Cliente Sem Email');
+  await page.locator('#phone').fill('14997951011');
+  await page.locator('#cpf').fill(generateCpf());
+  await page.locator('#address').fill('Rua dos Testes, 10');
+
+  await expect(continuar).toBeEnabled();
+});

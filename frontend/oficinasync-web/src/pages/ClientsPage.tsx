@@ -16,7 +16,7 @@ type Client = {
   name: string;
   phone: string;
   cpf: string;
-  email: string;
+  email: string | null;
   address: string;
   created_at: string;
 };
