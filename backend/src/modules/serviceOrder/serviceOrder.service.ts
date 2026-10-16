@@ -3,14 +3,19 @@
 /* eslint-disable @typescript-eslint/no-unsafe-call */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import {
+  BadRequestException,
+  ConflictException,
   Injectable,
   NotFoundException,
   UnauthorizedException,
   ForbiddenException,
 } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
+import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
 import { randomBytes } from 'crypto';
-import { Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
+import { Cars } from '../cars/cars.entity';
+import { Clients } from '../clients/clients.entity';
+import { CompleteDataDto } from './dto/complete-data.dto';
 import { ServiceOrders } from './serviceOrder.entity';
 import { CreateServiceOrderDto } from './dto/create-serviceOrder-dto';
 import { FinishServiceOrderDto } from './dto/finish-serviceOrder-dto';
@@ -33,6 +38,8 @@ export class ServiceOrdersService {
     private usersService: UsersService,
     private carsService: CarsService,
     private minioService: MinioService,
+    @InjectDataSource()
+    private dataSource: DataSource,
   ) {}
 
   async create(
@@ -380,6 +387,117 @@ export class ServiceOrdersService {
       finished_at: serviceOrder.finished_at,
       mileage_in: serviceOrder.mileage_in ?? car.mileage_in,
     }));
+  }
+
+  /**
+   * Completa, de uma vez e em transação, o que faltou na abertura rápida: usa um cliente
+   * já cadastrado (`client_id`), completa o cliente atual ou cria um novo (`client`), e
+   * completa o carro (`car`). Mapeia campo a campo — nada de Object.assign com o corpo.
+   */
+  async completeData(orderId: number, dto: CompleteDataDto, userId: number) {
+    const user = await this.usersService.findById(userId);
+    const order = await this.findEntityById(orderId);
+
+    if (!user.tenant || order.tenant.id !== user.tenant.id) {
+      throw new ForbiddenException(
+        'Essa ordem de serviço não pertence ao tenant do usuário.',
+      );
+    }
+
+    if (dto.client_id !== undefined && dto.client) {
+      throw new BadRequestException(
+        'Envie client_id (usar cliente já cadastrado) OU client (dados do cliente), não os dois.',
+      );
+    }
+
+    const tenant = user.tenant;
+
+    await this.dataSource.transaction(async (manager) => {
+      const carRepo = manager.getRepository(Cars);
+      const clientRepo = manager.getRepository(Clients);
+
+      const car = await carRepo.findOneOrFail({
+        where: { car_id: order.car.car_id },
+        relations: { client: true },
+      });
+      let client: Clients | null = car.client ?? null;
+
+      if (dto.client_id !== undefined) {
+        const existing = await clientRepo.findOne({
+          where: { client_id: dto.client_id },
+          relations: { tenant: true },
+        });
+
+        if (!existing) {
+          throw new NotFoundException('Cliente não encontrado!');
+        }
+        if (existing.tenant.id !== tenant.id) {
+          throw new ForbiddenException(
+            'Esse cliente não pertence ao tenant do usuário.',
+          );
+        }
+
+        client = existing;
+      } else if (dto.client) {
+        const input = dto.client;
+
+        if (input.cpf) {
+          const clash = await clientRepo.findOne({
+            where: { cpf: input.cpf, tenant: { id: tenant.id } },
+          });
+
+          if (clash && clash.client_id !== client?.client_id) {
+            throw new ConflictException({
+              message: 'Já existe um cliente com esse CPF.',
+              existing_client: { client_id: clash.client_id, name: clash.name },
+            });
+          }
+        }
+
+        if (!client) {
+          if (!input.name?.trim()) {
+            throw new BadRequestException(
+              'Informe pelo menos o nome do cliente.',
+            );
+          }
+          client = clientRepo.create({ name: input.name.trim(), tenant });
+        }
+
+        if (input.name !== undefined) client.name = input.name.trim();
+        if (input.phone !== undefined) client.phone = input.phone;
+        if (input.cpf !== undefined) client.cpf = input.cpf;
+        if (input.address !== undefined) client.address = input.address.trim();
+        if (input.email !== undefined) client.email = input.email;
+
+        client = await clientRepo.save(client);
+      }
+
+      if (dto.car) {
+        const input = dto.car;
+
+        if (input.brand !== undefined) car.brand = input.brand.trim();
+        if (input.model !== undefined) car.model = input.model.trim();
+        if (input.year !== undefined) car.year = input.year;
+        if (input.fuel_type !== undefined) car.fuel_type = input.fuel_type;
+        if (input.color !== undefined) car.color = input.color.trim();
+        if (input.chassis !== undefined) {
+          car.chassis = input.chassis.trim().toUpperCase();
+        }
+        if (input.mileage_in !== undefined) car.mileage_in = input.mileage_in;
+      }
+
+      car.client = client;
+      await carRepo.save(car);
+    });
+
+    const fresh = await this.findEntityById(orderId);
+    const missing = computeMissingData(fresh.car, fresh.car.client);
+
+    return {
+      client_id: fresh.car.client?.client_id ?? null,
+      missing_data: missing,
+      is_complete: isComplete(missing),
+    };
   }
 
   async finish(

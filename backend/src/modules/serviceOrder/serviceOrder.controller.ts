@@ -17,6 +17,7 @@ import {
 import { ServiceOrdersService } from './serviceOrder.service';
 import { CreateServiceOrderDto } from './dto/create-serviceOrder-dto';
 import { FinishServiceOrderDto } from './dto/finish-serviceOrder-dto';
+import { CompleteDataDto } from './dto/complete-data.dto';
 import { JwtAuthGuard } from '../AuthModule/jwt-auth.guard';
 import { ResponseServiceOrderDto } from './dto/response-serviceOrder-dto';
 import { plainToInstance } from 'class-transformer';
@@ -75,6 +76,19 @@ export class ServiceOrdersController {
   @HttpCode(HttpStatus.OK)
   findById(@Param('id', ParseIntPipe) id: number, @Req() req: any) {
     return this.serviceOrdersService.findById(id, req.user.sub);
+  }
+
+  @Patch('/:id/complete-data')
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.OK)
+  async completeData(
+    @Req() req: any,
+    @Param('id', ParseIntPipe) id: number,
+    @Body() completeDataDto: CompleteDataDto,
+  ) {
+    const userId = req.user.sub;
+
+    return this.serviceOrdersService.completeData(id, completeDataDto, userId);
   }
 
   @Patch('/:id/finish')
