@@ -346,6 +346,20 @@ Primeira parte do "Lançamento enxuto" (spec `docs/superpowers/specs/2026-10-11-
 
 Pacote separado na raiz (não mexe no `package.json` do frontend). **Playwright** (`e2e/`): sobe o backend compilado (`backend/dist`) no banco de TESTE na porta 3100 + o frontend em dev na 5183 (portas próprias, não colidem com o dia a dia), cria uma oficina+dono novos (`backend/test/ui-seed.ts`) e começa logado via `storageState`. Cobre login (erro visível, sucesso), rota raiz (regressão da tela branca do Android — provado: com o `App.tsx` antigo os 3 testes falham), e o wizard de abrir OS inteiro (4 fotos obrigatórias, botão travado com CPF inválido). **Vitest** (`unit/`): `validators.ts` (CPF, CNPJ, telefone/E.164, placa, ano, km, senha) e `viaCep.ts` (fetch simulado). Rodar: `cd ui-tests && npm run test:unit` e `npm run test:ui` (pré-requisitos no cabeçalho do `playwright.config.ts`: Docker com SQL Server+MinIO, `npm run build` no backend). O login é limitado a 5/min por IP: o `global-setup` faz 1 login e o `login.spec.ts` 2 — rerodar em menos de 1 minuto pode dar 429. **Ainda não está no CI** (workflow só roda backend + builds); entra quando o `.github/workflows` ganhar um job `telas`.
 
+### Agentes por área (time de subagentes do projeto)
+
+Definições em `.claude/agents/` (carregam ao abrir a sessão; `/agents` lista). Cada um é dono de uma área e conhece as regras deste arquivo. Eles trabalham **sob demanda** (não ficam vigiando sozinhos); rotinas recorrentes precisam de uma tarefa agendada.
+
+| Agente | Área | Observação |
+|---|---|---|
+| `guardiao-seguranca` | segurança multi-tenant, auth, DTOs, uploads | **somente leitura**; reporta achados + teste que reproduz |
+| `dev-backend` | `backend/` (NestJS, TypeORM, migrations) | TDD, tenant isolado, DTO com decorator |
+| `dev-frontend` | `frontend/oficinasync-web/` e `ui-tests/` | mobile-first, Cinema Escuro |
+| `qa-testes` | todas as suítes de teste | roda a bateria, acha lacunas, prova o vermelho |
+| `devops-deploy` | `.github/`, `deploy/`, Docker, backup | nunca age na VPS nem faz push sozinho |
+| `produto-receita` | planos, cobrança, LGPD, landing, specs | produz specs/planos; não implementa |
+| `dev-mobile-iot` | `mobile/` (Android) e `Iot/` (OBD) | OBD pausado por decisão do Leonardo |
+
 ## Configuração (.env do backend)
 
 ```
