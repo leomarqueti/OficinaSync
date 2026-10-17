@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { API_URL } from "@/lib/api";
+import { API_URL, apiFetch } from "@/lib/api";
 import { carTitle, clientLabel } from "@/lib/display";
 import { CompleteDataSheet } from "@/components/os/CompleteDataSheet";
 import type { MissingData, OrderClient } from "@/components/os/types";
@@ -43,6 +43,7 @@ export function OsFinishPage() {
   const [finalVerdict, setFinalVerdict] = useState("");
   const [downloadingReport, setDownloadingReport] = useState(false);
   const [completeOpen, setCompleteOpen] = useState(false);
+  const [pendingParts, setPendingParts] = useState(0);
 
   const [frontPhoto, setFrontPhoto] = useState<File | null>(null);
   const [rearPhoto, setRearPhoto] = useState<File | null>(null);
@@ -88,6 +89,14 @@ export function OsFinishPage() {
 
   useEffect(() => {
     fetchServiceOrder();
+  }, [id]);
+
+  // peças retiradas sem acerto: só avisa (depois de finalizar, só o escritório consegue acertar)
+  useEffect(() => {
+    if (!id) return;
+    apiFetch<{ parts: { used_quantity: number | null }[] }>(`/service_orders/${id}/internal`, { silent: true })
+      .then((r) => setPendingParts(r.parts.filter((p) => p.used_quantity === null).length))
+      .catch(() => setPendingParts(0));
   }, [id]);
 
   const uploadMedia = async (
@@ -445,6 +454,19 @@ export function OsFinishPage() {
           >
             Voltar para OS
           </Button>
+
+          {pendingParts > 0 && (
+            <div className="w-full rounded-2xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+              {pendingParts} peça(s) retirada(s) sem acerto — informe quanto realmente usou antes de finalizar.{" "}
+              <button
+                type="button"
+                className="font-semibold underline"
+                onClick={() => navigate(`/os/${id}/escritorio`)}
+              >
+                Acertar agora
+              </button>
+            </div>
+          )}
 
           <Button
             className="w-full bg-lime-400 text-black hover:bg-lime-500 sm:w-auto"

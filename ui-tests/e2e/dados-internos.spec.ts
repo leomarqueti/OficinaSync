@@ -227,3 +227,29 @@ test('dicas "?" explicam peça usada x retirada', async ({ page }) => {
   await page.getByRole('button', { name: 'Ajuda: peças retiradas e usadas' }).click();
   await expect(page.getByRole('note')).toContainText('realmente usou');
 });
+
+test('finalizar: avisa das peças retiradas sem acerto (sem bloquear) e some quando acertadas', async ({ page }) => {
+  const orderId = await openOrder(page);
+  const part = await api(page, 'POST', `/service_orders/${orderId}/parts`, { description: 'Vela sem acerto', taken_quantity: 4 });
+
+  await page.goto(`/os/${orderId}/finalizar`);
+  await expect(page.getByText(/1 peça\(s\) retirada\(s\) sem acerto/)).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Finalizar ordem de serviço' })).toBeEnabled();
+
+  await api(page, 'PATCH', `/service_orders/${orderId}/parts/${part.json.part_id}`, { used_quantity: 3 });
+  await page.reload();
+  await expect(page.getByRole('button', { name: 'Finalizar ordem de serviço' })).toBeVisible();
+  await expect(page.getByText(/retirada\(s\) sem acerto/)).toHaveCount(0);
+});
+
+test('preço no formato brasileiro: "1.200,50" no serviço grava R$ 1.200,50 (não 1,20)', async ({ page }) => {
+  const orderId = await openOrder(page);
+  await page.goto(`/os/${orderId}/escritorio`);
+  await page.locator('#service-desc').fill('Retífica de cabeçote');
+  await page.locator('#service-price').fill('1.200,50');
+  await page.getByRole('button', { name: 'Adicionar serviço' }).click();
+  await expect(page.getByText('Retífica de cabeçote')).toBeVisible();
+
+  const internal = await api(page, 'GET', `/service_orders/${orderId}/internal`);
+  expect(internal.json.services[0].price).toBe(1200.5);
+});

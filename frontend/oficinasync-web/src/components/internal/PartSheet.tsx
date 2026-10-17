@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { FieldShell } from "@/components/fields/FieldShell";
 import { apiFetch } from "@/lib/api";
 import { compressImage } from "@/lib/imageCompression";
+import { parseMoneyBR } from "@/lib/money";
 import { useDarkTheme } from "@/hooks/useDarkTheme";
 
 const inputClass =
@@ -37,8 +38,10 @@ export function PartSheet({ orderId, open, onClose, onSaved }: PartSheetProps) {
     setPhoto(null);
   }, [open]);
 
-  const toNumber = (v: string) => Number(v.replace(",", "."));
-  const valid = description.trim().length > 0 && qty !== "" && toNumber(qty) >= 0 && !Number.isNaN(toNumber(qty));
+  const qtyValue = parseMoneyBR(qty);
+  const priceValue = price.trim() === "" ? null : parseMoneyBR(price);
+  const priceInvalid = price.trim() !== "" && priceValue === null;
+  const valid = description.trim().length > 0 && qtyValue !== null && !priceInvalid;
 
   const submit = async () => {
     try {
@@ -48,8 +51,8 @@ export function PartSheet({ orderId, open, onClose, onSaved }: PartSheetProps) {
         json: {
           description: description.trim(),
           ...(code.trim() ? { code: code.trim() } : {}),
-          taken_quantity: toNumber(qty),
-          ...(price !== "" ? { unit_price: toNumber(price) } : {}),
+          taken_quantity: qtyValue,
+          ...(priceValue !== null ? { unit_price: priceValue } : {}),
         },
       });
 

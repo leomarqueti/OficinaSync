@@ -4,6 +4,7 @@ import { Plus, Trash2, Camera } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { apiFetch } from "@/lib/api";
 import { compressImage } from "@/lib/imageCompression";
+import { parseMoneyBR } from "@/lib/money";
 import { formatMoney, formatQty, type PartView } from "@/lib/internalApi";
 import { HelpHint } from "@/components/guide/HelpHint";
 import { PartSheet } from "./PartSheet";
@@ -23,21 +24,25 @@ export function PartsSection({ orderId, parts, canEdit, onChanged }: Props) {
   const [used, setUsed] = useState<Record<number, string>>({});
   const [price, setPrice] = useState<Record<number, string>>({});
 
-  const num = (v: string) => Number(v.replace(",", "."));
-
   const settle = async (part: PartView) => {
     const usedValue = used[part.part_id] ?? (part.used_quantity !== null ? String(part.used_quantity) : "");
-    if (usedValue === "" || Number.isNaN(num(usedValue))) {
+    const usedNumber = parseMoneyBR(usedValue);
+    if (usedNumber === null) {
       toast.error("Informe quanto você realmente usou (pode ser 0).");
       return;
     }
     const priceValue = price[part.part_id];
+    const priceNumber = priceValue === undefined || priceValue.trim() === "" ? null : parseMoneyBR(priceValue);
+    if (priceValue !== undefined && priceValue.trim() !== "" && priceNumber === null) {
+      toast.error("Preço inválido. Use números, por exemplo 25 ou 1.200,50.");
+      return;
+    }
     try {
       await apiFetch(`/service_orders/${orderId}/parts/${part.part_id}`, {
         method: "PATCH",
         json: {
-          used_quantity: num(usedValue),
-          ...(priceValue !== undefined ? { unit_price: priceValue === "" ? null : num(priceValue) } : {}),
+          used_quantity: usedNumber,
+          ...(priceValue !== undefined ? { unit_price: priceNumber } : {}),
         },
       });
       toast.success("Acerto salvo!");

@@ -8,14 +8,9 @@ import { UsersService } from '../users/users.service';
 import { SetParticipantsDto } from './dto/participants.dto';
 import { isOffice, responsibleShare, validateShares } from './internal-access';
 import { InternalContextService, OrderContext } from './internal-context.service';
+import { brtDateString, brtDayEnd, brtDayStart, brtMonthStart } from './day-range';
 import { commissionTotals } from './internal-math';
 import { ServiceOrderParticipants } from './service-order-participant.entity';
-
-/** 'YYYY-MM-DD' vira o início daquele dia no horário local (new Date('2026-10-17') seria meia-noite UTC = dia anterior no Brasil). */
-function parseDay(value: string): Date {
-  const m = /^(d{4})-(d{2})-(d{2})/.exec(value);
-  return m ? new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])) : new Date(value);
-}
 
 @Injectable()
 export class TeamService {
@@ -159,11 +154,9 @@ export class TeamService {
     if (!me.tenant) return { from: '', to: '', people: [] };
 
     const now = new Date();
-    const from = query.from ? parseDay(query.from) : new Date(now.getFullYear(), now.getMonth(), 1);
-    const to = query.to ? parseDay(query.to) : now;
-    // 'to' inclui o dia inteiro
-    const toEnd = new Date(to);
-    toEnd.setHours(23, 59, 59, 999);
+    // sempre no horário de Brasília, independente do fuso do servidor; 'to' inclui o dia inteiro
+    const from = query.from ? brtDayStart(query.from) : brtMonthStart(now);
+    const toEnd = query.to ? brtDayEnd(query.to) : now;
 
     const orders = await this.orders
       .createQueryBuilder('o')
@@ -214,8 +207,8 @@ export class TeamService {
     if (onlyUser !== undefined) people = people.filter((p) => p.user_id === onlyUser);
 
     return {
-      from: query.from ?? from.toISOString().slice(0, 10),
-      to: query.to ?? to.toISOString().slice(0, 10),
+      from: query.from ?? brtDateString(from),
+      to: query.to ?? brtDateString(toEnd),
       people,
     };
   }

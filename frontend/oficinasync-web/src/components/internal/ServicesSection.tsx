@@ -3,6 +3,7 @@ import { Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { apiFetch } from "@/lib/api";
 import { formatMoney, type ServiceView } from "@/lib/internalApi";
+import { parseMoneyBR } from "@/lib/money";
 
 type Props = { orderId: number; services: ServiceView[]; canEdit: boolean; onChanged: () => Promise<void> | void };
 
@@ -13,13 +14,16 @@ export function ServicesSection({ orderId, services, canEdit, onChanged }: Props
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState("");
 
+  const priceNumber = price.trim() === "" ? null : parseMoneyBR(price);
+  const priceInvalid = price.trim() !== "" && priceNumber === null;
+
   const add = async () => {
     try {
       await apiFetch(`/service_orders/${orderId}/services`, {
         method: "POST",
         json: {
           description: description.trim(),
-          ...(price !== "" ? { price: Number(price.replace(",", ".")) } : {}),
+          ...(priceNumber !== null ? { price: priceNumber } : {}),
         },
       });
       setDescription("");
@@ -68,7 +72,7 @@ export function ServicesSection({ orderId, services, canEdit, onChanged }: Props
             <label htmlFor="service-price" className="text-sm font-medium">Valor <span className="text-xs text-muted-foreground">(opcional)</span></label>
             <input id="service-price" inputMode="decimal" className={inputClass} value={price} onChange={(e) => setPrice(e.target.value)} placeholder="R$" />
           </div>
-          <Button className="h-11" onClick={add} disabled={description.trim() === ""}>
+          <Button className="h-11" onClick={add} disabled={description.trim() === "" || priceInvalid}>
             Adicionar serviço
           </Button>
         </div>

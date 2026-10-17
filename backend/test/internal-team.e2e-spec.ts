@@ -144,6 +144,13 @@ describe('equipe da OS (porcentagens) e comissões', () => {
       expect(byId.get(mech1.user.user_id).os_count).toBe(1);
     });
 
+    it('período de UM dia (hoje em Brasília) inclui a OS finalizada agora', async () => {
+      const today = new Date(Date.now() - 3 * 3600 * 1000).toISOString().slice(0, 10); // dia de Brasília (UTC-3)
+      const res = await request(server()).get(`/commissions?from=${today}&to=${today}`).set(as(a.token)).expect(200);
+      const ids = res.body.people.map((p: { user_id: number }) => p.user_id);
+      expect(ids).toContain(mech2.user.user_id);
+    });
+
     it('mecânico recebe só o próprio total, mesmo pedindo outro user_id', async () => {
       const res = await request(server()).get(`/commissions?${range()}&user_id=${mech1.user.user_id}`).set(as(mech2.token)).expect(200);
       expect(res.body.people).toHaveLength(1);
