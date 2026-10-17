@@ -1,5 +1,6 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Camera, Check } from "lucide-react";
+import { PhotoFlash } from "@/components/motion/PhotoFlash";
 import { compressImage } from "@/lib/imageCompression";
 
 type EntryPhotoSlotProps = {
@@ -14,6 +15,7 @@ type EntryPhotoSlotProps = {
  * órfãos no banco se o mecânico abandonar o fluxo pela metade).
  */
 export function EntryPhotoSlot({ label, file, onCapture }: EntryPhotoSlotProps) {
+  const [flashKey, setFlashKey] = useState(0);
   const previewUrl = useMemo(() => (file ? URL.createObjectURL(file) : null), [file]);
 
   useEffect(() => {
@@ -27,6 +29,7 @@ export function EntryPhotoSlot({ label, file, onCapture }: EntryPhotoSlotProps) 
       {previewUrl ? (
         <>
           <img src={previewUrl} alt={label} className="absolute inset-0 h-full w-full object-cover" />
+          <PhotoFlash flashKey={flashKey} />
           <span className="absolute inset-x-0 bottom-0 flex items-center justify-center gap-1 bg-brand/90 py-1 text-xs font-semibold text-brand-foreground">
             <Check className="h-3.5 w-3.5" />
             {label}
@@ -45,6 +48,7 @@ export function EntryPhotoSlot({ label, file, onCapture }: EntryPhotoSlotProps) 
         className="hidden"
         onChange={async (e) => {
           const file = e.target.files?.[0] ?? null;
+          if (file) setFlashKey((k) => k + 1);
           onCapture(file ? await compressImage(file) : null);
         }}
       />

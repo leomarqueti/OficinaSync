@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { celebrate } from "@/components/motion/celebration";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -242,6 +243,7 @@ export function OsFinishPage() {
         throw new Error(finishResult?.message ?? "Erro ao finalizar OS.");
       }
 
+      celebrate("OS finalizada");
       navigate("/dashboard");
     } catch (err) {
       console.error(err);

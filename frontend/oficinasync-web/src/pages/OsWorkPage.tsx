@@ -38,6 +38,7 @@ import { EditNotesSheet } from "@/components/os/EditNotesSheet";
 import { CompleteDataSheet } from "@/components/os/CompleteDataSheet";
 import { carTitle, clientLabel, kmLabel } from "@/lib/display";
 import { EditTestSheet } from "@/components/os/EditTestSheet";
+import { celebrate } from "@/components/motion/celebration";
 import { CreateSectionSheet } from "@/components/os/CreateSectionSheet";
 import {
   sectionOrder,
@@ -207,7 +208,7 @@ export function OsWorkPage() {
         await apiFetch(`/sections/${confirm.section.section_id}/publish`, {
           method: "PATCH",
         });
-        toast.success("Etapa publicada — o cliente já pode ver!");
+        celebrate("O cliente já pode ver");
       } else {
         await apiFetch(`/tests/${confirm.test.test_id}`, { method: "DELETE" });
         toast.success("Teste excluído.");
