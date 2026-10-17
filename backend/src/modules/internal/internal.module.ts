@@ -10,6 +10,8 @@ import { InternalController } from './internal.controller';
 import { ServiceOrderParticipants } from './service-order-participant.entity';
 import { ServiceOrderParts } from './service-order-part.entity';
 import { ServiceOrderServices } from './service-order-service.entity';
+import { MinioModule } from '../minio/minio.module';
+import { PartsService } from './parts.service';
 import { TeamService } from './team.service';
 
 @Module({
@@ -24,9 +26,10 @@ import { TeamService } from './team.service';
     UsersModule,
     AuthModule,
     ServiceOrdersModule,
+    MinioModule,
   ],
   controllers: [InternalController],
-  providers: [InternalContextService, TeamService],
+  providers: [InternalContextService, TeamService, PartsService],
   exports: [InternalContextService],
 })
 export class InternalModule {}

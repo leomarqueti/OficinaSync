@@ -1,21 +1,26 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   HttpCode,
   HttpStatus,
   Param,
   ParseIntPipe,
   Patch,
+  Post,
   Put,
   Req,
   UseGuards,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../AuthModule/jwt-auth.guard';
 import { SetNotesDto } from './dto/notes.dto';
+import { CreatePartDto, UpdatePartDto } from './dto/part.dto';
 import { SetResponsibleDto } from './dto/responsible.dto';
+import { CreateServiceItemDto, UpdateServiceItemDto } from './dto/service-item.dto';
 import { InternalContextService } from './internal-context.service';
 import { responsibleShare } from './internal-access';
+import { PartsService } from './parts.service';
 import { TeamService } from './team.service';
 
 @Controller()
@@ -24,6 +29,7 @@ export class InternalController {
   constructor(
     private readonly context: InternalContextService,
     private readonly team: TeamService,
+    private readonly partsService: PartsService,
   ) {}
 
   @Get('users/team')
@@ -45,8 +51,8 @@ export class InternalController {
       },
       responsible: { user_id: ctx.responsible.user_id, name: ctx.responsible.name },
       notes: ctx.can.edit_notes ? ctx.order.internal_notes : null,
-      parts: [],
-      services: [],
+      parts: await this.partsService.listParts(ctx),
+      services: await this.partsService.listServices(ctx),
       participants: [],
       responsible_share_percent: responsibleShare([]),
       my_share_percent: null,
@@ -64,5 +70,57 @@ export class InternalController {
   @HttpCode(HttpStatus.OK)
   setResponsible(@Param('id', ParseIntPipe) id: number, @Body() dto: SetResponsibleDto, @Req() req: any) {
     return this.team.setResponsible(id, req.user.sub, dto.user_id);
+  }
+
+  @Post('service_orders/:id/parts')
+  async createPart(@Param('id', ParseIntPipe) id: number, @Body() dto: CreatePartDto, @Req() req: any) {
+    return this.partsService.createPart(await this.context.load(id, req.user.sub), dto);
+  }
+
+  @Patch('service_orders/:id/parts/:partId')
+  @HttpCode(HttpStatus.OK)
+  async updatePart(
+    @Param('id', ParseIntPipe) id: number,
+    @Param('partId', ParseIntPipe) partId: number,
+    @Body() dto: UpdatePartDto,
+    @Req() req: any,
+  ) {
+    return this.partsService.updatePart(await this.context.load(id, req.user.sub), partId, dto);
+  }
+
+  @Delete('service_orders/:id/parts/:partId')
+  @HttpCode(HttpStatus.OK)
+  async deletePart(
+    @Param('id', ParseIntPipe) id: number,
+    @Param('partId', ParseIntPipe) partId: number,
+    @Req() req: any,
+  ) {
+    return this.partsService.deletePart(await this.context.load(id, req.user.sub), partId);
+  }
+
+  @Post('service_orders/:id/services')
+  async createService(@Param('id', ParseIntPipe) id: number, @Body() dto: CreateServiceItemDto, @Req() req: any) {
+    return this.partsService.createService(await this.context.load(id, req.user.sub), dto);
+  }
+
+  @Patch('service_orders/:id/services/:serviceId')
+  @HttpCode(HttpStatus.OK)
+  async updateService(
+    @Param('id', ParseIntPipe) id: number,
+    @Param('serviceId', ParseIntPipe) serviceId: number,
+    @Body() dto: UpdateServiceItemDto,
+    @Req() req: any,
+  ) {
+    return this.partsService.updateService(await this.context.load(id, req.user.sub), serviceId, dto);
+  }
+
+  @Delete('service_orders/:id/services/:serviceId')
+  @HttpCode(HttpStatus.OK)
+  async deleteService(
+    @Param('id', ParseIntPipe) id: number,
+    @Param('serviceId', ParseIntPipe) serviceId: number,
+    @Req() req: any,
+  ) {
+    return this.partsService.deleteService(await this.context.load(id, req.user.sub), serviceId);
   }
 }
