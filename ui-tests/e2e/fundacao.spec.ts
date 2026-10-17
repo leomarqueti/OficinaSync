@@ -116,6 +116,38 @@ test.describe('duas caras — dono', () => {
     await expect(page.getByRole('button', { name: 'Abrir ou fechar menu' }).first()).toBeVisible();
   });
 
+  test('dono com "modo mecânico" salvo: abre direto nele, sem piscar o menu e sem carregar a lista duas vezes', async ({ page }) => {
+    await page.goto('/dashboard');
+    const me = await api(page, 'GET', '/users/me');
+    await page.evaluate((id) => localStorage.setItem(`oficinasync_mode_${id}`, 'simple'), me.json.user_id);
+    // registra se o menu lateral (modo controle) chegou a aparecer, mesmo que por um instante
+    await page.addInitScript(() => {
+      (window as unknown as { __sidebarSeen: boolean }).__sidebarSeen = false;
+      new MutationObserver(() => {
+        if (document.querySelector('[data-slot="sidebar"]')) (window as unknown as { __sidebarSeen: boolean }).__sidebarSeen = true;
+      }).observe(document, { childList: true, subtree: true });
+    });
+    await page.reload();
+    await expect(page.getByRole('navigation', { name: 'Navegação principal' })).toBeVisible();
+    await page.waitForLoadState('networkidle');
+    expect(await page.evaluate(() => (window as unknown as { __sidebarSeen: boolean }).__sidebarSeen)).toBe(false);
+    await page.evaluate((id) => localStorage.removeItem(`oficinasync_mode_${id}`), me.json.user_id);
+  });
+
+  test('tela "Eu": sair fica no fim (longe do dedo) e a troca de modo aparece uma vez só', async ({ page }) => {
+    await page.goto('/dashboard');
+    const me = await api(page, 'GET', '/users/me');
+    await page.evaluate((id) => localStorage.setItem(`oficinasync_mode_${id}`, 'simple'), me.json.user_id);
+    await page.goto('/configuracoes');
+    const sair = page.getByRole('button', { name: 'Sair da conta' });
+    await expect(sair).toBeVisible();
+    const sairY = (await sair.boundingBox())!.y;
+    const senhaY = (await page.getByRole('heading', { name: /trocar senha/i }).boundingBox())!.y;
+    expect(sairY).toBeGreaterThan(senhaY);
+    await expect(page.getByRole('button', { name: 'Ver modo controle' })).toHaveCount(1);
+    await page.evaluate((id) => localStorage.removeItem(`oficinasync_mode_${id}`), me.json.user_id);
+  });
+
   test('nome longo da oficina não estoura a tela no celular', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 812 });
     await page.goto('/dashboard');
@@ -132,4 +164,13 @@ test('publicar etapa comemora: "O cliente já pode ver"', async ({ page }) => {
   await page.getByRole('button', { name: 'Publicar pro cliente' }).first().click();
   await page.getByRole('alertdialog').getByRole('button', { name: 'Publicar' }).click();
   await expect(page.getByText('O cliente já pode ver', { exact: true })).toBeVisible();
+});
+
+test('finalizar OS: o botão de escolher foto é legível no tema escuro', async ({ page }) => {
+  const orderId = await openOrder(page);
+  await page.goto(`/os/${orderId}/finalizar`);
+  const input = page.locator('input[type="file"]').first();
+  await expect(input).toBeAttached();
+  const color = await input.evaluate((el) => getComputedStyle(el, '::file-selector-button').color);
+  expect(color).toBe('rgb(10, 10, 10)');
 });

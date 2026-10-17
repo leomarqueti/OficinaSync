@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { KeyRound, Loader2, LogOut, Percent } from "lucide-react";
 import { BigButton } from "@/components/kit";
-import { ModeSwitch } from "@/components/shell/ModeSwitch";
 import { useShellMode } from "@/components/shell/ModeContext";
 import { logout } from "@/lib/session";
 import { Button } from "@/components/ui/button";
@@ -70,10 +69,6 @@ export function SettingsPage() {
               <section aria-label="Atalhos" className="mt-6 flex flex-col gap-3">
                 <BigButton variant="secondary" icon={<Percent />} onClick={() => navigate("/comissoes")}>
                   Minhas comissões
-                </BigButton>
-                <ModeSwitch className="w-full justify-center" />
-                <BigButton variant="danger" icon={<LogOut />} onClick={() => logout(navigate)}>
-                  Sair da conta
                 </BigButton>
               </section>
             )}
@@ -164,6 +159,14 @@ export function SettingsPage() {
                 Rever passo a passo
               </Button>
             </div>
+
+            {mode === "simple" && (
+              <div className="mt-10 border-t border-white/10 pt-6">
+                <BigButton variant="secondary" icon={<LogOut />} onClick={() => logout(navigate)}>
+                  Sair da conta
+                </BigButton>
+              </div>
+            )}
           </div>
         </div>
     </>

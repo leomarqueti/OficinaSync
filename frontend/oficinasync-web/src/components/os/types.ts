@@ -98,6 +98,14 @@ export const sectionOrder = [
   "final",
 ] as const;
 
+/**
+ * Etapas mostradas na trilha da OS. "Scanner / OBD" só aparece com o OBD ligado
+ * (VITE_FEATURE_OBD) ou quando a OS já tem essa etapa — nunca esconde dado existente.
+ */
+export function visibleStepTypes(existing: Set<string>, obdEnabled: boolean): string[] {
+  return sectionOrder.filter((type) => type !== "obd_scan" || obdEnabled || existing.has(type));
+}
+
 export const sectionLabels: Record<string, string> = {
   checkin: "Check-in",
   obd_scan: "Scanner / OBD",

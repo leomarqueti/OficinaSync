@@ -1,5 +1,5 @@
 import { Check, Plus } from "lucide-react";
-import { sectionOrder, sectionLabels, type SectionItem } from "./types";
+import { sectionLabels, visibleStepTypes, type SectionItem } from "./types";
 
 type SectionStepperProps = {
   sections: SectionItem[];
@@ -17,7 +17,7 @@ export function SectionStepper({ sections, onCreateSection }: SectionStepperProp
 
   return (
     <div className="flex gap-2 overflow-x-auto pb-1 [-webkit-overflow-scrolling:touch]">
-      {sectionOrder.map((type) => {
+      {visibleStepTypes(new Set(byType.keys()), import.meta.env.VITE_FEATURE_OBD === "true").map((type) => {
         const section = byType.get(type);
         const label = sectionLabels[type];
 

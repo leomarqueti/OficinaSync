@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { useMe } from "@/lib/me";
 import { modeFor, readModePreference, saveModePreference, type AppMode } from "@/lib/mode";
 import { ControlShell } from "./ControlShell";
@@ -17,13 +17,9 @@ function safeStorage(): Storage | undefined {
 /** Escolhe a "cara" do sistema pelo cargo (mecânico → simples; escritório → controle; dono escolhe). */
 export function AppShell({ children }: { children: ReactNode }) {
   const { me, loading } = useMe();
-  const [preference, setPreference] = useState<AppMode | null>(() =>
-    me ? readModePreference(safeStorage(), me.user_id) : null,
-  );
-
-  useEffect(() => {
-    if (me) setPreference(readModePreference(safeStorage(), me.user_id));
-  }, [me]);
+  // escolha feita nesta tela; sem ela, lê o storage na hora (síncrono) — nunca renderiza o modo errado antes
+  const [override, setOverride] = useState<AppMode | null>(null);
+  const preference = override ?? (me ? readModePreference(safeStorage(), me.user_id) : null);
 
   const mode = me ? modeFor(me.role, preference) : null;
   const shell = shellFor(loading, Boolean(me), mode);
@@ -34,7 +30,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     setMode: (next: AppMode) => {
       if (!me || me.role !== "owner") return;
       saveModePreference(safeStorage(), me.user_id, next);
-      setPreference(next);
+      setOverride(next);
     },
   };
 

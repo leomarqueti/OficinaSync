@@ -346,7 +346,7 @@ export function OsFinishPage() {
         type="file"
         accept="image/*"
         onChange={(e) => setter(e.target.files?.[0] ?? null)}
-        className="h-12 rounded-xl border-white/12 bg-white/[0.04] text-base placeholder:text-white/50 w-full border px-3 py-2 file:mr-3 file:rounded-md file:border-0 file:bg-lime-100 file:px-3 file:py-1.5 outline-none focus-visible:border-brand/60 focus-visible:ring-2 focus-visible:ring-brand/40"
+        className="h-12 rounded-xl border-white/12 bg-white/[0.04] text-base placeholder:text-white/50 w-full border px-3 py-2 file:mr-3 file:rounded-md file:border-0 file:bg-brand file:font-semibold file:text-[#0a0a0a] file:px-3 file:py-1.5 outline-none focus-visible:border-brand/60 focus-visible:ring-2 focus-visible:ring-brand/40"
       />
     </div>
   );
