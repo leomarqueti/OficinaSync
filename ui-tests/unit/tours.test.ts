@@ -51,6 +51,11 @@ describe('estado do passo a passo', () => {
     }
   });
 
+  it('versão 2 (visual novo) e o mecânico aprende o botão verde "+ Carro" de baixo', () => {
+    expect(TOUR_VERSION).toBe(2);
+    expect(tourSteps('mechanic').map((s) => s.text).join(' ')).toMatch(/\+ Carro/);
+  });
+
   it('mecânico aprende peças e equipe; dono aprende ficha e comissões; recepção, completar dados', () => {
     expect(tourSteps('mechanic').map((s) => s.text).join(' ')).toMatch(/quem ajudou/i);
     expect(tourSteps('owner').map((s) => s.text).join(' ')).toMatch(/ficha/i);

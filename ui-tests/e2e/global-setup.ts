@@ -2,6 +2,7 @@ import { execSync } from 'node:child_process';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { tourKey } from '../../frontend/oficinasync-web/src/lib/tours';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const backendDir = path.resolve(here, '../../backend');
@@ -46,7 +47,7 @@ export default async function globalSetup() {
   const tourFlag = async (token: string) => {
     const res = await fetch(`${BACKEND_URL}/users/me`, { headers: { Authorization: `Bearer ${token}` } });
     const me = (await res.json()) as { user_id: number };
-    return { name: `oficinasync_tour_v1_${me.user_id}`, value: '1' };
+    return { name: tourKey(me.user_id), value: '1' };
   };
 
   const authDir = path.resolve(here, '.auth');

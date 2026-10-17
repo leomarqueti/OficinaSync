@@ -1,6 +1,6 @@
 import type { Role } from "./me";
 
-export const TOUR_VERSION = 1;
+export const TOUR_VERSION = 2;
 
 export type TourStep = { title: string; text: string; target?: string };
 
@@ -22,7 +22,7 @@ const common: TourStep[] = [
   },
   {
     title: "Abrir uma OS",
-    text: "Toque em \"Nova OS\". Se o cliente já foi embora, use a \"Abertura rápida\": só a placa é obrigatória, o resto você completa depois.",
+    text: "Toque em \"Nova OS\" — no celular do mecânico é o botão verde \"+ Carro\", embaixo. Se o cliente já foi embora, use a \"Abertura rápida\": só a placa é obrigatória, o resto você completa depois.",
     target: "[data-tour='new-os']",
   },
 ];
