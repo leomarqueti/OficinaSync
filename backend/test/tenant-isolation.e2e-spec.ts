@@ -249,7 +249,8 @@ describe('isolamento entre oficinas (tenants)', () => {
       .get(`/service_orders/public/${bw.publicToken}`)
       .expect(200);
 
-    expect(Object.keys(res.body.client).sort()).toEqual(['name', 'phone']);
+    // só o nome (saudação da página): telefone/CPF/e-mail do cliente nunca saem na API pública
+    expect(Object.keys(res.body.client).sort()).toEqual(['name']);
     expect(res.body.sections).toEqual([]); // checkin ainda é rascunho
     expect(JSON.stringify(res.body)).not.toContain(bw.cpf);
   });

@@ -108,7 +108,6 @@ export class MediaService {
       throw new NotFoundException();
     }
 
-    console.log(mediaSaved);
     return {
       ...mediaSaved,
       section_id: mediaSaved.section?.section_id ?? null,

@@ -18,6 +18,8 @@ import { JwtAuthGuard } from '../AuthModule/jwt-auth.guard';
       inject: [ConfigService],
       useFactory: async (config: ConfigService) => ({
         secret: config.get<string>('JWT_SECRET'),
+        // o login NUNCA pode emitir token eterno: sem JWT_EXPIRES_IN no .env vale 1 dia
+        signOptions: { expiresIn: (config.get<string>('JWT_EXPIRES_IN') || '1d') as never },
       }),
     }),
     UsersModule,

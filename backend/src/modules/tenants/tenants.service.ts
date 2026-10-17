@@ -68,7 +68,6 @@ export class TenantsService {
 
     //Agora vamos chamar a funçao de criar a verificacao de email
     await this.email_verificationService.saveToken(userId, token);
-    console.log(token);
     this.emailService.sendVerificationEmail(email, token, name);
 
     // vamos vincular o user com o tenant

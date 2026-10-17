@@ -270,11 +270,9 @@ export class ServiceOrdersService {
         color: serviceOrder.car.color,
         fuel_type: serviceOrder.car.fuel_type,
       },
+      // página pública (link no WhatsApp): só o nome, pra saudação — telefone/CPF nunca saem aqui
       client: serviceOrder.car.client
-        ? {
-            name: serviceOrder.car.client.name,
-            phone: serviceOrder.car.client.phone,
-          }
+        ? { name: serviceOrder.car.client.name }
         : null,
       sections: publishedSections,
     };

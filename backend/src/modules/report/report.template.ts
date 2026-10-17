@@ -1,3 +1,5 @@
+import { escapeHtml as e } from '../../common/html';
+
 const BRAND = '#7cb928';
 
 const verdictLabels: Record<string, string> = {
@@ -108,9 +110,9 @@ function renderMeasurementsTable(measurements: ReportMeasurement[]) {
     .map(
       (m) => `
         <tr>
-          <td>${m.label}</td>
-          <td class="muted">${m.expected || '-'}</td>
-          <td>${m.actual}</td>
+          <td>${e(m.label)}</td>
+          <td class="muted">${e(m.expected || '-')}</td>
+          <td>${e(m.actual)}</td>
         </tr>`,
     )
     .join('');
@@ -130,8 +132,8 @@ function renderCompressaoBlock(
 ) {
   const specLine =
     data.specMin || data.specMax
-      ? `<p class="muted">Especificado: ${data.specMin || '-'}–${data.specMax || '-'} ${data.unit ?? ''}${
-          data.tool ? ` • Ferramenta: ${data.tool}` : ''
+      ? `<p class="muted">Especificado: ${e(data.specMin || '-')}–${e(data.specMax || '-')} ${e(data.unit ?? '')}${
+          data.tool ? ` • Ferramenta: ${e(data.tool)}` : ''
         }</p>`
       : '';
 
@@ -139,14 +141,14 @@ function renderCompressaoBlock(
     .map((cyl: Record<string, any>) => {
       const photo = cyl.media_id ? photoLookup.get(cyl.media_id) : null;
       const badge = cyl.status
-        ? `<span class="badge badge-${cyl.status}">${verdictLabels[cyl.status] ?? cyl.status}</span>`
+        ? `<span class="badge badge-${e(cyl.status)}">${e(verdictLabels[cyl.status] ?? cyl.status)}</span>`
         : '';
 
       return `
         <div class="cyl-item">
           ${photo ? `<img src="${photo}" />` : '<div class="cyl-photo-placeholder">Sem foto</div>'}
-          <p class="cyl-number">Cil. ${cyl.number}</p>
-          <p class="cyl-value">${cyl.value || '-'} ${data.unit ?? ''}</p>
+          <p class="cyl-number">Cil. ${e(cyl.number)}</p>
+          <p class="cyl-value">${e(cyl.value || '-')} ${e(data.unit ?? '')}</p>
           ${badge}
         </div>`;
     })
@@ -156,16 +158,16 @@ function renderCompressaoBlock(
 }
 
 function renderDtcBlock(data: Record<string, any>) {
-  const scannerLine = data.scanner ? `<p class="muted">Scanner: ${data.scanner}</p>` : '';
+  const scannerLine = data.scanner ? `<p class="muted">Scanner: ${e(data.scanner)}</p>` : '';
 
   const rows = (data.dtcs ?? [])
     .map(
       (dtc: Record<string, any>) => `
       <tr>
-        <td>${dtc.code}</td>
-        <td>${dtc.description || '-'}</td>
-        <td>${dtc.module || '-'}</td>
-        <td><span class="badge badge-dtc-${dtc.status}">${dtcStatusLabels[dtc.status] ?? dtc.status}</span></td>
+        <td>${e(dtc.code)}</td>
+        <td>${e(dtc.description || '-')}</td>
+        <td>${e(dtc.module || '-')}</td>
+        <td><span class="badge badge-dtc-${e(dtc.status)}">${e(dtcStatusLabels[dtc.status] ?? dtc.status)}</span></td>
       </tr>`,
     )
     .join('');
@@ -180,7 +182,7 @@ function renderDtcBlock(data: Record<string, any>) {
     .filter(Boolean);
 
   const systemsBlock = systems.length
-    ? `<p class="systems-ok">Sistemas OK: ${systems.join(', ')}</p>`
+    ? `<p class="systems-ok">Sistemas OK: ${e(systems.join(', '))}</p>`
     : '';
 
   return `${scannerLine}${table}${systemsBlock}`;
@@ -208,10 +210,10 @@ const obdParamLabels: Record<string, { label: string; unit: string }> = {
 
 function renderObdSnapshotBlock(data: Record<string, any>) {
   const collectedLine = `<p class="muted">Coletado direto da central do veículo${
-    data.device_name ? ` · ${data.device_name}` : ''
+    data.device_name ? ` · ${e(data.device_name)}` : ''
   }${
     data.collected_at
-      ? ` · ${new Date(data.collected_at).toLocaleString('pt-BR')}`
+      ? ` · ${e(new Date(data.collected_at).toLocaleString('pt-BR'))}`
       : ''
   }</p>`;
 
@@ -222,13 +224,13 @@ function renderObdSnapshotBlock(data: Record<string, any>) {
   const paramRows = entries
     .map(([key, value]) => {
       const meta = obdParamLabels[key] ?? { label: key, unit: '' };
-      return `<tr><td>${meta.label}</td><td>${Number(value).toLocaleString('pt-BR', { maximumFractionDigits: 1 })} ${meta.unit}</td></tr>`;
+      return `<tr><td>${e(meta.label)}</td><td>${e(Number(value).toLocaleString('pt-BR', { maximumFractionDigits: 1 }))} ${e(meta.unit)}</td></tr>`;
     })
     .join('');
 
   const voltageRow =
     data.voltage !== null && data.voltage !== undefined
-      ? `<tr><td>Tensão da bateria</td><td>${Number(data.voltage).toLocaleString('pt-BR', { maximumFractionDigits: 1 })} V</td></tr>`
+      ? `<tr><td>Tensão da bateria</td><td>${e(Number(data.voltage).toLocaleString('pt-BR', { maximumFractionDigits: 1 }))} V</td></tr>`
       : '';
 
   const paramsTable =
@@ -239,7 +241,7 @@ function renderObdSnapshotBlock(data: Record<string, any>) {
   const dtcRows = ((data.dtcs ?? []) as Record<string, any>[])
     .map(
       (dtc) =>
-        `<tr><td>${dtc.code}</td><td>${dtc.description || '-'}</td></tr>`,
+        `<tr><td>${e(dtc.code)}</td><td>${e(dtc.description || '-')}</td></tr>`,
     )
     .join('');
 
@@ -251,7 +253,7 @@ function renderObdSnapshotBlock(data: Record<string, any>) {
 }
 
 function renderBateriaBlock(data: Record<string, any>) {
-  const toolLine = data.tool ? `<p class="muted">Ferramenta: ${data.tool}</p>` : '';
+  const toolLine = data.tool ? `<p class="muted">Ferramenta: ${e(data.tool)}</p>` : '';
 
   const metrics: Array<[string, any, string]> = [
     ['Repouso', data.tensaoRepouso, 'V'],
@@ -266,8 +268,8 @@ function renderBateriaBlock(data: Record<string, any>) {
     .map(
       ([label, value, unit]) => `
       <div class="metric-tile">
-        <p class="metric-value">${value}${unit}</p>
-        <p class="metric-label">${label}</p>
+        <p class="metric-value">${e(value)}${e(unit)}</p>
+        <p class="metric-label">${e(label)}</p>
       </div>`,
     )
     .join('');
@@ -280,10 +282,10 @@ function renderInjetoresBlock(
   photoLookup: Map<number, string>,
 ) {
   const infoParts = [
-    data.tool && `Ferramenta: ${data.tool}`,
-    data.pulsos && `${data.pulsos} pulsos`,
+    data.tool && `Ferramenta: ${e(data.tool)}`,
+    data.pulsos && `${e(data.pulsos)} pulsos`,
     (data.specMin || data.specMax) &&
-      `Especificado: ${data.specMin || '-'}–${data.specMax || '-'} ${data.unit ?? ''}`,
+      `Especificado: ${e(data.specMin || '-')}–${e(data.specMax || '-')} ${e(data.unit ?? '')}`,
   ].filter(Boolean);
 
   const infoLine = infoParts.length ? `<p class="muted">${infoParts.join(' • ')}</p>` : '';
@@ -303,9 +305,9 @@ function renderInjetoresBlock(
     .map(
       (inj: Record<string, any>) => `
       <tr>
-        <td>${inj.number}</td>
-        <td>${inj.value || '-'} ${data.unit ?? ''}</td>
-        <td>${sprayLabels[inj.sprayPattern] ?? inj.sprayPattern}</td>
+        <td>${e(inj.number)}</td>
+        <td>${e(inj.value || '-')} ${e(data.unit ?? '')}</td>
+        <td>${e(sprayLabels[inj.sprayPattern] ?? inj.sprayPattern)}</td>
       </tr>`,
     )
     .join('');
@@ -332,7 +334,7 @@ function renderAntesDepoisBlock(
         </div>`
       : '';
 
-  const description = data.description ? `<p>${data.description}</p>` : '';
+  const description = data.description ? `<p>${e(data.description)}</p>` : '';
 
   return `${photosBlock}${description}`;
 }
@@ -340,7 +342,7 @@ function renderAntesDepoisBlock(
 function renderAchadoBlock(data: Record<string, any>, photoLookup: Map<number, string>) {
   const severity = data.severity ?? 'media';
   const color = achadoSeverityColors[severity] ?? achadoSeverityColors.media;
-  const label = achadoSeverityLabels[severity] ?? severity;
+  const label = e(achadoSeverityLabels[severity] ?? severity);
 
   const photo = data.media_id ? photoLookup.get(data.media_id) : null;
   const photoBlock = photo
@@ -350,7 +352,7 @@ function renderAchadoBlock(data: Record<string, any>, photoLookup: Map<number, s
   return `
     <div class="achado-box" style="border-left-color:${color}">
       <span class="badge" style="background:${color}22;color:${color}">Atenção ${label}</span>
-      ${data.description ? `<p class="achado-description">${data.description}</p>` : ''}
+      ${data.description ? `<p class="achado-description">${e(data.description)}</p>` : ''}
       ${photoBlock}
     </div>`;
 }
@@ -388,15 +390,15 @@ function renderTest(step: ReportProcedureStep, number: number, photoLookup: Map<
   <div class="step">
     <div class="step-header">
       <span class="step-number">${number}.</span>
-      <span class="step-title">${step.title}</span>
+      <span class="step-title">${e(step.title)}</span>
       ${
         step.verdict
-          ? `<span class="badge badge-${step.verdict}">${verdictLabels[step.verdict] ?? step.verdict}</span>`
+          ? `<span class="badge badge-${e(step.verdict)}">${e(verdictLabels[step.verdict] ?? step.verdict)}</span>`
           : ''
       }
     </div>
     ${body}
-    ${step.notes ? `<p class="step-notes">${step.notes}</p>` : ''}
+    ${step.notes ? `<p class="step-notes">${e(step.notes)}</p>` : ''}
   </div>`;
 }
 
@@ -408,7 +410,7 @@ function renderChapterPhotos(photos: ReportPhoto[]) {
       (photo) => `
       <div class="photo">
         <img src="${photo.dataUri}" />
-        <p class="photo-label">${photo.label}</p>
+        <p class="photo-label">${e(photo.label)}</p>
       </div>`,
     )
     .join('');
@@ -436,9 +438,9 @@ function renderChapter(
     <section class="chapter">
       <div class="chapter-header">
         <span class="chapter-number">${chapterNumber}</span>
-        <h2>${chapter.label}</h2>
+        <h2>${e(chapter.label)}</h2>
       </div>
-      ${chapter.notes ? `<p class="chapter-notes">${chapter.notes}</p>` : ''}
+      ${chapter.notes ? `<p class="chapter-notes">${e(chapter.notes)}</p>` : ''}
       ${renderChapterPhotos(chapter.photos)}
       ${testsHtml}
     </section>`;
@@ -450,8 +452,8 @@ function renderSummary(chapters: ReportChapter[]) {
 
   const items = allTests
     .map((step) => {
-      const verdict = step.verdict ? ` — ${verdictLabels[step.verdict] ?? step.verdict}` : '';
-      return `<li>${step.title}${verdict}</li>`;
+      const verdict = step.verdict ? ` — ${e(verdictLabels[step.verdict] ?? step.verdict)}` : '';
+      return `<li>${e(step.title)}${verdict}</li>`;
     })
     .join('');
 
@@ -687,18 +689,18 @@ export function buildReportHtml(data: ReportData): string {
   <div class="cover-meta">
     <div>
       <h1>Laudo Técnico</h1>
-      <p class="muted">${data.tenantName}${data.tenantCnpj ? ` — CNPJ ${data.tenantCnpj}` : ''}</p>
+      <p class="muted">${e(data.tenantName)}${data.tenantCnpj ? ` — CNPJ ${e(data.tenantCnpj)}` : ''}</p>
     </div>
   </div>
   <div class="accent-rule"></div>
 
   <section class="grid">
-    <div class="field"><div class="field-label">Cliente</div><div class="field-value">${data.clientName ?? '-'}</div></div>
-    <div class="field"><div class="field-label">Veículo</div><div class="field-value">${[data.car.brand, data.car.model].filter(Boolean).join(' ') || '-'}</div></div>
+    <div class="field"><div class="field-label">Cliente</div><div class="field-value">${e(data.clientName ?? '-')}</div></div>
+    <div class="field"><div class="field-label">Veículo</div><div class="field-value">${e([data.car.brand, data.car.model].filter(Boolean).join(' ') || '-')}</div></div>
     <div class="field"><div class="field-label">Ano</div><div class="field-value">${data.car.year ?? '-'}</div></div>
-    <div class="field"><div class="field-label">Placa</div><div class="field-value">${data.car.plate}</div></div>
-    <div class="field"><div class="field-label">Cor</div><div class="field-value">${data.car.color ?? '-'}</div></div>
-    <div class="field"><div class="field-label">Combustível</div><div class="field-value">${data.car.fuel_type ?? '-'}</div></div>
+    <div class="field"><div class="field-label">Placa</div><div class="field-value">${e(data.car.plate)}</div></div>
+    <div class="field"><div class="field-label">Cor</div><div class="field-value">${e(data.car.color ?? '-')}</div></div>
+    <div class="field"><div class="field-label">Combustível</div><div class="field-value">${e(data.car.fuel_type ?? '-')}</div></div>
     <div class="field"><div class="field-label">Quilometragem</div><div class="field-value">${data.car.mileage_in != null ? `${data.car.mileage_in.toLocaleString('pt-BR')} km` : '-'}</div></div>
     <div class="field"><div class="field-label">Data de abertura</div><div class="field-value">${formatDate(data.createdAt)}</div></div>
     <div class="field"><div class="field-label">Data do laudo</div><div class="field-value">${formatDate(data.finishedAt ?? new Date())}</div></div>
@@ -706,7 +708,7 @@ export function buildReportHtml(data: ReportData): string {
 
   <section>
     <h2>Queixa relatada</h2>
-    <p class="complaint">${data.clientComplaint || 'Sem relato informado.'}</p>
+    <p class="complaint">${e(data.clientComplaint || 'Sem relato informado.')}</p>
     ${renderChapterPhotos(data.intakePhotos)}
   </section>
 
@@ -714,13 +716,13 @@ export function buildReportHtml(data: ReportData): string {
 
   ${
     data.rootCause
-      ? `<section><h2>Causa raiz identificada</h2><p>${data.rootCause}</p></section>`
+      ? `<section><h2>Causa raiz identificada</h2><p>${e(data.rootCause)}</p></section>`
       : ''
   }
 
   <section>
     <h2>Conclusão</h2>
-    <p>${data.conclusion || 'Sem observações finais registradas.'}</p>
+    <p>${e(data.conclusion || 'Sem observações finais registradas.')}</p>
     ${banner ? `<div class="banner" style="background:${banner.color}">${banner.text}</div>` : ''}
   </section>
 
@@ -738,8 +740,8 @@ export function buildReportHtml(data: ReportData): string {
   </div>
 
   <div class="signature">
-    <span>Responsável técnico: <strong>${data.responsavelTecnico ?? '-'}</strong></span>
-    <span>${data.tenantName}</span>
+    <span>Responsável técnico: <strong>${e(data.responsavelTecnico ?? '-')}</strong></span>
+    <span>${e(data.tenantName)}</span>
   </div>
 </body>
 </html>`;
@@ -748,7 +750,7 @@ export function buildReportHtml(data: ReportData): string {
 export function buildHeaderTemplate(tenantName: string): string {
   return `
     <div style="font-size:9px; width:100%; padding:0 32px; display:flex; justify-content:space-between; color:#6b7280; font-family:Arial,Helvetica,sans-serif;">
-      <span><strong>${tenantName}</strong> — Laudo Técnico</span>
+      <span><strong>${e(tenantName)}</strong> — Laudo Técnico</span>
       <span>Diagnóstico automotivo especializado</span>
     </div>`;
 }
@@ -756,7 +758,7 @@ export function buildHeaderTemplate(tenantName: string): string {
 export function buildFooterTemplate(tenantName: string): string {
   return `
     <div style="font-size:9px; width:100%; padding:0 32px; display:flex; justify-content:space-between; color:#6b7280; font-family:Arial,Helvetica,sans-serif;">
-      <span>${tenantName} — Laudo Técnico Confidencial</span>
+      <span>${e(tenantName)} — Laudo Técnico Confidencial</span>
       <span>Página <span class="pageNumber"></span>/<span class="totalPages"></span></span>
     </div>`;
 }

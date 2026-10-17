@@ -57,7 +57,7 @@ type PublicServiceOrder = {
     color: string | null;
     fuel_type: string | null;
   };
-  client: { name: string; phone: string | null } | null;
+  client: { name: string } | null;
   sections: SectionItem[];
 };
 
@@ -254,6 +254,17 @@ function MediaGallery({
 export function PublicServiceOrderPage() {
   const { token } = useParams();
   const reduced = useReducedMotion();
+
+  // link com token vai pro WhatsApp: se vazar, não pode virar resultado do Google
+  useEffect(() => {
+    const meta = document.createElement("meta");
+    meta.name = "robots";
+    meta.content = "noindex, nofollow";
+    document.head.appendChild(meta);
+    return () => {
+      meta.remove();
+    };
+  }, []);
 
   const [data, setData] = useState<PublicServiceOrder | null>(null);
   const [loading, setLoading] = useState(true);

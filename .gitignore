@@ -18,3 +18,7 @@ build/
 Thumbs.db
 # Configuracao pessoal do Claude Code neste projeto
 .claude/settings.local.json
+
+# Segredos de produção (os modelos *.example continuam versionados)
+.env.production
+backend/.env.production

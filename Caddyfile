@@ -1,4 +1,20 @@
+# Cabeçalhos de segurança comuns aos três sites.
+(security_headers) {
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		-Server
+	}
+}
+
 {$DOMAIN} {
+	import security_headers
+
+	# Link do cliente (vai pelo WhatsApp): se vazar, não pode ser indexado pelo Google.
+	@servico path /servico/*
+	header @servico X-Robots-Tag "noindex, nofollow"
+
 	root * /srv
 	encode gzip
 	try_files {path} /index.html
@@ -6,9 +22,11 @@
 }
 
 api.{$DOMAIN} {
+	import security_headers
 	reverse_proxy backend:3000
 }
 
 storage.{$DOMAIN} {
+	import security_headers
 	reverse_proxy minio:9000
 }

@@ -184,6 +184,20 @@ export class ReportService {
 
     try {
       const page = await browser.newPage();
+
+      // Defesa em profundidade (o HTML já é escapado): o laudo não precisa de JavaScript nem de
+      // rede — as fotos vão embutidas em data: URI. Bloquear impede SSRF se algo escapar.
+      await page.setJavaScriptEnabled(false);
+      await page.setRequestInterception(true);
+      page.on('request', (request) => {
+        const url = request.url();
+        if (url.startsWith('data:') || url === 'about:blank') {
+          void request.continue();
+        } else {
+          void request.abort();
+        }
+      });
+
       await page.setContent(html, { waitUntil: 'load' });
 
       const pdf = await page.pdf({

@@ -11,6 +11,7 @@ async function bootstrap() {
   // limiting (ThrottlerGuard) enxergaria o IP do Caddy pra todo mundo,
   // e um usuário bloquearia a oficina inteira.
   app.set('trust proxy', 1);
+  app.disable('x-powered-by'); // não anuncia que é Express
 
   const corsOrigins = process.env.CORS_ORIGINS
     ? process.env.CORS_ORIGINS.split(',').map((origin) => origin.trim())
