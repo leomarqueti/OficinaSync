@@ -119,5 +119,21 @@ assert_eq "sai com 0" "$CODE" "0"
 assert_eq "sobraram 7" "$(find "$T/backups" -name '*.bak' | wc -l | tr -d ' ')" "7"
 assert_eq "o mais antigo foi removido" "$([ -e "$T/backups/oficinasync_20200101_000000.bak" ] && echo existe || echo removido)" "removido"
 
+# ---- 7. primeiro deploy: a VPS já está no commit certo, mas nunca foi construída -----
+echo "7) primeiro deploy (VPS já no commit da production, sem marcador de deploy)"
+rm -f "$T/vps/.last_deployed_sha"
+BEFORE="$(ups)"
+OUT="$(FAKE_HEALTH=ok run_deploy)"; CODE=$?
+assert_eq "sai com 0" "$CODE" "0"
+assert_eq "reconstruiu mesmo sem commit novo" "$(ups)" "$((BEFORE + 1))"
+assert_eq "gravou o marcador do deploy" "$(cat "$T/vps/.last_deployed_sha" 2>/dev/null)" "$(vps_head)"
+BEFORE="$(ups)"
+OUT="$(FAKE_HEALTH=ok run_deploy)"; CODE=$?
+assert_eq "segundo disparo sem novidade não rebuilda" "$(ups)" "$BEFORE"
+
+# ---- 8. o comando do backup precisa falhar de verdade quando o SQL der erro ------------
+echo "8) sqlcmd roda com -b (sem isso um erro do BACKUP não derruba o script)"
+assert_contains "o comando do backup usa -b" "$(grep 'sqlcmd' "$FAKE_LOG" | head -1)" " -b "
+
 echo
 if [ "$FAILS" -eq 0 ]; then echo "TUDO OK"; else echo "$FAILS falha(s)"; exit 1; fi

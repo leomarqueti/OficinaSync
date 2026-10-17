@@ -58,7 +58,7 @@ main() {
   # SC2016: o $SA_PASSWORD é do ambiente do CONTAINER, por isso as aspas simples (expande lá dentro).
   # shellcheck disable=SC2016
   "${compose[@]}" exec -T sqlserver bash -c \
-    '/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "$SA_PASSWORD" -C -Q "BACKUP DATABASE [oficinasync] TO DISK = N'\''/var/opt/mssql/oficinasync_backup.bak'\'' WITH INIT, FORMAT"' \
+    '/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "$SA_PASSWORD" -C -b -Q "BACKUP DATABASE [oficinasync] TO DISK = N'\''/var/opt/mssql/oficinasync_backup.bak'\'' WITH INIT, FORMAT"' \
     >/dev/null \
     || { log "ERRO: backup falhou — deploy abortado, nada foi alterado."; exit 1; }
   docker cp oficinasync-db:/var/opt/mssql/oficinasync_backup.bak "$backup_file" \
@@ -69,7 +69,13 @@ main() {
   local new_sha
   new_sha="$(git rev-parse "origin/$branch")"
 
-  if [ "$new_sha" = "$prev_sha" ]; then
+  # Marcador do último deploy que SUBIU: no primeiro deploy a VPS pode já estar no commit certo
+  # (DEPLOY.md 10.1c manda dar checkout na production antes), mas os containers nunca foram
+  # construídos com ele — só dispensa se o código E o marcador estão em dia.
+  local marker="$repo_dir/.last_deployed_sha" deployed=""
+  [ -f "$marker" ] && deployed="$(cat "$marker")"
+
+  if [ "$new_sha" = "$prev_sha" ] && [ "$new_sha" = "$deployed" ]; then
     log "Deploy dispensado: nada novo em origin/$branch ($prev_sha)."
     rotate_backups "$backup_dir" "$keep_backups"
     exit 0
@@ -83,15 +89,20 @@ main() {
     fi
   fi
 
-  log "Atualizando $prev_sha -> $new_sha"
-  git merge --ff-only --quiet "origin/$branch" \
-    || { log "ERRO: não deu fast-forward (a VPS divergiu do remoto). Nada foi alterado."; exit 1; }
+  if [ "$new_sha" != "$prev_sha" ]; then
+    log "Atualizando $prev_sha -> $new_sha"
+    git merge --ff-only --quiet "origin/$branch" \
+      || { log "ERRO: não deu fast-forward (a VPS divergiu do remoto). Nada foi alterado."; exit 1; }
+  else
+    log "Código já em $new_sha, mas ainda não foi construído/publicado: reconstruindo."
+  fi
 
   log "Reconstruindo containers..."
   "${compose[@]}" up -d --build
 
   # ---- saúde --------------------------------------------------------------
   if wait_healthy "$health_url" "$health_retries"; then
+    echo "$new_sha" >"$marker"
     log "OK: $health_url respondeu. Deploy concluído em $new_sha."
     rotate_backups "$backup_dir" "$keep_backups"
     exit 0
