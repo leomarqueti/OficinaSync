@@ -143,7 +143,7 @@ export function ScannerPage() {
               </div>
               <p className="mt-1 text-sm text-muted-foreground">
                 Dê um nome pro dongle (ex: "Scanner bancada 1"). O token gerado
-                vai configurado no aparelho — ele aparece uma única vez.
+                já vai configurado no aparelho — ele aparece uma única vez.
               </p>
 
               <form

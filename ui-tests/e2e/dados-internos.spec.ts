@@ -177,3 +177,22 @@ test('o botão "Ficha do escritório" aparece para o dono e não para o mecânic
   await expect(mechPage.getByRole('button', { name: 'Ficha do escritório' })).toHaveCount(0);
   await mechCtx.close();
 });
+
+test('comissões: tela abre com filtro de período e sem o item Scanner no menu', async ({ page }) => {
+  await page.goto('/dashboard');
+  await expect(page.getByRole('button', { name: 'Scanner' })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Comissões' }).click();
+  await expect(page).toHaveURL(/\/comissoes$/);
+  await expect(page.getByRole('heading', { name: 'Comissões' })).toBeVisible();
+  await expect(page.locator('#comm-from')).toBeVisible();
+  await expect(page.locator('#comm-to')).toBeVisible();
+  await expect(page.getByText(/Nenhuma OS concluída/)).toBeVisible();
+});
+
+test.describe('mecânico', () => {
+  test.use({ storageState: 'e2e/.auth/mechanic.json' });
+  test('vê "Minhas comissões"', async ({ page }) => {
+    await page.goto('/comissoes');
+    await expect(page.getByRole('heading', { name: 'Minhas comissões' })).toBeVisible();
+  });
+});

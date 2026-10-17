@@ -15,18 +15,22 @@ import {
   ClipboardList,
   Home,
   LogOut,
+  Percent,
   Radio,
   Settings,
   Users,
   Wrench,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { clearMeCache, isOfficeRole, useMe } from "@/lib/me";
 
 export function DashboardSidebar() {
   const navigate = useNavigate();
+  const { me } = useMe();
 
   const logout = () => {
     localStorage.removeItem("token");
+    clearMeCache();
     navigate("/login");
   };
 
@@ -77,19 +81,30 @@ export function DashboardSidebar() {
                 </SidebarMenuButton>
               </SidebarMenuItem>
 
+              {me?.role === "owner" && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton onClick={() => navigate("/equipe")}>
+                    <Wrench />
+                    <span>Equipe</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
+
               <SidebarMenuItem>
-                <SidebarMenuButton onClick={() => navigate("/equipe")}>
-                  <Wrench />
-                  <span>Equipe</span>
+                <SidebarMenuButton onClick={() => navigate("/comissoes")}>
+                  <Percent />
+                  <span>{isOfficeRole(me?.role) ? "Comissões" : "Minhas comissões"}</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
 
-              <SidebarMenuItem>
-                <SidebarMenuButton onClick={() => navigate("/scanner")}>
-                  <Radio />
-                  <span>Scanner</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
+              {import.meta.env.VITE_FEATURE_OBD === "true" && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton onClick={() => navigate("/scanner")}>
+                    <Radio />
+                    <span>Scanner</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
 
               <SidebarMenuItem>
                 <SidebarMenuButton onClick={() => navigate("/configuracoes")}>

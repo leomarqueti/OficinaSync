@@ -13,6 +13,7 @@ const TenantRegisterPage = lazy(() => import('./pages/TenantRegisterPage').then(
 const EmailSendPage = lazy(() => import('./pages/EmailSendPage').then((m) => ({ default: m.EmailSendPage })))
 const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage').then((m) => ({ default: m.ForgotPasswordPage })))
 const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage').then((m) => ({ default: m.ResetPasswordPage })))
+const CommissionsPage = lazy(() => import('./pages/CommissionsPage').then((m) => ({ default: m.CommissionsPage })))
 const SettingsPage = lazy(() => import('./pages/SettingsPage').then((m) => ({ default: m.SettingsPage })))
 const TeamPage = lazy(() => import('./pages/TeamPage').then((m) => ({ default: m.TeamPage })))
 const AcceptInvitePage = lazy(() => import('./pages/AcceptInvitePage').then((m) => ({ default: m.AcceptInvitePage })))
@@ -58,6 +59,14 @@ function App() {
             element={
               <SidebarProvider>
                 <DashboardPage />
+              </SidebarProvider>
+            }
+          />
+          <Route
+            path="/comissoes"
+            element={
+              <SidebarProvider>
+                <CommissionsPage />
               </SidebarProvider>
             }
           />
