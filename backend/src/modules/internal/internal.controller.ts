@@ -25,6 +25,7 @@ import { CreateServiceItemDto, UpdateServiceItemDto } from './dto/service-item.d
 import { UploadConcurrencyInterceptor } from '../medias/upload-concurrency.interceptor';
 import { HARD_UPLOAD_LIMIT_BYTES } from '../minio/upload-limits';
 import { InternalContextService } from './internal-context.service';
+import { OfficeSheetService } from './office-sheet.service';
 import { PartsService } from './parts.service';
 import { TeamService } from './team.service';
 
@@ -35,6 +36,7 @@ export class InternalController {
     private readonly context: InternalContextService,
     private readonly team: TeamService,
     private readonly partsService: PartsService,
+    private readonly officeSheet: OfficeSheetService,
   ) {}
 
   @Get('users/team')
@@ -61,6 +63,11 @@ export class InternalController {
       ...(await this.team.listParticipants(ctx)),
       can: ctx.can,
     };
+  }
+
+  @Get('service_orders/:id/office-sheet')
+  officeSheetOf(@Param('id', ParseIntPipe) id: number, @Req() req: any) {
+    return this.officeSheet.build(id, req.user.sub);
   }
 
   @Put('service_orders/:id/internal/notes')

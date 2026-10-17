@@ -13,6 +13,7 @@ import { ServiceOrderParts } from './service-order-part.entity';
 import { ServiceOrderServices } from './service-order-service.entity';
 import { MediaModule } from '../medias/media.module';
 import { MinioModule } from '../minio/minio.module';
+import { OfficeSheetService } from './office-sheet.service';
 import { PartsService } from './parts.service';
 import { TeamService } from './team.service';
 
@@ -32,7 +33,7 @@ import { TeamService } from './team.service';
     MediaModule,
   ],
   controllers: [InternalController, CommissionsController],
-  providers: [InternalContextService, TeamService, PartsService],
+  providers: [InternalContextService, TeamService, PartsService, OfficeSheetService],
   exports: [InternalContextService],
 })
 export class InternalModule {}
