@@ -80,7 +80,7 @@ export function AntesDepoisForm({
             value={data.description}
             onChange={(e) => setData((prev) => ({ ...prev, description: e.target.value }))}
             placeholder="Ex: limpeza do compartimento do motor"
-            className="min-h-[70px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none"
+            className="rounded-xl border-white/12 bg-white/[0.04] text-base placeholder:text-white/50 min-h-[70px] w-full border px-3 py-2 outline-none focus-visible:border-brand/60 focus-visible:ring-2 focus-visible:ring-brand/40"
           />
         </div>
       </div>

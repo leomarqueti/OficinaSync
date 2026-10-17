@@ -87,7 +87,7 @@ export function CompressaoMecanicaForm({
               value={data.tool}
               onChange={(e) => setData((prev) => ({ ...prev, tool: e.target.value }))}
               placeholder="Ex: Würth, Kitest"
-              className="h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              className="h-12 rounded-xl border-white/12 bg-white/[0.04] text-base placeholder:text-white/50 w-full border px-3 py-2 outline-none focus-visible:border-brand/60 focus-visible:ring-2 focus-visible:ring-brand/40"
             />
           </div>
 
@@ -98,7 +98,7 @@ export function CompressaoMecanicaForm({
               onChange={(e) =>
                 setData((prev) => ({ ...prev, unit: e.target.value as typeof prev.unit }))
               }
-              className="h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              className="h-12 rounded-xl border-white/12 bg-white/[0.04] text-base placeholder:text-white/50 w-full border px-3 py-2 outline-none focus-visible:border-brand/60 focus-visible:ring-2 focus-visible:ring-brand/40"
             >
               <option value="psi">psi</option>
               <option value="bar">bar</option>
@@ -114,7 +114,7 @@ export function CompressaoMecanicaForm({
                 inputMode="decimal"
                 value={data.specMin}
                 onChange={(e) => setData((prev) => ({ ...prev, specMin: e.target.value }))}
-                className="h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                className="h-12 rounded-xl border-white/12 bg-white/[0.04] text-base placeholder:text-white/50 w-full border px-3 py-2 outline-none focus-visible:border-brand/60 focus-visible:ring-2 focus-visible:ring-brand/40"
               />
             </div>
             <div className="space-y-1">
@@ -124,7 +124,7 @@ export function CompressaoMecanicaForm({
                 inputMode="decimal"
                 value={data.specMax}
                 onChange={(e) => setData((prev) => ({ ...prev, specMax: e.target.value }))}
-                className="h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                className="h-12 rounded-xl border-white/12 bg-white/[0.04] text-base placeholder:text-white/50 w-full border px-3 py-2 outline-none focus-visible:border-brand/60 focus-visible:ring-2 focus-visible:ring-brand/40"
               />
             </div>
           </div>
@@ -166,14 +166,14 @@ export function CompressaoMecanicaForm({
                       value={cyl.value}
                       onChange={(e) => updateCylinder(index, "value", e.target.value)}
                       placeholder={`Valor (${data.unit})`}
-                      className="h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                      className="h-12 rounded-xl border-white/12 bg-white/[0.04] text-base placeholder:text-white/50 w-full border px-3 py-2 outline-none focus-visible:border-brand/60 focus-visible:ring-2 focus-visible:ring-brand/40"
                     />
                     <select
                       value={cyl.status}
                       onChange={(e) =>
                         updateCylinder(index, "status", e.target.value as ItemStatus | "")
                       }
-                      className="h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                      className="h-12 rounded-xl border-white/12 bg-white/[0.04] text-base placeholder:text-white/50 w-full border px-3 py-2 outline-none focus-visible:border-brand/60 focus-visible:ring-2 focus-visible:ring-brand/40"
                     >
                       <option value="">Status</option>
                       <option value="approved">OK</option>

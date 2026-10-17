@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { FieldShell } from "./FieldShell";
 import { formatPlate, isValidPlate } from "@/lib/validators";
+import { fieldClass } from "@/components/kit";
+import { cn } from "@/lib/utils";
 
-const inputClass =
-  "h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring uppercase";
+const inputClass = cn(fieldClass, "uppercase");
 
 type PlateFieldProps = {
   value: string;

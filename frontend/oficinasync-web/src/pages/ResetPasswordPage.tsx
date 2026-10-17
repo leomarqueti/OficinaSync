@@ -8,9 +8,9 @@ import { apiFetch } from "@/lib/api";
 import { isStrongPassword } from "@/lib/validators";
 import { useDarkTheme } from "@/hooks/useDarkTheme";
 import { BrandLogo } from "@/components/brand/BrandLogo";
+import { fieldClass } from "@/components/kit";
 
-const inputClass =
-  "h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring";
+const inputClass = fieldClass;
 
 export function ResetPasswordPage() {
   useDarkTheme();

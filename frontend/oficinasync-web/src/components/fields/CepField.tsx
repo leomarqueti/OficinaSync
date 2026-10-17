@@ -2,9 +2,9 @@ import { useState } from "react";
 import { Loader2 } from "lucide-react";
 import { FieldShell } from "./FieldShell";
 import { fetchAddressByCep, formatCep } from "@/lib/viaCep";
+import { fieldClass } from "@/components/kit";
 
-const inputClass =
-  "h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring";
+const inputClass = fieldClass;
 
 type CepFieldProps = {
   /** Chamado com o endereço formatado assim que o CEP é encontrado — quem usa decide onde colocar (ex: preencher o campo Endereço). */

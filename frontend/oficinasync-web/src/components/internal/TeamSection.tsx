@@ -5,11 +5,11 @@ import { apiFetch } from "@/lib/api";
 import { HelpHint } from "@/components/guide/HelpHint";
 import { roleLabels } from "@/lib/me";
 import type { InternalData, TeamMember } from "@/lib/internalApi";
+import { fieldClassCompact } from "@/components/kit";
 
 const TASKS = ["Diagnóstico", "Elétrica", "Mecânica", "Montagem", "Teste"];
 
-const inputClass =
-  "h-10 rounded-md border border-input bg-background px-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring";
+const inputClass = fieldClassCompact;
 
 type Row = { checked: boolean; task: string; percent: string };
 

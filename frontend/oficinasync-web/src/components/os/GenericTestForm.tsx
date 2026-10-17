@@ -144,21 +144,21 @@ export function GenericTestForm({ initial, carId, onSave, onCancel, saving }: Ge
               value={measurement.label}
               onChange={(e) => updateRow(index, "label", e.target.value)}
               placeholder="Ex: Tensão mínima"
-              className="h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              className="h-12 rounded-xl border-white/12 bg-white/[0.04] text-base placeholder:text-white/50 w-full border px-3 py-2 outline-none focus-visible:border-brand/60 focus-visible:ring-2 focus-visible:ring-brand/40"
             />
             <input
               type="text"
               value={measurement.expected ?? ""}
               onChange={(e) => updateRow(index, "expected", e.target.value)}
               placeholder="Esperado (opcional)"
-              className="h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              className="h-12 rounded-xl border-white/12 bg-white/[0.04] text-base placeholder:text-white/50 w-full border px-3 py-2 outline-none focus-visible:border-brand/60 focus-visible:ring-2 focus-visible:ring-brand/40"
             />
             <input
               type="text"
               value={measurement.actual}
               onChange={(e) => updateRow(index, "actual", e.target.value)}
               placeholder="Medido"
-              className="h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              className="h-12 rounded-xl border-white/12 bg-white/[0.04] text-base placeholder:text-white/50 w-full border px-3 py-2 outline-none focus-visible:border-brand/60 focus-visible:ring-2 focus-visible:ring-brand/40"
             />
             <Button type="button" variant="outline" onClick={() => removeRow(index)}>
               Remover

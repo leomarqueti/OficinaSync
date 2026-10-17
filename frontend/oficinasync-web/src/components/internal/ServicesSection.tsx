@@ -4,11 +4,11 @@ import { Button } from "@/components/ui/button";
 import { apiFetch } from "@/lib/api";
 import { formatMoney, type ServiceView } from "@/lib/internalApi";
 import { parseMoneyBR } from "@/lib/money";
+import { fieldClass } from "@/components/kit";
 
 type Props = { orderId: number; services: ServiceView[]; canEdit: boolean; onChanged: () => Promise<void> | void };
 
-const inputClass =
-  "h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring";
+const inputClass = fieldClass;
 
 export function ServicesSection({ orderId, services, canEdit, onChanged }: Props) {
   const [description, setDescription] = useState("");

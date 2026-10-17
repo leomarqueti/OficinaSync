@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { FieldShell } from "./FieldShell";
 import { formatCpf, isValidCpf, onlyDigits } from "@/lib/validators";
+import { fieldClass } from "@/components/kit";
 
-const inputClass =
-  "h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring";
+const inputClass = fieldClass;
 
 type CpfFieldProps = {
   /** Valor só com dígitos. */

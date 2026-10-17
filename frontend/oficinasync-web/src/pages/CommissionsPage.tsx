@@ -7,6 +7,7 @@ import { apiFetch } from "@/lib/api";
 import { useDarkTheme } from "@/hooks/useDarkTheme";
 import { isOfficeRole, useMe } from "@/lib/me";
 import type { TeamMember } from "@/lib/internalApi";
+import { fieldClassCompact } from "@/components/kit";
 
 type Line = {
   service_order_id: number;
@@ -19,8 +20,7 @@ type Line = {
 type Person = { user_id: number; name: string; role: string; os_count: number; total_percent: number; orders: Line[] };
 type Result = { from: string; to: string; people: Person[] };
 
-const inputClass =
-  "h-10 rounded-md border border-input bg-background px-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring";
+const inputClass = fieldClassCompact;
 
 const iso = (d: Date) => {
   const pad = (n: number) => String(n).padStart(2, "0");

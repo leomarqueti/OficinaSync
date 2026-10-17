@@ -8,6 +8,8 @@ import { parseMoneyBR } from "@/lib/money";
 import { formatMoney, formatQty, type PartView } from "@/lib/internalApi";
 import { HelpHint } from "@/components/guide/HelpHint";
 import { PartSheet } from "./PartSheet";
+import { fieldClassCompact } from "@/components/kit";
+import { cn } from "@/lib/utils";
 
 type Props = {
   orderId: number;
@@ -16,8 +18,7 @@ type Props = {
   onChanged: () => Promise<void> | void;
 };
 
-const inputClass =
-  "h-10 w-24 rounded-md border border-input bg-background px-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring";
+const inputClass = cn(fieldClassCompact, "w-24");
 
 export function PartsSection({ orderId, parts, canEdit, onChanged }: Props) {
   const [open, setOpen] = useState(false);

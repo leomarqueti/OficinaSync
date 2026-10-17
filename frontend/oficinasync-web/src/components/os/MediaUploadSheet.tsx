@@ -101,7 +101,7 @@ export function MediaUploadSheet({ sectionId, onClose, onSaved }: MediaUploadShe
               value={label}
               onChange={(e) => setLabel(e.target.value)}
               placeholder="Ex: detalhe da falha no chicote"
-              className="h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              className="h-12 rounded-xl border-white/12 bg-white/[0.04] text-base placeholder:text-white/50 w-full border px-3 py-2 outline-none focus-visible:border-brand/60 focus-visible:ring-2 focus-visible:ring-brand/40"
             />
           </div>
 

@@ -33,7 +33,7 @@ export function TestFormShell({
           type="text"
           value={title}
           onChange={(e) => onTitleChange(e.target.value)}
-          className="h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+          className="h-12 rounded-xl border-white/12 bg-white/[0.04] text-base placeholder:text-white/50 w-full border px-3 py-2 outline-none focus-visible:border-brand/60 focus-visible:ring-2 focus-visible:ring-brand/40"
         />
       </div>
 
@@ -44,7 +44,7 @@ export function TestFormShell({
         <select
           value={verdict}
           onChange={(e) => onVerdictChange(e.target.value)}
-          className="h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-sm sm:w-64"
+          className="h-12 rounded-xl border-white/12 bg-white/[0.04] text-base placeholder:text-white/50 w-full border px-3 py-2 sm:w-64 outline-none focus-visible:border-brand/60 focus-visible:ring-2 focus-visible:ring-brand/40"
         >
           <option value="">Sem veredito ainda</option>
           <option value="approved">Aprovado</option>
@@ -59,7 +59,7 @@ export function TestFormShell({
           value={notes}
           onChange={(e) => onNotesChange(e.target.value)}
           placeholder="Explique o que foi analisado neste teste..."
-          className="min-h-[90px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none"
+          className="rounded-xl border-white/12 bg-white/[0.04] text-base placeholder:text-white/50 min-h-[90px] w-full border px-3 py-2 outline-none focus-visible:border-brand/60 focus-visible:ring-2 focus-visible:ring-brand/40"
         />
       </div>
 

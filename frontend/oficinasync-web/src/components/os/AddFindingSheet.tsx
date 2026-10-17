@@ -135,7 +135,7 @@ export function AddFindingSheet({
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Ex: Lâmpada de freio queimada"
-              className="h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              className="h-12 rounded-xl border-white/12 bg-white/[0.04] text-base placeholder:text-white/50 w-full border px-3 py-2 outline-none focus-visible:border-brand/60 focus-visible:ring-2 focus-visible:ring-brand/40"
             />
           </div>
 
@@ -165,7 +165,7 @@ export function AddFindingSheet({
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Explique o que foi notado e por que o cliente deveria ficar atento..."
-              className="min-h-[90px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none"
+              className="rounded-xl border-white/12 bg-white/[0.04] text-base placeholder:text-white/50 min-h-[90px] w-full border px-3 py-2 outline-none focus-visible:border-brand/60 focus-visible:ring-2 focus-visible:ring-brand/40"
             />
           </div>
 

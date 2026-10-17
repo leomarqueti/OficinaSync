@@ -68,7 +68,7 @@ export function LeituraDtcForm({ initial, onSave, onCancel, saving }: LeituraDtc
             value={data.scanner}
             onChange={(e) => setData((prev) => ({ ...prev, scanner: e.target.value }))}
             placeholder="Ex: Doutor-IE, Launch, THINKCAR"
-            className="h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+            className="h-12 rounded-xl border-white/12 bg-white/[0.04] text-base placeholder:text-white/50 w-full border px-3 py-2 outline-none focus-visible:border-brand/60 focus-visible:ring-2 focus-visible:ring-brand/40"
           />
         </div>
 
@@ -83,12 +83,12 @@ export function LeituraDtcForm({ initial, onSave, onCancel, saving }: LeituraDtc
                   value={dtc.code}
                   onChange={(e) => updateDtc(index, "code", e.target.value)}
                   placeholder="Código (ex: P0302)"
-                  className="h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  className="h-12 rounded-xl border-white/12 bg-white/[0.04] text-base placeholder:text-white/50 w-full border px-3 py-2 outline-none focus-visible:border-brand/60 focus-visible:ring-2 focus-visible:ring-brand/40"
                 />
                 <select
                   value={dtc.status}
                   onChange={(e) => updateDtc(index, "status", e.target.value as DtcStatus)}
-                  className="h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  className="h-12 rounded-xl border-white/12 bg-white/[0.04] text-base placeholder:text-white/50 w-full border px-3 py-2 outline-none focus-visible:border-brand/60 focus-visible:ring-2 focus-visible:ring-brand/40"
                 >
                   <option value="confirmado">Confirmado</option>
                   <option value="intermitente">Intermitente</option>
@@ -102,7 +102,7 @@ export function LeituraDtcForm({ initial, onSave, onCancel, saving }: LeituraDtc
                 value={dtc.description}
                 onChange={(e) => updateDtc(index, "description", e.target.value)}
                 placeholder="Descrição (ex: Falha de combustão no cilindro 2)"
-                className="h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                className="h-12 rounded-xl border-white/12 bg-white/[0.04] text-base placeholder:text-white/50 w-full border px-3 py-2 outline-none focus-visible:border-brand/60 focus-visible:ring-2 focus-visible:ring-brand/40"
               />
 
               <div className="flex gap-2">
@@ -111,7 +111,7 @@ export function LeituraDtcForm({ initial, onSave, onCancel, saving }: LeituraDtc
                   value={dtc.module}
                   onChange={(e) => updateDtc(index, "module", e.target.value)}
                   placeholder="Módulo (ex: Motor, ABS, Airbag)"
-                  className="h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  className="h-12 rounded-xl border-white/12 bg-white/[0.04] text-base placeholder:text-white/50 w-full border px-3 py-2 outline-none focus-visible:border-brand/60 focus-visible:ring-2 focus-visible:ring-brand/40"
                 />
                 <Button type="button" variant="outline" onClick={() => removeDtcRow(index)}>
                   Remover
@@ -134,7 +134,7 @@ export function LeituraDtcForm({ initial, onSave, onCancel, saving }: LeituraDtc
             value={data.systemsOk}
             onChange={(e) => setData((prev) => ({ ...prev, systemsOk: e.target.value }))}
             placeholder="Ex: ABS, Airbag, Painel (separados por vírgula)"
-            className="h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+            className="h-12 rounded-xl border-white/12 bg-white/[0.04] text-base placeholder:text-white/50 w-full border px-3 py-2 outline-none focus-visible:border-brand/60 focus-visible:ring-2 focus-visible:ring-brand/40"
           />
         </div>
       </div>

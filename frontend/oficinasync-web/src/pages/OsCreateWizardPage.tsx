@@ -33,9 +33,9 @@ import {
   quickClientValid,
 } from "@/lib/quickOpen";
 import { carTitle, clientLabel } from "@/lib/display";
+import { fieldClass } from "@/components/kit";
 
-const inputClass =
-  "h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring";
+const inputClass = fieldClass;
 
 const fuelOptions = [
   { value: "flex", label: "Flex" },
@@ -862,7 +862,7 @@ export function OsCreateWizardPage() {
               onChange={(e) => setComplaint(e.target.value)}
               placeholder="Ex: veículo falha ao ligar de manhã, painel oscila e a bateria descarrega com frequência..."
               maxLength={500}
-              className="min-h-[160px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="rounded-xl border-white/12 bg-white/[0.04] text-base placeholder:text-white/50 min-h-[160px] w-full border px-3 py-2 outline-none focus-visible:border-brand/60 focus-visible:ring-2 focus-visible:ring-brand/40"
             />
             <p className="mt-1.5 text-right text-xs text-muted-foreground">
               {complaint.length}/500

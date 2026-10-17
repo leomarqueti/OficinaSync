@@ -8,9 +8,10 @@ import { EditCarSheet } from "@/components/cars/EditCarSheet";
 import { apiFetch } from "@/lib/api";
 import { useDarkTheme } from "@/hooks/useDarkTheme";
 import { carTitle } from "@/lib/display";
+import { fieldClass } from "@/components/kit";
+import { cn } from "@/lib/utils";
 
-const inputClass =
-  "h-11 w-full rounded-md border border-input bg-background pl-9 pr-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring";
+const inputClass = cn(fieldClass, "pl-10");
 
 type CarItem = {
   car_id: number;

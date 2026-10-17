@@ -80,7 +80,7 @@ export function InjetoresBancoForm({
               type="text"
               value={data.tool}
               onChange={(e) => setData((prev) => ({ ...prev, tool: e.target.value }))}
-              className="h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              className="h-12 rounded-xl border-white/12 bg-white/[0.04] text-base placeholder:text-white/50 w-full border px-3 py-2 outline-none focus-visible:border-brand/60 focus-visible:ring-2 focus-visible:ring-brand/40"
             />
           </div>
 
@@ -91,7 +91,7 @@ export function InjetoresBancoForm({
               inputMode="numeric"
               value={data.pulsos}
               onChange={(e) => setData((prev) => ({ ...prev, pulsos: e.target.value }))}
-              className="h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              className="h-12 rounded-xl border-white/12 bg-white/[0.04] text-base placeholder:text-white/50 w-full border px-3 py-2 outline-none focus-visible:border-brand/60 focus-visible:ring-2 focus-visible:ring-brand/40"
             />
           </div>
 
@@ -102,7 +102,7 @@ export function InjetoresBancoForm({
               onChange={(e) =>
                 setData((prev) => ({ ...prev, unit: e.target.value as typeof prev.unit }))
               }
-              className="h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              className="h-12 rounded-xl border-white/12 bg-white/[0.04] text-base placeholder:text-white/50 w-full border px-3 py-2 outline-none focus-visible:border-brand/60 focus-visible:ring-2 focus-visible:ring-brand/40"
             >
               <option value="ml">ml</option>
               <option value="cc">cc</option>
@@ -118,7 +118,7 @@ export function InjetoresBancoForm({
               inputMode="decimal"
               value={data.specMin}
               onChange={(e) => setData((prev) => ({ ...prev, specMin: e.target.value }))}
-              className="h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              className="h-12 rounded-xl border-white/12 bg-white/[0.04] text-base placeholder:text-white/50 w-full border px-3 py-2 outline-none focus-visible:border-brand/60 focus-visible:ring-2 focus-visible:ring-brand/40"
             />
           </div>
           <div className="space-y-1">
@@ -128,7 +128,7 @@ export function InjetoresBancoForm({
               inputMode="decimal"
               value={data.specMax}
               onChange={(e) => setData((prev) => ({ ...prev, specMax: e.target.value }))}
-              className="h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              className="h-12 rounded-xl border-white/12 bg-white/[0.04] text-base placeholder:text-white/50 w-full border px-3 py-2 outline-none focus-visible:border-brand/60 focus-visible:ring-2 focus-visible:ring-brand/40"
             />
           </div>
         </div>
@@ -174,12 +174,12 @@ export function InjetoresBancoForm({
                 value={inj.value}
                 onChange={(e) => updateInjector(index, "value", e.target.value)}
                 placeholder={data.unit}
-                className="h-11 w-24 rounded-md border border-input bg-background px-3 py-2 text-sm"
+                className="h-12 rounded-xl border-white/12 bg-white/[0.04] text-base placeholder:text-white/50 w-24 border px-3 py-2 outline-none focus-visible:border-brand/60 focus-visible:ring-2 focus-visible:ring-brand/40"
               />
               <select
                 value={inj.sprayPattern}
                 onChange={(e) => updateInjector(index, "sprayPattern", e.target.value as SprayPattern)}
-                className="h-11 flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm"
+                className="h-12 rounded-xl border-white/12 bg-white/[0.04] text-base placeholder:text-white/50 flex-1 border px-3 py-2 outline-none focus-visible:border-brand/60 focus-visible:ring-2 focus-visible:ring-brand/40"
               >
                 <option value="OK">Spray OK</option>
                 <option value="IRREGULAR">Spray irregular</option>

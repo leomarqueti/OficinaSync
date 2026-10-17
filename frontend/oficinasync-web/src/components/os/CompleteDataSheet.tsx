@@ -19,9 +19,9 @@ import { useDarkTheme } from "@/hooks/useDarkTheme";
 import { HelpHint } from "@/components/guide/HelpHint";
 import { onlyDigits } from "@/lib/validators";
 import type { MissingData, MissingItem, OrderClient } from "./types";
+import { fieldClass } from "@/components/kit";
 
-const inputClass =
-  "h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring";
+const inputClass = fieldClass;
 
 const fuelOptions = [
   { value: "flex", label: "Flex" },

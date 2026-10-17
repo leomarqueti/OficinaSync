@@ -8,9 +8,9 @@ import { PhoneField } from "@/components/fields/PhoneField";
 import { apiFetch } from "@/lib/api";
 import { useDarkTheme } from "@/hooks/useDarkTheme";
 import { e164ToDigits, isValidCnpj, isValidPhone } from "@/lib/validators";
+import { fieldClass } from "@/components/kit";
 
-const inputClass =
-  "h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring";
+const inputClass = fieldClass;
 
 export function TenantRegisterPage() {
   useDarkTheme();

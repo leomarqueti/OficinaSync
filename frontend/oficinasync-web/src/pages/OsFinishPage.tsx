@@ -344,7 +344,7 @@ export function OsFinishPage() {
         type="file"
         accept="image/*"
         onChange={(e) => setter(e.target.files?.[0] ?? null)}
-        className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm file:mr-3 file:rounded-md file:border-0 file:bg-lime-100 file:px-3 file:py-1.5"
+        className="h-12 rounded-xl border-white/12 bg-white/[0.04] text-base placeholder:text-white/50 w-full border px-3 py-2 file:mr-3 file:rounded-md file:border-0 file:bg-lime-100 file:px-3 file:py-1.5 outline-none focus-visible:border-brand/60 focus-visible:ring-2 focus-visible:ring-brand/40"
       />
     </div>
   );
@@ -377,7 +377,7 @@ export function OsFinishPage() {
               value={finalNotes}
               onChange={(e) => setFinalNotes(e.target.value)}
               placeholder="Ex: veículo entregue funcionando normalmente, sistema testado e sem falhas."
-              className="min-h-[140px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none"
+              className="rounded-xl border-white/12 bg-white/[0.04] text-base placeholder:text-white/50 min-h-[140px] w-full border px-3 py-2 outline-none focus-visible:border-brand/60 focus-visible:ring-2 focus-visible:ring-brand/40"
             />
           </CardContent>
         </Card>
@@ -396,7 +396,7 @@ export function OsFinishPage() {
                 value={rootCause}
                 onChange={(e) => setRootCause(e.target.value)}
                 placeholder="Ex: contaminação por goma decorrente de degradação do combustível."
-                className="min-h-[100px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none"
+                className="rounded-xl border-white/12 bg-white/[0.04] text-base placeholder:text-white/50 min-h-[100px] w-full border px-3 py-2 outline-none focus-visible:border-brand/60 focus-visible:ring-2 focus-visible:ring-brand/40"
               />
             </div>
 
@@ -406,7 +406,7 @@ export function OsFinishPage() {
                 value={conclusion}
                 onChange={(e) => setConclusion(e.target.value)}
                 placeholder="Ex: após a substituição das peças, o motor voltou a operar normalmente."
-                className="min-h-[100px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none"
+                className="rounded-xl border-white/12 bg-white/[0.04] text-base placeholder:text-white/50 min-h-[100px] w-full border px-3 py-2 outline-none focus-visible:border-brand/60 focus-visible:ring-2 focus-visible:ring-brand/40"
               />
             </div>
 
@@ -415,7 +415,7 @@ export function OsFinishPage() {
               <select
                 value={finalVerdict}
                 onChange={(e) => setFinalVerdict(e.target.value)}
-                className="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm md:w-64"
+                className="h-12 rounded-xl border-white/12 bg-white/[0.04] text-base placeholder:text-white/50 w-full border px-3 py-2 md:w-64 outline-none focus-visible:border-brand/60 focus-visible:ring-2 focus-visible:ring-brand/40"
               >
                 <option value="">Sem veredito ainda</option>
                 <option value="resolved">Falha sanada / serviço concluído</option>

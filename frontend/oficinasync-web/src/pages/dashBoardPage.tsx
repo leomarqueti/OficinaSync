@@ -316,7 +316,7 @@ export function DashboardPage() {
                     placeholder="Buscar por cliente, placa ou nº da OS..."
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
-                    className="h-11 w-full rounded-md border border-input bg-background pl-9 pr-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    className="h-12 rounded-xl border-white/12 bg-white/[0.04] text-base placeholder:text-white/50 pl-10 w-full border pr-3 py-2 outline-none focus-visible:border-brand/60 focus-visible:ring-2 focus-visible:ring-brand/40"
                   />
                 </div>
               </div>

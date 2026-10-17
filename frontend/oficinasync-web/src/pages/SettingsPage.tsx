@@ -11,9 +11,9 @@ import { isStrongPassword } from "@/lib/validators";
 import { useDarkTheme } from "@/hooks/useDarkTheme";
 import { useMe } from "@/lib/me";
 import { resetTour } from "@/lib/tours";
+import { fieldClass } from "@/components/kit";
 
-const inputClass =
-  "h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring";
+const inputClass = fieldClass;
 
 export function SettingsPage() {
   useDarkTheme();

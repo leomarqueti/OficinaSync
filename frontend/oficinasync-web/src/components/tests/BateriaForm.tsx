@@ -32,7 +32,7 @@ function NumberField({
         inputMode="decimal"
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+        className="h-12 rounded-xl border-white/12 bg-white/[0.04] text-base placeholder:text-white/50 w-full border px-3 py-2 outline-none focus-visible:border-brand/60 focus-visible:ring-2 focus-visible:ring-brand/40"
       />
     </div>
   );
@@ -69,7 +69,7 @@ export function BateriaForm({ initial, onSave, onCancel, saving }: BateriaFormPr
               value={data.tool}
               onChange={(e) => updateField("tool", e.target.value)}
               placeholder="Ex: Doutor-IE"
-              className="h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              className="h-12 rounded-xl border-white/12 bg-white/[0.04] text-base placeholder:text-white/50 w-full border px-3 py-2 outline-none focus-visible:border-brand/60 focus-visible:ring-2 focus-visible:ring-brand/40"
             />
           </div>
 
@@ -78,7 +78,7 @@ export function BateriaForm({ initial, onSave, onCancel, saving }: BateriaFormPr
             <select
               value={data.resultado}
               onChange={(e) => updateField("resultado", e.target.value)}
-              className="h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              className="h-12 rounded-xl border-white/12 bg-white/[0.04] text-base placeholder:text-white/50 w-full border px-3 py-2 outline-none focus-visible:border-brand/60 focus-visible:ring-2 focus-visible:ring-brand/40"
             >
               <option value="">Selecione</option>
               <option value="APROVADA">Aprovada</option>

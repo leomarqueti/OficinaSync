@@ -28,7 +28,7 @@ export function NotesSection({ orderId, notes, onChanged }: Props) {
         value={text}
         onChange={(e) => setText(e.target.value)}
         maxLength={4000}
-        className="min-h-[110px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        className="rounded-xl border-white/12 bg-white/[0.04] text-base placeholder:text-white/50 min-h-[110px] w-full border px-3 py-2 outline-none focus-visible:border-brand/60 focus-visible:ring-2 focus-visible:ring-brand/40"
         placeholder="Ex: cliente paga no PIX; nota em nome da empresa..."
       />
       <Button className="h-11" onClick={save}>Salvar anotações</Button>
