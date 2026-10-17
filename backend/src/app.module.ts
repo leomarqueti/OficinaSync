@@ -3,6 +3,7 @@ import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { globalThrottleLimit } from './common/throttle';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { TenantsModule } from './modules/tenants/tenants.module';
 import { UsersModule } from './modules/users/users.module';
@@ -38,7 +39,7 @@ export const PASSWORD_PEPPER = 'PASSWORD_PEPPER';
     ThrottlerModule.forRoot([
       {
         ttl: 60000,
-        limit: 60,
+        limit: globalThrottleLimit(process.env),
       },
     ]),
     //Vamos configuar o typeOrm para conectar com o banco de dados, todos os paramentros que iremos passar como senha do banco e etc, vira das variaveis de ambiente, porque se deixamos aqui escrito senha: 123456, alguem com acesso ao codigo fonte do projeto, poderia ver a senha do banco de dados, e isso não é seguro, por isso usamos as variaveis de ambiente. 10/03/2026
