@@ -294,7 +294,7 @@ export function OsFinishPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-neutral-100 p-6">
+      <div className="min-h-screen bg-background p-6">
         <div className="mx-auto max-w-4xl">
           <Card className="rounded-3xl">
             <CardContent className="p-8">
@@ -310,7 +310,7 @@ export function OsFinishPage() {
 
   if (error || !data) {
     return (
-      <div className="min-h-screen bg-neutral-100 p-6">
+      <div className="min-h-screen bg-background p-6">
         <div className="mx-auto max-w-4xl">
           <Card className="rounded-3xl border-red-200">
             <CardContent className="p-8">
@@ -350,7 +350,7 @@ export function OsFinishPage() {
   );
 
   return (
-    <div className="min-h-screen bg-neutral-100 p-4 md:p-6">
+    <div className="min-h-screen bg-background p-4 md:p-6">
       <div className="mx-auto max-w-5xl space-y-6">
         <Card className="rounded-3xl border-0 bg-gradient-to-br from-black via-neutral-950 to-emerald-950 text-white">
           <CardContent className="p-6 md:p-8">

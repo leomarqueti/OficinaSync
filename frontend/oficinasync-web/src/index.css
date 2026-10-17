@@ -1,13 +1,20 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
-@import "@fontsource-variable/geist";
+@import "./styles/fonts.css";
 
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-    --font-heading: var(--font-sans);
-    --font-sans: 'Geist Variable', sans-serif;
+    --font-heading: 'Saira Condensed', 'Archivo', sans-serif;
+    --font-display: 'Saira Condensed', 'Archivo', sans-serif;
+    --font-sans: 'Archivo', system-ui, sans-serif;
+    --color-warning: var(--warning);
+    --color-success: var(--success);
+    --color-danger: var(--danger);
+    --color-text-strong: var(--text-strong);
+    --color-text-body: var(--text-body);
+    --color-text-soft: var(--text-soft);
     --color-brand: var(--brand);
     --color-brand-foreground: var(--brand-foreground);
     --color-surface: var(--surface);
@@ -89,6 +96,12 @@
     --sidebar-accent-foreground: oklch(0.205 0 0);
     --sidebar-border: oklch(0.922 0 0);
     --sidebar-ring: oklch(0.708 0 0);
+    --warning: #facc15;
+    --success: #a3e635;
+    --danger: #f87171;
+    --text-strong: #fafafa;
+    --text-body: rgba(255, 255, 255, 0.72);
+    --text-soft: rgba(255, 255, 255, 0.6);
 }
 
 /* Cinema Escuro — tema assinatura do OficinaSync.
@@ -130,6 +143,12 @@
     --sidebar-accent-foreground: #fafafa;
     --sidebar-border: rgba(255, 255, 255, 0.08);
     --sidebar-ring: rgba(163, 230, 53, 0.6);
+    --warning: #facc15;
+    --success: #a3e635;
+    --danger: #f87171;
+    --text-strong: #fafafa;
+    --text-body: rgba(255, 255, 255, 0.72);
+    --text-soft: rgba(255, 255, 255, 0.6);
 }
 
 @layer base {
@@ -142,6 +161,13 @@
   html {
     @apply font-sans;
     }
+  :where(h1, h2, h3) {
+    font-family: var(--font-display);
+  }
+  :where(h1, h2) {
+    text-transform: uppercase;
+    letter-spacing: 0.01em;
+  }
 }
 
 /* Acessibilidade: quem pediu menos movimento no sistema operacional
@@ -162,5 +188,22 @@
   }
   body {
     background: #fff !important;
+  }
+}
+
+/* Brilho limão sutil no topo das telas principais (Cinema Escuro Premium). */
+@utility app-glow {
+  background: radial-gradient(120% 55% at 50% 0%, #1d2a0a 0%, #0a0a0a 55%);
+}
+
+/* "Carregando": o desenho da tela aparece com um brilho passando. */
+@utility skeleton-shimmer {
+  background: linear-gradient(90deg, #1f1f1f 25%, #2e2e2e 50%, #1f1f1f 75%);
+  background-size: 200% 100%;
+  animation: oficinasync-shimmer 1.4s linear infinite;
+}
+@keyframes oficinasync-shimmer {
+  to {
+    background-position: -200% 0;
   }
 }

@@ -363,7 +363,7 @@ export function PublicServiceOrderPage() {
         };
 
   return (
-    <div className="dark min-h-screen bg-background text-foreground antialiased">
+    <div className="dark min-h-screen bg-background text-foreground antialiased [&_h1]:normal-case [&_h2]:normal-case">
       <ScrollProgressBar />
 
       {/* ============ ABERTURA ============ */}
