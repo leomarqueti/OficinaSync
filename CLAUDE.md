@@ -4,7 +4,7 @@
 
 OficinaSync é um SaaS multi-tenant para gestão de oficinas mecânicas, com foco em **transparência ao cliente**. O diferencial é uma página pública personalizada onde o cliente acompanha o serviço em tempo real com fotos, vídeos, áudios e explicações do mecânico — como um "storytelling" do reparo.
 
-Dono do projeto: Leonardo (mecânico há 11 anos, formado em ADS). Objetivo atual: rodar o sistema na própria oficina (Lima Auto Elétrica, Tupanciretã-SP) e depois evoluir. **Não é mais TCC** — é produto real.
+Dono do projeto: Leonardo (mecânico há 11 anos, formado em ADS). Objetivo atual: rodar o sistema na própria oficina (Lima Auto Elétrica, Tupã-SP) e depois evoluir. **Não é mais TCC** — é produto real.
 
 ## Stack
 
@@ -359,6 +359,19 @@ Pedido do Leonardo: no balcão o cliente às vezes já foi embora ou só deu o n
 - Testes: unit (`missing-data`, `report.template`), e2e backend (`partial-data`, `quick-open-read`, `complete-data`, `finish-gate`, `client-optional-email`), Vitest (`display`, `quickOpen`), Playwright (`abertura-rapida.spec.ts`).
 - **Revisão final (corrigido, com teste):** `/clientes` e o Editar cliente quebravam com cliente só-nome (null em phone/cpf); `EditCarSheet` gravava ano 0/KM 0/flex em carro parcial (agora manda só o preenchido; ano exige `@Min(1900)` e `computeMissingData` trata ano < 1900 como faltando); `null` em campo opcional virava "não enviado" (`!= null` no `completeData`/`CarsService.create` — `@IsOptional` deixa `null` passar e `where: { client_id: null }` do TypeORM ignora a condição e acha o primeiro cliente da tabela); tela de finalizar não monta o sheet (que liga o tema escuro no body) enquanto fechado. **Bug antigo achado de passagem:** `GET /cars?search=<placa de 6+ chars>` dava 500 — o `ILike` herda `varchar(7)` da coluna `plate` no mssql; agora usa `Raw(LOWER(col) LIKE LOWER(:p))`. **Decisão em aberto (spec):** o modo rápido com a placa de um carro já cadastrado cria carro duplicado (carros só são listados por cliente) — falta buscar por placa no passo do veículo.
 - **Observação de repo:** `frontend/oficinasync-web/` tem um `.git` aninhado antigo (inofensivo) — rode `git` sempre da raiz do projeto.
+
+### Dados internos da OS + ficha do escritório + equipe/comissão + passo a passo (feito)
+
+Pedido do Leonardo pro teste na Lima com todos os funcionários: o escritório monta a OS formal/nota em OUTRO sistema, então precisa receber do mecânico peças (código, quantidade, preço, foto da caixa), serviços e a divisão de comissão. Spec: `docs/superpowers/specs/2026-10-17-dados-internos-e-ficha-do-escritorio-design.md`; plano: `docs/superpowers/plans/2026-10-17-dados-internos-e-ficha-do-escritorio.md`.
+
+- **Tudo é interno**: `InternalModule` (`backend/src/modules/internal/`) com rotas próprias `/service_orders/:id/{internal,parts,services,participants,responsible,office-sheet}`, `/commissions`, `/users/team`. `GET /service_orders/:id`, a rota pública e o laudo **não conhecem** esses dados; `no-leak.spec.ts` trava isso (arquivos do laudo/rota pública não podem referenciar as entidades internas) e `internal-sheet.e2e-spec.ts` varre as respostas com valores-sentinela.
+- **Perfis:** dono e recepção = escritório (veem/editam tudo); mecânico vê só o dele. `permissionsFor(viewer, orderDone)` (`internal-access.ts`) é a fonte única. Responsável = `responsible_user_id ?? user_id` (quem abriu; o escritório troca). Mecânico comum recebe só a PRÓPRIA linha da equipe na API.
+- **Equipe em %:** ajudantes 1–99 cada, soma ≤ 99, responsável fica com `100 − soma` (não é digitado). `PUT /participants` substitui a lista inteira. Comissão só em % (a OS não tem preço; R$ vem com o orçamento digital).
+- **Peças:** retiradas × usadas (`used_quantity` null = sem acerto, ≤ retirada), preço opcional (null = "preço não informado"), foto da caixa interna (`photo_*` na própria peça, **entra na cota** — `MediaService.getTenantUsageBytes` soma; só aceita imagem com tipo DETECTADO). Acerto pendente NÃO bloqueia finalizar (aparece em amarelo na ficha). Após finalizar, só o escritório edita peças/serviços/equipe.
+- **Ficha** (`/os/:id/ficha`): escritório + responsável; copiar por bloco/tudo (`sheetToText`), imprimir via `window.print()`; todo texto é escapado pelo React. Telas: `OsOfficePage` (`/os/:id/escritorio`), `CommissionsPage` (`/comissoes`).
+- **Didático:** `GuidedTour` + `tours.ts` (por perfil, `localStorage` por usuário e versão; "Rever passo a passo" em Configurações), `HelpHint` ("?"). Menu: Scanner só com `VITE_FEATURE_OBD=true`; Equipe só pro dono.
+- **Gotchas:** `@IsOptional()` deixa `null` passar — nos PATCH de peça/serviço `null` em `code/used_quantity/unit_price/price` significa LIMPAR; `decimal` do SQL Server volta string (usar `decimalTransformer`); datas `'YYYY-MM-DD'` do `/commissions` são lidas como dia LOCAL; testes e2e criam funcionários com `createStaff` (token assinado direto, sem `/auth/login` que tem limite de 5/min); o `global-setup` dos testes de tela cria também um mecânico (`e2e/.auth/mechanic.json`) e pré-marca o passo a passo como visto; o ambiente de teste manual (`start-env.sh`) precisa estar parado antes do Playwright.
+- **Pré-requisitos pra usar na Lima:** deploy da versão atual (produção está na antiga), e-mail de convite funcionando (SPF/DKIM) e backup mínimo — ver `docs/equipe/lancamento-publico/`.
 
 ### Agentes por área (time de subagentes do projeto)
 
