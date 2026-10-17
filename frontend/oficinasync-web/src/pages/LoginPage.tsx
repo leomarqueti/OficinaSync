@@ -4,7 +4,7 @@ import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { apiFetch } from "@/lib/api";
 import { useDarkTheme } from "@/hooks/useDarkTheme";
-import logoOficinaSync from "@/assets/logoOficinaSync.png";
+import { BrandLogo } from "@/components/brand/BrandLogo";
 import { clearMeCache } from "@/lib/me";
 
 const inputClass =
@@ -49,11 +49,12 @@ export function LoginPage() {
   return (
     <div className="dark grid min-h-screen w-full grid-cols-1 bg-background text-foreground md:grid-cols-2">
       <div className="hidden items-center justify-center bg-black p-10 md:flex">
-        <img src={logoOficinaSync} alt="OficinaSync" className="h-auto w-72 object-contain" />
+        <BrandLogo size="lg" />
       </div>
 
       <div className="flex items-center justify-center p-8 md:p-12">
         <div className="w-full max-w-md">
+          <BrandLogo size="sm" className="mb-8 md:hidden" />
           <h1 className="text-3xl font-bold tracking-tight">Olá, mecânico! 👋</h1>
           <p className="mt-2 text-sm text-muted-foreground">
             Entre na sua conta para acessar as ordens de serviço

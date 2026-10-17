@@ -4,7 +4,7 @@ import { Loader2, MailCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { apiFetch } from "@/lib/api";
 import { useDarkTheme } from "@/hooks/useDarkTheme";
-import logoOficinaSync from "@/assets/logoOficinaSync.png";
+import { BrandLogo } from "@/components/brand/BrandLogo";
 
 const inputClass =
   "h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring";
@@ -38,11 +38,12 @@ export function ForgotPasswordPage() {
   return (
     <div className="dark grid min-h-screen w-full grid-cols-1 bg-background text-foreground md:grid-cols-2">
       <div className="hidden items-center justify-center bg-black p-10 md:flex">
-        <img src={logoOficinaSync} alt="OficinaSync" className="h-auto w-72 object-contain" />
+        <BrandLogo size="lg" />
       </div>
 
       <div className="flex items-center justify-center p-8 md:p-12">
         <div className="w-full max-w-md">
+          <BrandLogo size="sm" className="mb-8 md:hidden" />
           {sent ? (
             <div className="text-center">
               <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-brand/10">
