@@ -247,6 +247,28 @@ check **"Testes e builds"** passe, e sem force-push.
 - Na VPS, direto: `sudo /opt/oficinasync/deploy/deploy.sh` (mesmo comportamento, com o mesmo backup e rollback).
 - Testar o próprio `deploy.sh` sem servidor: `bash deploy/test-deploy.sh` (usa `docker` e `curl` falsos).
 
+### 10.3. Primeiro deploy da versão com segurança + dados internos (checklist)
+
+O código dessa versão já está na branch `production` (empurrada de `main`). O GitHub roda os testes; para o
+passo de **publicar** funcionar, falta só o que depende de acesso à VPS e ao painel do GitHub:
+
+1. **VPS — chave de deploy** (10.1 a/b): gerar a chave, acrescentar a linha com `command="/opt/oficinasync/deploy/deploy.sh",...` no `authorized_keys`.
+2. **VPS — variáveis novas** em `/opt/oficinasync/.env.production` e `/opt/oficinasync/backend/.env.production`
+   (sem elas o site publica mas quebra em silêncio): `CORS_ORIGINS=https://oficinasync.com.br`, `FRONTEND_URL=https://oficinasync.com.br`,
+   `BACKEND_URL=https://api.oficinasync.com.br`, `JWT_EXPIRES_IN=1d`, `PROMO_VIDEO_ENABLED=false`, `TENANT_STORAGE_QUOTA_MB=2048`.
+   Se o segredo `JWT_SECRET`/`PASSWORD_PEPPER` de produção nunca foi trocado desde março, troque o `JWT_SECRET`
+   (isso desloga todo mundo; **não** troque o `PASSWORD_PEPPER`: invalida todas as senhas).
+3. **VPS — checkout** (10.1 c): `cd /opt/oficinasync && git fetch && git checkout production` e `git status` limpo.
+   A partir desta versão o `deploy.sh` reconstrói os containers mesmo que a VPS já esteja no commit certo
+   (marcador `.last_deployed_sha`), então esse checkout não "pula" o primeiro deploy.
+4. **GitHub — 4 segredos** (10.1 d). Depois: *Actions → Testar e publicar → Re-run* (ou novo `git push origin main:production`).
+5. **Conferir**: `https://api.oficinasync.com.br/health` → 200; abrir uma OS; abrir o link do cliente; baixar um laudo PDF.
+6. **Migrations deste release** (rodam sozinhas na subida; o backup é feito antes): `PartialClientAndCarData`
+   (relaxa NOT NULL de cliente/carro) e `InternalOrderData` (3 tabelas novas + 2 colunas em `service_orders`);
+   a do OBD também, se a produção ainda não a tiver. Nenhuma apaga dado.
+7. **Depois do deploy**: olhar a tabela `users` por cadastros estranhos desde julho (a versão antiga aceitava cadastro com
+   campos que não deviam) e configurar o backup agendado + cópia fora da VPS (`docs/equipe/lancamento-publico/03-devops-operacao.md`).
+
 ---
 
 ## Riscos conhecidos / pendências de infra

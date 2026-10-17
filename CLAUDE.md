@@ -373,6 +373,18 @@ Pedido do Leonardo pro teste na Lima com todos os funcionários: o escritório m
 - **Gotchas:** `@IsOptional()` deixa `null` passar — nos PATCH de peça/serviço `null` em `code/used_quantity/unit_price/price` significa LIMPAR; `decimal` do SQL Server volta string (usar `decimalTransformer`); datas `'YYYY-MM-DD'` do `/commissions` são lidas como dia LOCAL; testes e2e criam funcionários com `createStaff` (token assinado direto, sem `/auth/login` que tem limite de 5/min); o `global-setup` dos testes de tela cria também um mecânico (`e2e/.auth/mechanic.json`) e pré-marca o passo a passo como visto; o ambiente de teste manual (`start-env.sh`) precisa estar parado antes do Playwright.
 - **Pré-requisitos pra usar na Lima:** deploy da versão atual (produção está na antiga), e-mail de convite funcionando (SPF/DKIM) e backup mínimo — ver `docs/equipe/lancamento-publico/`.
 
+### Endurecimento pré-lançamento (feito, 2026-10-17) + estado do deploy
+
+Vindo da auditoria do time (`docs/equipe/lancamento-publico/01-seguranca-dados-lgpd.md`, `03-devops-operacao.md`):
+
+- **Login expira:** `JwtModule` (`AuthModule` e `InvitesModule`) usa `signOptions.expiresIn = JWT_EXPIRES_IN || '1d'` (antes o token nascia eterno). Onboarding continua 15 min.
+- **HTML escapado:** `src/common/html.ts` (`escapeHtml`, `oneLine`) aplicado em TODO texto do usuário no laudo (`report.template.ts`, cabeçalho/rodapé) e nos e-mails (`emailResend.service.ts`); `report.escape.spec.ts` injeta `"><img src=x onerror=1><script>…` em todos os campos. O Puppeteer roda com **JS desligado e rede bloqueada** (só `data:` URI) — verificado gerando PDF real com Chromium (o e2e usa stub de puppeteer).
+- **Sem `console.log`** no código de produção (vazava token de verificação e dados de mídia); `no-console-log.spec.ts` trava.
+- **API pública** (`/service_orders/public/:token`) devolve só `client.name` (telefone/CPF nunca); página do cliente com `<meta robots noindex>` e Caddy com `X-Robots-Tag` em `/servico/*`; Caddy também põe HSTS, nosniff, Referrer-Policy; `x-powered-by` desligado.
+- `npm audit fix` no backend (altas/críticas zeradas; sobram 7 baixas/moderadas). **Cuidado:** `npm audit fix --omit=dev` PODA as dependências de desenvolvimento do `node_modules` — rode `npm install` depois.
+- `.gitignore` ignora `.env.production`; `backend/.env.example` só com placeholders. **O repositório GitHub é público** e o histórico de março ainda tem senhas antigas de dev — trocar os segredos de produção e/ou tornar o repo privado.
+- **Deploy:** `deploy.sh` agora usa `sqlcmd -b` (erro no BACKUP derruba o script) e grava `.last_deployed_sha` (o primeiro deploy reconstrói mesmo com a VPS já no commit da production). Passo a passo e variáveis novas: `DEPLOY.md` 10.3. Em 2026-10-17 a `main` e a `production` foram empurradas pro GitHub; **o passo de publicar na VPS só roda com os 4 segredos do GitHub + chave de deploy na VPS** (ver 10.1/10.3).
+
 ### Agentes por área (time de subagentes do projeto)
 
 Definições em `.claude/agents/` (carregam ao abrir a sessão; `/agents` lista). Cada um é dono de uma área e conhece as regras deste arquivo. Eles trabalham **sob demanda** (não ficam vigiando sozinhos); rotinas recorrentes precisam de uma tarefa agendada.
