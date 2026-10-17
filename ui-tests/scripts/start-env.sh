@@ -38,7 +38,7 @@ echo "$SEED_OUT" | grep '^UI_SEED ' | sed 's/^UI_SEED //' > ui-tests/.persona-en
 
 echo "Subindo o backend (porta $BACKEND_PORT)..."
 (cd backend && PORT="$BACKEND_PORT" DB_NAME=oficinasync_test MINIO_BUCKET=oficinasync-test \
-  CORS_ORIGINS="http://localhost:$FRONTEND_PORT" nohup node dist/main.js >"$ROOT/ui-tests/.backend.log" 2>&1 &)
+  CORS_ORIGINS="http://localhost:$FRONTEND_PORT" THROTTLE_LIMIT=1000 nohup node dist/main.js >"$ROOT/ui-tests/.backend.log" 2>&1 &)
 
 echo "Subindo o frontend (porta $FRONTEND_PORT)..."
 (cd frontend/oficinasync-web && VITE_API_URL="http://localhost:$BACKEND_PORT" \
