@@ -3,6 +3,7 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { Toaster } from 'sonner'
 import './App.css'
 import { SidebarProvider } from '@/components/ui/sidebar'
+import { CelebrationHost } from '@/components/motion/CelebrationHost'
 
 // Code-splitting por rota: cada página vira um chunk separado, carregado sob
 // demanda — importa principalmente pra página pública do cliente (aberta no 4G)
@@ -41,6 +42,7 @@ function App() {
   return (
     <BrowserRouter>
       <Toaster position="top-center" richColors closeButton theme="dark" />
+      <CelebrationHost />
       <Suspense fallback={<PageLoader />}>
         <Routes>
           <Route
