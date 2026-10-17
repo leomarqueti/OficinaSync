@@ -184,3 +184,22 @@ export async function createPartialOrder(
     publicToken: order.body.public_token as string,
   };
 }
+
+/** Abre uma OS (carro só com placa) como o dono do `token` — esse usuário vira o responsável. */
+export async function openOrderAs(app: INestApplication, token: string) {
+  const server = app.getHttpServer();
+  const auth = { Authorization: `Bearer ${token}` };
+  const plate = randomPlate();
+  const car = await request(server).post('/cars').set(auth).send({ plate }).expect(201);
+  const order = await request(server)
+    .post('/service_orders')
+    .set(auth)
+    .send({ car_id: car.body.car_id, client_complaint: 'Barulho no motor' })
+    .expect(201);
+  return {
+    orderId: order.body.service_order_id as number,
+    carId: car.body.car_id as number,
+    publicToken: order.body.public_token as string,
+    plate,
+  };
+}

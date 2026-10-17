@@ -113,6 +113,15 @@ export class ServiceOrders {
   @JoinColumn({ name: 'user_id' })
   user: Users;
 
+  /** Quem responde pela OS (equipe/comissão). null = quem abriu (`user`). */
+  @ManyToOne(() => Users, { nullable: true })
+  @JoinColumn({ name: 'responsible_user_id' })
+  responsible: Users | null;
+
+  /** Anotações do escritório — NUNCA vão pra página pública nem pro laudo. */
+  @Column({ type: 'nvarchar', length: 'max', nullable: true })
+  internal_notes: string | null;
+
   @OneToMany(() => Sections, (section) => section.serviceOrder)
   sections: Sections[];
 }

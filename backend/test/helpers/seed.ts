@@ -1,3 +1,5 @@
+import { JwtService } from '@nestjs/jwt';
+import { Role } from '../../src/modules/users/role.enum';
 import { randomUUID } from 'crypto';
 import type { INestApplication, INestApplicationContext } from '@nestjs/common';
 import request from 'supertest';
@@ -69,4 +71,26 @@ export async function createTenantWithOwner(
     .expect(200);
 
   return { tenant, user, email, password, token: login.body.access_token };
+}
+
+export type Staff = { user: Users; email: string; token: string; role: Role };
+
+/**
+ * Funcionário ativo da oficina `tenant`, já com JWT. Assina o token direto (sem /auth/login)
+ * porque o login tem limite de 5/min e as suítes precisam de vários perfis.
+ */
+export async function createStaff(
+  app: INestApplication,
+  tenant: Tenants,
+  role: Role,
+  label: string,
+): Promise<Staff> {
+  const email = `${label}-${randomUUID().slice(0, 8)}@teste.local`;
+  const user = await app
+    .get(UsersService)
+    .createFromInvite(`${label} ${role}`, email, 'Teste@12345', tenant, role);
+  const token = app
+    .get(JwtService, { strict: false })
+    .sign({ sub: user.user_id, scope: 'access' });
+  return { user, email, token, role };
 }
