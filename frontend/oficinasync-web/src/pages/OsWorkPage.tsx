@@ -5,6 +5,7 @@ import {
   Activity,
   ArrowLeft,
   Boxes,
+  ClipboardList,
   Clapperboard,
   Copy,
   ExternalLink,
@@ -82,6 +83,7 @@ export function OsWorkPage() {
   const [confirmBusy, setConfirmBusy] = useState(false);
   const [downloadingReport, setDownloadingReport] = useState(false);
   const [completeOpen, setCompleteOpen] = useState(false);
+  const [canSeeSheet, setCanSeeSheet] = useState(false);
   const [triggeringVideo, setTriggeringVideo] = useState(false);
   const [lightboxMedia, setLightboxMedia] = useState<LightboxMedia | null>(null);
 
@@ -90,6 +92,13 @@ export function OsWorkPage() {
     { device_id: number; name: string; online: boolean }[]
   >([]);
   const [capturingObd, setCapturingObd] = useState(false);
+
+  useEffect(() => {
+    if (!id) return;
+    apiFetch<{ can: { see_sheet: boolean } }>(`/service_orders/${id}/internal`, { silent: true })
+      .then((r) => setCanSeeSheet(r.can.see_sheet))
+      .catch(() => setCanSeeSheet(false));
+  }, [id]);
 
   const fetchOrder = useCallback(async () => {
     if (!id) return;
@@ -443,6 +452,16 @@ export function OsWorkPage() {
               <Boxes className="mr-1.5 h-4 w-4" />
               Peças e equipe
             </Button>
+            {canSeeSheet && (
+              <Button
+                variant="outline"
+                className="h-11"
+                onClick={() => navigate(`/os/${data.service_order_id}/ficha`)}
+              >
+                <ClipboardList className="mr-1.5 h-4 w-4" />
+                Ficha do escritório
+              </Button>
+            )}
 
             <Button
               className="col-span-2 h-11 bg-brand text-brand-foreground hover:bg-brand/90 sm:ml-auto"

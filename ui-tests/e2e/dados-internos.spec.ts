@@ -134,3 +134,46 @@ test.describe('mecânico comum vê só a sua parte', () => {
     await expect(page.getByLabel(/^Ajudou:/)).toHaveCount(0);
   });
 });
+
+test('ficha do escritório: reúne peças usadas, serviços e equipe, e copia como texto', async ({ page, context }) => {
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  const orderId = await openOrder(page);
+  await api(page, 'POST', `/service_orders/${orderId}/parts`, { description: 'Vela NGK', code: 'BKR6E', taken_quantity: 4, used_quantity: 2, unit_price: 25 });
+  await api(page, 'POST', `/service_orders/${orderId}/parts`, { description: 'Cabo de vela', taken_quantity: 6 });
+  await api(page, 'POST', `/service_orders/${orderId}/services`, { description: 'Troca das velas', price: 60 });
+
+  await page.goto(`/os/${orderId}/ficha`);
+  await expect(page.getByRole('heading', { name: new RegExp(`Ficha da OS #${orderId}`) })).toBeVisible();
+  await expect(page.getByText(/Vela NGK/).first()).toBeVisible();
+  await expect(page.getByText(/Retiradas sem acerto/i)).toBeVisible();
+  await expect(page.getByText(/Cabo de vela/)).toBeVisible();
+  await expect(page.getByText(/Troca das velas/).first()).toBeVisible();
+
+  await page.getByRole('button', { name: 'Copiar tudo' }).click();
+  await expect(page.getByText('Ficha copiada!')).toBeVisible();
+  const copied = await page.evaluate(() => navigator.clipboard.readText());
+  expect(copied).toContain(`OS #${orderId}`);
+  expect(copied).toContain('2x Vela NGK');
+  expect(copied).toContain('RETIRADAS SEM ACERTO');
+});
+
+test('ficha: HTML digitado na descrição aparece como texto (não executa)', async ({ page }) => {
+  const orderId = await openOrder(page);
+  await api(page, 'POST', `/service_orders/${orderId}/parts`, { description: '<img src=x onerror=window.__pwned=1>', taken_quantity: 1, used_quantity: 1 });
+  await page.goto(`/os/${orderId}/ficha`);
+  await expect(page.getByText('<img src=x onerror=window.__pwned=1>').first()).toBeVisible();
+  expect(await page.evaluate(() => (window as unknown as { __pwned?: number }).__pwned)).toBeUndefined();
+});
+
+test('o botão "Ficha do escritório" aparece para o dono e não para o mecânico comum', async ({ page, browser }) => {
+  const orderId = await openOrder(page);
+  await page.goto(`/os/${orderId}`);
+  await expect(page.getByRole('button', { name: 'Ficha do escritório' })).toBeVisible();
+
+  const mechCtx = await browser.newContext({ storageState: 'e2e/.auth/mechanic.json' });
+  const mechPage = await mechCtx.newPage();
+  await mechPage.goto(`/os/${orderId}`);
+  await expect(mechPage.getByRole('button', { name: 'Peças e equipe' })).toBeVisible();
+  await expect(mechPage.getByRole('button', { name: 'Ficha do escritório' })).toHaveCount(0);
+  await mechCtx.close();
+});

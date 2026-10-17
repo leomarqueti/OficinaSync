@@ -156,3 +156,11 @@
     scroll-behavior: auto !important;
   }
 }
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  body {
+    background: #fff !important;
+  }
+}
