@@ -24,6 +24,7 @@ import { VideoModule } from './modules/video/video.module';
 import { InvitesModule } from './modules/invites/invites.module';
 import { HealthModule } from './modules/health/health.module';
 import { ObdModule } from './modules/obd/obd.module';
+import { InternalModule } from './modules/internal/internal.module';
 
 export const PASSWORD_PEPPER = 'PASSWORD_PEPPER';
 
@@ -85,6 +86,7 @@ export const PASSWORD_PEPPER = 'PASSWORD_PEPPER';
     InvitesModule,
     HealthModule,
     ObdModule,
+    InternalModule,
   ],
   controllers: [],
   providers: [
