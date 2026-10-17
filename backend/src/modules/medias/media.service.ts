@@ -41,7 +41,15 @@ export class MediaService {
       .select('COALESCE(SUM(CAST(m.size AS BIGINT)), 0)', 'total')
       .getRawOne<{ total: string | number }>();
 
-    return Number(row?.total ?? 0);
+    // fotos de caixa de peças (área interna) também gastam o espaço da oficina
+    const partRows: Array<{ total: string | number }> =
+      await this.mediaRepository.manager.query(
+        `SELECT COALESCE(SUM(CAST(photo_size AS BIGINT)), 0) AS total
+           FROM service_order_parts WHERE tenant_id = @0`,
+        [tenantId],
+      );
+
+    return Number(row?.total ?? 0) + Number(partRows[0]?.total ?? 0);
   }
 
   async create(

@@ -10,6 +10,7 @@ import { InternalController } from './internal.controller';
 import { ServiceOrderParticipants } from './service-order-participant.entity';
 import { ServiceOrderParts } from './service-order-part.entity';
 import { ServiceOrderServices } from './service-order-service.entity';
+import { MediaModule } from '../medias/media.module';
 import { MinioModule } from '../minio/minio.module';
 import { PartsService } from './parts.service';
 import { TeamService } from './team.service';
@@ -27,6 +28,7 @@ import { TeamService } from './team.service';
     AuthModule,
     ServiceOrdersModule,
     MinioModule,
+    MediaModule,
   ],
   controllers: [InternalController],
   providers: [InternalContextService, TeamService, PartsService],

@@ -92,7 +92,7 @@ export class MinioService implements OnModuleInit {
     }
   }
 
-  async upload(file: Express.Multer.File) {
+  async upload(file: Express.Multer.File, opts: { onlyImages?: boolean } = {}) {
     if (!file) {
       throw new BadRequestException('Arquivo não enviado.');
     }
@@ -110,6 +110,11 @@ export class MinioService implements OnModuleInit {
       throw new BadRequestException(
         'Tipo de arquivo não permitido. Envie apenas imagem, áudio ou vídeo válidos.',
       );
+    }
+
+    // sem detecção real do conteúdo não dá pra confiar no tipo declarado pelo cliente
+    if (opts.onlyImages && (!detected || !detectedMimeType.startsWith('image/'))) {
+      throw new BadRequestException('Envie uma foto (JPG, PNG ou WebP).');
     }
 
     const sizeError = checkUploadSize(detectedMimeType, file.size);
@@ -171,6 +176,10 @@ export class MinioService implements OnModuleInit {
       mime_type: mimeType,
       size: buffer.length,
     };
+  }
+
+  async removeObject(objectName: string): Promise<void> {
+    await this.client.removeObject(this.bucketName, objectName);
   }
 
   async getObjectBuffer(objectName: string): Promise<Buffer> {

@@ -2,7 +2,8 @@ import request from 'supertest';
 import type { INestApplication } from '@nestjs/common';
 import { createTestApp } from './helpers/test-app';
 import { createStaff, createTenantWithOwner, type Owner, type Staff } from './helpers/seed';
-import { createWorld, openOrderAs } from './helpers/fixtures';
+import { createWorld, openOrderAs, pngOfSize } from './helpers/fixtures';
+import { MediaService } from '../src/modules/medias/media.service';
 import { Role } from '../src/modules/users/role.enum';
 
 describe('peças e serviços da OS', () => {
@@ -108,5 +109,47 @@ describe('peças e serviços da OS', () => {
 
     await add(mech1.token).expect(403);
     await add(a.token).expect(201);
+  });
+
+describe('foto da caixa', () => {
+    const photo = (t: string, partId: number, buffer: Buffer, name = 'caixa.png') =>
+      request(server())
+        .post(`/service_orders/${orderId}/parts/${partId}/photo`)
+        .set(as(t))
+        .attach('file', buffer, { filename: name, contentType: 'image/png' });
+
+    it('anexa a foto, devolve URL assinada e a foto entra na cota da oficina', async () => {
+      const part = (await addPart(mech1.token, { description: 'Caixa da bomba', taken_quantity: 1 }).expect(201)).body;
+      const before = await app.get(MediaService).getTenantUsageBytes(a.tenant.id);
+
+      const res = await photo(mech1.token, part.part_id, pngOfSize(50 * 1024)).expect(201);
+      expect(res.body.photo_url).toMatch(/^https?:\/\//);
+
+      const after = await app.get(MediaService).getTenantUsageBytes(a.tenant.id);
+      expect(after - before).toBeGreaterThanOrEqual(50 * 1024);
+    });
+
+    it('arquivo que não é imagem é recusado (400)', async () => {
+      const part = (await addPart(mech1.token, { description: 'Sem imagem', taken_quantity: 1 }).expect(201)).body;
+      await photo(mech1.token, part.part_id, Buffer.from('isto não é uma foto'), 'x.txt').expect(400);
+    });
+
+    it('foto acima de 15 MB → 413', async () => {
+      const part = (await addPart(mech1.token, { description: 'Foto gigante', taken_quantity: 1 }).expect(201)).body;
+      await photo(mech1.token, part.part_id, pngOfSize(15 * 1024 * 1024 + 1024)).expect(413);
+    });
+
+    it('sem arquivo → 400; peça de outra oficina → 403', async () => {
+      const part = (await addPart(mech1.token, { description: 'Sem arquivo', taken_quantity: 1 }).expect(201)).body;
+      await request(server()).post(`/service_orders/${orderId}/parts/${part.part_id}/photo`).set(as(mech1.token)).expect(400);
+      await photo(b.token, part.part_id, pngOfSize(1024)).expect(403);
+    });
+
+    it('trocar a foto mantém só a nova; apagar a peça não deixa erro', async () => {
+      const part = (await addPart(mech1.token, { description: 'Troca de foto', taken_quantity: 1 }).expect(201)).body;
+      await photo(mech1.token, part.part_id, pngOfSize(2048)).expect(201);
+      await photo(mech1.token, part.part_id, pngOfSize(4096)).expect(201);
+      await request(server()).delete(`/service_orders/${orderId}/parts/${part.part_id}`).set(as(mech1.token)).expect(200);
+    });
   });
 });

@@ -1,7 +1,15 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+  PayloadTooLargeException,
+} from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { MediaService } from '../medias/media.service';
 import { MinioService } from '../minio/minio.service';
+import { exceedsQuota } from '../minio/upload-limits';
 import { CreatePartDto, UpdatePartDto } from './dto/part.dto';
 import { CreateServiceItemDto, UpdateServiceItemDto } from './dto/service-item.dto';
 import { InternalContextService, OrderContext } from './internal-context.service';
@@ -31,6 +39,8 @@ export class PartsService {
     @InjectRepository(ServiceOrderServices)
     private readonly services: Repository<ServiceOrderServices>,
     private readonly minio: MinioService,
+    private readonly mediaService: MediaService,
+    private readonly config: ConfigService,
     private readonly context: InternalContextService,
   ) {}
 
@@ -117,8 +127,35 @@ export class PartsService {
   async deletePart(ctx: OrderContext, partId: number): Promise<{ deleted: true }> {
     this.context.require(ctx, 'edit_items', EDIT_MSG);
     const part = await this.findPart(ctx, partId);
+    const photo = part.photo_object_name;
     await this.parts.remove(part);
+    if (photo) await this.minio.removeObject(photo).catch(() => undefined);
     return { deleted: true };
+  }
+
+  async uploadPhoto(ctx: OrderContext, partId: number, file: Express.Multer.File): Promise<PartView> {
+    this.context.require(ctx, 'edit_items', EDIT_MSG);
+    if (!file) throw new BadRequestException('Foto não enviada.');
+    const part = await this.findPart(ctx, partId);
+
+    const quotaBytes = Number(this.config.get('TENANT_STORAGE_QUOTA_MB') ?? 2048) * 1024 * 1024;
+    const used = await this.mediaService.getTenantUsageBytes(ctx.tenant.id);
+    if (exceedsQuota(used, file.size, quotaBytes)) {
+      throw new PayloadTooLargeException(
+        'Limite de armazenamento da oficina atingido. Fale com o suporte para ampliar.',
+      );
+    }
+
+    const uploaded = await this.minio.upload(file, { onlyImages: true });
+    const previous = part.photo_object_name;
+
+    part.photo_object_name = uploaded.object_name;
+    part.photo_mime = uploaded.mime_type;
+    part.photo_size = uploaded.size;
+    const saved = await this.parts.save(part);
+
+    if (previous) await this.minio.removeObject(previous).catch(() => undefined);
+    return this.toPartView(saved);
   }
 
   // ---- serviços / mão de obra

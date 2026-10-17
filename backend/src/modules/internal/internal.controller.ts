@@ -11,13 +11,18 @@ import {
   Post,
   Put,
   Req,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { JwtAuthGuard } from '../AuthModule/jwt-auth.guard';
 import { SetNotesDto } from './dto/notes.dto';
 import { CreatePartDto, UpdatePartDto } from './dto/part.dto';
 import { SetResponsibleDto } from './dto/responsible.dto';
 import { CreateServiceItemDto, UpdateServiceItemDto } from './dto/service-item.dto';
+import { UploadConcurrencyInterceptor } from '../medias/upload-concurrency.interceptor';
+import { HARD_UPLOAD_LIMIT_BYTES } from '../minio/upload-limits';
 import { InternalContextService } from './internal-context.service';
 import { responsibleShare } from './internal-access';
 import { PartsService } from './parts.service';
@@ -96,6 +101,20 @@ export class InternalController {
     @Req() req: any,
   ) {
     return this.partsService.deletePart(await this.context.load(id, req.user.sub), partId);
+  }
+
+  @Post('service_orders/:id/parts/:partId/photo')
+  @UseInterceptors(
+    UploadConcurrencyInterceptor,
+    FileInterceptor('file', { limits: { fileSize: HARD_UPLOAD_LIMIT_BYTES } }),
+  )
+  async uploadPartPhoto(
+    @Param('id', ParseIntPipe) id: number,
+    @Param('partId', ParseIntPipe) partId: number,
+    @UploadedFile() file: Express.Multer.File,
+    @Req() req: any,
+  ) {
+    return this.partsService.uploadPhoto(await this.context.load(id, req.user.sub), partId, file);
   }
 
   @Post('service_orders/:id/services')
