@@ -1,8 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Car, FilePenLine, Loader2, Search } from "lucide-react";
-import { SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
-import { DashboardSidebar } from "@/components/DashboardSidebar";
 import { Button } from "@/components/ui/button";
 import { EditCarSheet } from "@/components/cars/EditCarSheet";
 import { apiFetch } from "@/lib/api";
@@ -55,13 +53,10 @@ export function CarsPage() {
 
   return (
     <>
-      <DashboardSidebar />
 
-      <SidebarInset className="dark bg-background">
-        <div className="min-h-screen p-4 text-foreground md:p-6">
+        <div className="min-h-full p-4 text-foreground md:p-6">
           <div className="mx-auto max-w-4xl">
             <div className="flex items-center gap-3">
-              <SidebarTrigger />
               <div>
                 <h1 className="text-2xl font-bold tracking-tight">Veículos</h1>
                 <p className="text-sm text-muted-foreground">
@@ -135,7 +130,6 @@ export function CarsPage() {
             </div>
           </div>
         </div>
-      </SidebarInset>
 
       <EditCarSheet car={editingCar} onClose={() => setEditingCar(null)} onSaved={loadCars} />
     </>

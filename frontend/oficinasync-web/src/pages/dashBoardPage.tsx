@@ -1,9 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
 import { Car, Clock3, ClipboardList, Plus, Search, User } from "lucide-react";
-import { DashboardSidebar } from "@/components/DashboardSidebar";
 import { apiFetch } from "@/lib/api";
 import { useDarkTheme } from "@/hooks/useDarkTheme";
 import { carDetails, carTitle, clientLabel, kmLabel } from "@/lib/display";
@@ -210,14 +208,11 @@ export function DashboardPage() {
 
   return (
     <>
-      <DashboardSidebar />
 
-      <SidebarInset className="dark bg-background">
-        <div className="min-h-screen p-4 text-foreground md:p-6">
+        <div className="min-h-full p-4 text-foreground md:p-6">
           <div className="mx-auto max-w-7xl">
             <div className="flex items-start justify-between gap-4">
               <div className="flex items-start gap-3">
-                <SidebarTrigger className="mt-1" />
 
                 <div>
                   <h1 className="text-2xl font-bold tracking-tight">
@@ -484,7 +479,6 @@ export function DashboardPage() {
             </div>
           </div>
         </div>
-      </SidebarInset>
 
       {meForTour && (
         <GuidedTour

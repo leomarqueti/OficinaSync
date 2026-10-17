@@ -2,7 +2,7 @@ import { Suspense, lazy } from 'react'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { Toaster } from 'sonner'
 import './App.css'
-import { SidebarProvider } from '@/components/ui/sidebar'
+import { AppShell } from '@/components/shell/AppShell'
 import { CelebrationHost } from '@/components/motion/CelebrationHost'
 
 // Code-splitting por rota: cada página vira um chunk separado, carregado sob
@@ -59,65 +59,65 @@ function App() {
           <Route
             path="/dashboard"
             element={
-              <SidebarProvider>
+              <AppShell>
                 <DashboardPage />
-              </SidebarProvider>
+              </AppShell>
             }
           />
           <Route
             path="/comissoes"
             element={
-              <SidebarProvider>
+              <AppShell>
                 <CommissionsPage />
-              </SidebarProvider>
+              </AppShell>
             }
           />
           <Route
             path="/configuracoes"
             element={
-              <SidebarProvider>
+              <AppShell>
                 <SettingsPage />
-              </SidebarProvider>
+              </AppShell>
             }
           />
           <Route
             path="/equipe"
             element={
-              <SidebarProvider>
+              <AppShell>
                 <TeamPage />
-              </SidebarProvider>
+              </AppShell>
             }
           />
           <Route
             path="/clientes"
             element={
-              <SidebarProvider>
+              <AppShell>
                 <ClientsPage />
-              </SidebarProvider>
+              </AppShell>
             }
           />
           <Route
             path="/veiculos"
             element={
-              <SidebarProvider>
+              <AppShell>
                 <CarsPage />
-              </SidebarProvider>
+              </AppShell>
             }
           />
           <Route
             path="/veiculos/:id"
             element={
-              <SidebarProvider>
+              <AppShell>
                 <CarHistoryPage />
-              </SidebarProvider>
+              </AppShell>
             }
           />
           <Route
             path="/scanner"
             element={
-              <SidebarProvider>
+              <AppShell>
                 <ScannerPage />
-              </SidebarProvider>
+              </AppShell>
             }
           />
           <Route path="/os-client-create" element={<OsCreateWizardPage />} />

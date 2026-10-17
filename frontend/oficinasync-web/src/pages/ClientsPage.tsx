@@ -1,7 +1,5 @@
 import { useEffect, useState } from "react";
 import { FilePenLine, Loader2, Search, User } from "lucide-react";
-import { SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
-import { DashboardSidebar } from "@/components/DashboardSidebar";
 import { Button } from "@/components/ui/button";
 import { EditClientSheet } from "@/components/clients/EditClientSheet";
 import { apiFetch } from "@/lib/api";
@@ -50,13 +48,10 @@ export function ClientsPage() {
 
   return (
     <>
-      <DashboardSidebar />
 
-      <SidebarInset className="dark bg-background">
-        <div className="min-h-screen p-4 text-foreground md:p-6">
+        <div className="min-h-full p-4 text-foreground md:p-6">
           <div className="mx-auto max-w-4xl">
             <div className="flex items-center gap-3">
-              <SidebarTrigger />
               <div>
                 <h1 className="text-2xl font-bold tracking-tight">Clientes</h1>
                 <p className="text-sm text-muted-foreground">
@@ -125,7 +120,6 @@ export function ClientsPage() {
             </div>
           </div>
         </div>
-      </SidebarInset>
 
       <EditClientSheet
         client={editingClient}

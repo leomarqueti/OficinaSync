@@ -2,8 +2,6 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { KeyRound, Loader2 } from "lucide-react";
-import { SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
-import { DashboardSidebar } from "@/components/DashboardSidebar";
 import { Button } from "@/components/ui/button";
 import { PasswordStrength } from "@/components/fields/PasswordStrength";
 import { apiFetch } from "@/lib/api";
@@ -51,13 +49,10 @@ export function SettingsPage() {
 
   return (
     <>
-      <DashboardSidebar />
 
-      <SidebarInset className="dark bg-background">
-        <div className="min-h-screen p-4 text-foreground md:p-6">
+        <div className="min-h-full p-4 text-foreground md:p-6">
           <div className="mx-auto max-w-2xl">
             <div className="flex items-center gap-3">
-              <SidebarTrigger />
               <div>
                 <h1 className="text-2xl font-bold tracking-tight">Configurações</h1>
                 <p className="text-sm text-muted-foreground">
@@ -154,7 +149,6 @@ export function SettingsPage() {
             </div>
           </div>
         </div>
-      </SidebarInset>
     </>
   );
 }

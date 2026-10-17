@@ -58,3 +58,51 @@ test.describe('fundação visual', () => {
     expect(await res.text()).toContain('data-brand="oficinasync-gear"');
   });
 });
+
+test.describe('duas caras — mecânico', () => {
+  test.use({ storageState: 'e2e/.auth/mechanic.json' });
+
+  test('mecânico entra no modo simples: barra embaixo, sem menu lateral', async ({ page }) => {
+    await page.goto('/dashboard');
+    const nav = page.getByRole('navigation', { name: 'Navegação principal' });
+    await expect(nav).toBeVisible();
+    await expect(nav.getByRole('button', { name: 'Abrir carro novo' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Abrir ou fechar menu' })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Ver como mecânico' })).toHaveCount(0);
+  });
+
+  test('mecânico abre /comissoes direto pelo link: carrega dentro do modo simples', async ({ page }) => {
+    await page.goto('/comissoes');
+    await expect(page.getByRole('heading', { name: /minhas comissões/i })).toBeVisible();
+    await expect(page.getByRole('navigation', { name: 'Navegação principal' })).toBeVisible();
+  });
+
+  test('"+ Carro" abre o cadastro de OS', async ({ page }) => {
+    await page.goto('/dashboard');
+    await page.getByRole('button', { name: 'Abrir carro novo' }).click();
+    await expect(page).toHaveURL(/\/os-client-create$/);
+  });
+});
+
+test.describe('duas caras — dono', () => {
+  test('dono entra no modo controle e troca pro modo mecânico; a escolha sobrevive ao recarregar', async ({ page }) => {
+    await page.goto('/dashboard');
+    await expect(page.getByRole('button', { name: 'Abrir ou fechar menu' }).first()).toBeVisible();
+
+    await page.getByRole('button', { name: 'Ver como mecânico' }).first().click();
+    await expect(page.getByRole('navigation', { name: 'Navegação principal' })).toBeVisible();
+
+    await page.reload();
+    await expect(page.getByRole('navigation', { name: 'Navegação principal' })).toBeVisible();
+
+    await page.getByRole('button', { name: 'Ver modo controle' }).click();
+    await expect(page.getByRole('button', { name: 'Abrir ou fechar menu' }).first()).toBeVisible();
+  });
+
+  test('nome longo da oficina não estoura a tela no celular', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 812 });
+    await page.goto('/dashboard');
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth);
+    expect(overflow).toBe(false);
+  });
+});

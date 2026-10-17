@@ -2,8 +2,6 @@ import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { Copy, Loader2, Plus, Radio, Trash2 } from "lucide-react";
-import { SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
-import { DashboardSidebar } from "@/components/DashboardSidebar";
 import { Button } from "@/components/ui/button";
 import { ObdLivePanel } from "@/components/obd/ObdLivePanel";
 import {
@@ -121,13 +119,10 @@ export function ScannerPage() {
 
   return (
     <>
-      <DashboardSidebar />
 
-      <SidebarInset className="dark bg-background">
-        <div className="min-h-screen p-4 text-foreground md:p-6">
+        <div className="min-h-full p-4 text-foreground md:p-6">
           <div className="mx-auto max-w-2xl">
             <div className="flex items-center gap-3">
-              <SidebarTrigger />
               <div>
                 <h1 className="text-2xl font-bold tracking-tight">Scanner OBD</h1>
                 <p className="text-sm text-muted-foreground">
@@ -281,7 +276,6 @@ export function ScannerPage() {
             )}
           </div>
         </div>
-      </SidebarInset>
 
       <AlertDialog
         open={deletingDevice !== null}

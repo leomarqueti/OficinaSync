@@ -1,8 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Car, ClipboardList, Loader2 } from "lucide-react";
-import { SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
-import { DashboardSidebar } from "@/components/DashboardSidebar";
 import { apiFetch } from "@/lib/api";
 import { useDarkTheme } from "@/hooks/useDarkTheme";
 import { carTitle, kmLabel } from "@/lib/display";
@@ -90,13 +88,10 @@ export function CarHistoryPage() {
 
   return (
     <>
-      <DashboardSidebar />
 
-      <SidebarInset className="dark bg-background">
-        <div className="min-h-screen p-4 text-foreground md:p-6">
+        <div className="min-h-full p-4 text-foreground md:p-6">
           <div className="mx-auto max-w-4xl">
             <div className="flex items-center gap-3">
-              <SidebarTrigger />
               <button
                 type="button"
                 onClick={() => navigate("/veiculos")}
@@ -186,7 +181,6 @@ export function CarHistoryPage() {
             )}
           </div>
         </div>
-      </SidebarInset>
     </>
   );
 }

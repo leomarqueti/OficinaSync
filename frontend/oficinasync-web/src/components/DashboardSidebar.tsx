@@ -1,3 +1,7 @@
+import { Car, Home, LogOut, Percent, Radio, Settings, Users, Wrench } from "lucide-react";
+import { useLocation, useNavigate } from "react-router-dom";
+import { BrandLogo, BrandSymbol } from "@/components/brand/BrandLogo";
+import { ModeSwitch } from "@/components/shell/ModeSwitch";
 import {
   Sidebar,
   SidebarContent,
@@ -10,42 +14,32 @@ import {
   SidebarMenuItem,
   SidebarRail,
 } from "@/components/ui/sidebar";
-import {
-  Car,
-  ClipboardList,
-  Home,
-  LogOut,
-  Percent,
-  Radio,
-  Settings,
-  Users,
-  Wrench,
-} from "lucide-react";
-import { useNavigate } from "react-router-dom";
-import { clearMeCache, isOfficeRole, useMe } from "@/lib/me";
+import { isOfficeRole, useMe } from "@/lib/me";
+import { logout } from "@/lib/session";
+
+type Item = { to: string; label: string; icon: typeof Home; show?: boolean };
 
 export function DashboardSidebar() {
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   const { me } = useMe();
 
-  const logout = () => {
-    localStorage.removeItem("token");
-    clearMeCache();
-    navigate("/login");
-  };
+  const items: Item[] = [
+    { to: "/dashboard", label: "Início", icon: Home },
+    { to: "/clientes", label: "Clientes", icon: Users },
+    { to: "/veiculos", label: "Veículos", icon: Car },
+    { to: "/equipe", label: "Equipe", icon: Wrench, show: me?.role === "owner" },
+    { to: "/comissoes", label: isOfficeRole(me?.role) ? "Comissões" : "Minhas comissões", icon: Percent },
+    { to: "/scanner", label: "Scanner", icon: Radio, show: import.meta.env.VITE_FEATURE_OBD === "true" },
+    { to: "/configuracoes", label: "Configurações", icon: Settings },
+  ];
 
   return (
     <Sidebar collapsible="icon">
-      <SidebarHeader className="border-b">
-        <div className="flex items-center gap-3 px-2 py-2">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand font-bold text-brand-foreground">
-            O
-          </div>
-
-          <div className="group-data-[collapsible=icon]:hidden">
-            <p className="text-sm font-semibold">OficinaSync</p>
-            <p className="text-xs text-muted-foreground">Painel da oficina</p>
-          </div>
+      <SidebarHeader className="border-b border-white/5">
+        <div className="flex items-center gap-2 px-2 py-2">
+          <BrandLogo size="sm" className="group-data-[collapsible=icon]:hidden" />
+          <BrandSymbol className="hidden h-8 w-8 group-data-[collapsible=icon]:block" title="OficinaSync" />
         </div>
       </SidebarHeader>
 
@@ -53,74 +47,32 @@ export function DashboardSidebar() {
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton onClick={() => navigate("/dashboard")} isActive>
-                  <Home />
-                  <span>Início</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-
-              <SidebarMenuItem>
-                <SidebarMenuButton onClick={() => navigate("/dashboard")}>
-                  <ClipboardList />
-                  <span>Ordens</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-
-              <SidebarMenuItem>
-                <SidebarMenuButton onClick={() => navigate("/clientes")}>
-                  <Users />
-                  <span>Clientes</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-
-              <SidebarMenuItem>
-                <SidebarMenuButton onClick={() => navigate("/veiculos")}>
-                  <Car />
-                  <span>Veículos</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-
-              {me?.role === "owner" && (
-                <SidebarMenuItem>
-                  <SidebarMenuButton onClick={() => navigate("/equipe")}>
-                    <Wrench />
-                    <span>Equipe</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              )}
-
-              <SidebarMenuItem>
-                <SidebarMenuButton onClick={() => navigate("/comissoes")}>
-                  <Percent />
-                  <span>{isOfficeRole(me?.role) ? "Comissões" : "Minhas comissões"}</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-
-              {import.meta.env.VITE_FEATURE_OBD === "true" && (
-                <SidebarMenuItem>
-                  <SidebarMenuButton onClick={() => navigate("/scanner")}>
-                    <Radio />
-                    <span>Scanner</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              )}
-
-              <SidebarMenuItem>
-                <SidebarMenuButton onClick={() => navigate("/configuracoes")}>
-                  <Settings />
-                  <span>Config.</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
+              {items
+                .filter((item) => item.show !== false)
+                .map((item) => (
+                  <SidebarMenuItem key={item.to}>
+                    <SidebarMenuButton
+                      className="h-11 text-[15px]"
+                      isActive={pathname === item.to || pathname.startsWith(`${item.to}/`)}
+                      onClick={() => navigate(item.to)}
+                    >
+                      <item.icon />
+                      <span>{item.label}</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter className="border-t">
+      <SidebarFooter className="border-t border-white/5">
+        <div className="px-2 group-data-[collapsible=icon]:hidden">
+          <ModeSwitch className="w-full justify-center" />
+        </div>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton onClick={logout}>
+            <SidebarMenuButton className="h-11" onClick={() => logout(navigate)}>
               <LogOut />
               <span>Sair</span>
             </SidebarMenuButton>

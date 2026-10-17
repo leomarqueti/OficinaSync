@@ -1,8 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Loader2 } from "lucide-react";
-import { SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
-import { DashboardSidebar } from "@/components/DashboardSidebar";
 import { apiFetch } from "@/lib/api";
 import { useDarkTheme } from "@/hooks/useDarkTheme";
 import { isOfficeRole, useMe } from "@/lib/me";
@@ -63,12 +61,9 @@ export function CommissionsPage() {
 
   return (
     <>
-      <DashboardSidebar />
-      <SidebarInset className="dark bg-background">
-        <div className="min-h-screen p-4 text-foreground md:p-6">
+        <div className="min-h-full p-4 text-foreground md:p-6">
           <div className="mx-auto max-w-3xl space-y-5">
             <div className="flex items-center gap-3">
-              <SidebarTrigger />
               <h1 className="text-2xl font-bold tracking-tight">{office ? "Comissões" : "Minhas comissões"}</h1>
             </div>
             <p className="text-sm text-muted-foreground">
@@ -135,7 +130,6 @@ export function CommissionsPage() {
             ))}
           </div>
         </div>
-      </SidebarInset>
     </>
   );
 }
