@@ -386,6 +386,49 @@ Vindo da auditoria do time (`docs/equipe/lancamento-publico/01-seguranca-dados-l
 - **Primeiro deploy automático FEITO em 2026-10-17** (commit `3720e56`): os 4 segredos estão no GitHub, a chave de deploy está no `authorized_keys` da VPS (Hostinger, `srv1800935`, 187.127.46.129) e o workflow testou e publicou sozinho. Daqui pra frente: `git push origin main:production` publica. As imagens Docker usam **Debian 12 (bookworm)**: a base bullseye saiu de suporte e o `apt-get` dava 404. O CI agora constrói as imagens (passo "Imagens Docker — build") pra pegar isso antes da VPS.
 - **Deploy:** `deploy.sh` agora usa `sqlcmd -b` (erro no BACKUP derruba o script) e grava `.last_deployed_sha` (o primeiro deploy reconstrói mesmo com a VPS já no commit da production). Passo a passo e variáveis novas: `DEPLOY.md` 10.3. Em 2026-10-17 a `main` e a `production` foram empurradas pro GitHub; **o passo de publicar na VPS só roda com os 4 segredos do GitHub + chave de deploy na VPS** (ver 10.1/10.3).
 
+### Reforma visual "Cinema Escuro Premium" — Fase 1: Fundação (feito, branch `feat/reforma-visual-fase1`)
+
+Pedido do Leonardo (2026-10-17): o app "parecia amador, feito com IA, não valia R$ 99/mês", sem animação, sem pensar em quem quase não lê nem escreve (mecânico com mão suja, Android, tablet no futuro).
+
+**Plano em 5 fases**, uma spec cada:
+- **Fase 1:** fundação (esta).
+- **Fase 2:** modo simples do mecânico, com voz pelo reconhecimento grátis do navegador, áudio ou texto, e "Como o carro chegou" (proteção do mecânico).
+- **Fase 3:** modo controle do escritório (depois: desempenho por funcionário).
+- **Fase 4:** página do cliente vitrine.
+- **Fase 5:** landing "acesso antecipado", **deixando explícito que está em desenvolvimento**.
+
+Spec: `docs/superpowers/specs/2026-10-17-reforma-visual-fase1-fundacao-design.md`; plano: `docs/superpowers/plans/2026-10-17-reforma-visual-fase1-fundacao.md`; antes e depois: `docs/equipe/reforma-visual/fase1-antes-depois.md`.
+
+- **Tema global:**
+  - `<html class="dark">` no `index.html`. O `useDarkTheme` ficou inofensivo.
+  - A ficha (`OsSheetPage`) continua clara de propósito, para impressão.
+  - `:where(h1,h2)` em caixa alta e Saira. A página pública neutraliza com `[&_h1]:normal-case`.
+- **Fontes:** Saira Condensed (700/800, títulos e botões) e Archivo (400/600/700). São arquivos `.woff2` versionados em `src/assets/fonts` (OFL), **não** `@fontsource`, para não mexer no `package.json` do frontend.
+- **Tokens:**
+  - `--warning` amarelo `#facc15` para alerta e `--danger`; limão continua `--brand`.
+  - Utilitários `app-glow` (brilho limão no topo) e `skeleton-shimmer`.
+- **Marca:**
+  - `@/components/brand/BrandLogo` (`BrandLogo`, `BrandSymbol`), em vetor, `data-brand="oficinasync-gear"`.
+  - Ícones do app gerados com `node ui-tests/scripts/gen-brand-icons.mjs`.
+- **Animações** (`@/components/motion`), todas respeitando "menos movimento":
+  - `celebrate("msg")` dispara a comemoração; o `CelebrationHost` está montado no `App`.
+  - `PhotoFlash` para o flash da foto.
+  - `haptic()` em `@/lib/haptics` para a vibração.
+- **Kit** (`@/components/kit`): `BigButton` (≥56px, `hint` diz o que falta quando desabilitado), `ActionTile`, `StatusChip`, `AlertBanner`, `PageHeader`, `TextField`/`SelectField`/`TextAreaField`. `fieldClass`/`fieldClassCompact` é o visual único de **todo** campo do sistema; use-o em campo novo.
+- **Duas caras** (`@/components/shell`):
+  - `AppShell` envolve as 8 rotas com menu e escolhe pelo `modeFor(role, preferência)` (`@/lib/mode`).
+  - Mecânico → `SimpleShell` (barra embaixo). Escritório → `ControlShell` (menu lateral).
+  - O dono alterna (`ModeSwitch`); a preferência fica em `localStorage` `oficinasync_mode_<id>`, lida de forma síncrona para não piscar.
+  - As páginas **não** montam mais `DashboardSidebar`/`SidebarInset`. `logout()` fica em `@/lib/session`.
+- **Testes:**
+  - O Vitest (`ui-tests/unit`) agora renderiza componentes do frontend via `react-dom/server` (alias de `@/` e do React do frontend no `vitest.config.ts`).
+  - `e2e/fundacao.spec.ts` cobre fundo escuro, letra, favicon, as duas caras, a comemoração e as regressões da revisão.
+  - O passo a passo foi para a v2. O `global-setup` usa `tourKey()`.
+- **Limite da API configurável:**
+  - O padrão continua 60 req/min por IP; `THROTTLE_LIMIT` ajusta.
+  - Os testes de tela e o `start-env.sh` usam 1000, porque a bateria estourava o limite.
+  - **Decisão pendente do Leonardo:** subir em produção, já que a oficina inteira sai pelo mesmo IP.
+
 ### Agentes por área (time de subagentes do projeto)
 
 Definições em `.claude/agents/` (carregam ao abrir a sessão; `/agents` lista). Cada um é dono de uma área e conhece as regras deste arquivo. Eles trabalham **sob demanda** (não ficam vigiando sozinhos); rotinas recorrentes precisam de uma tarefa agendada.
