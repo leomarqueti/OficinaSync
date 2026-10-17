@@ -6,6 +6,8 @@ import { apiFetch } from "@/lib/api";
 import { useDarkTheme } from "@/hooks/useDarkTheme";
 import { carDetails, carTitle, clientLabel, kmLabel } from "@/lib/display";
 import { GuidedTour } from "@/components/guide/GuidedTour";
+import { useShellMode } from "@/components/shell/ModeContext";
+import { SimpleHome } from "@/components/simple/SimpleHome";
 import { useMe } from "@/lib/me";
 import { markTourDone, shouldShowTour, tourSteps } from "@/lib/tours";
 
@@ -206,6 +208,28 @@ export function DashboardPage() {
     });
   }, [orders, search]);
 
+  const { mode } = useShellMode();
+
+  const tour = meForTour && (
+    <GuidedTour
+      steps={tourSteps(meForTour.role)}
+      open={tourOpen}
+      onClose={() => {
+        markTourDone(localStorage, meForTour.user_id);
+        setTourOpen(false);
+      }}
+    />
+  );
+
+  if (mode === "simple") {
+    return (
+      <>
+        <SimpleHome orders={orders} loading={loading} userName={me?.name} />
+        {tour}
+      </>
+    );
+  }
+
   return (
     <>
 
@@ -219,7 +243,7 @@ export function DashboardPage() {
                     {greeting()}
                     {me ? `, ${me.name.split(" ")[0]}` : ""}!
                   </h1>
-                  <p className="text-sm capitalize text-muted-foreground">
+                  <p className="text-sm text-muted-foreground first-letter:uppercase">
                     {formatShortDate()}
                     {me?.tenant_name ? ` · ${me.tenant_name}` : ""}
                   </p>
@@ -480,16 +504,7 @@ export function DashboardPage() {
           </div>
         </div>
 
-      {meForTour && (
-        <GuidedTour
-          steps={tourSteps(meForTour.role)}
-          open={tourOpen}
-          onClose={() => {
-            markTourDone(localStorage, meForTour.user_id);
-            setTourOpen(false);
-          }}
-        />
-      )}
+      {tour}
     </>
   );
 }

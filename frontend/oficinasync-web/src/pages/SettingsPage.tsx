@@ -1,7 +1,11 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { KeyRound, Loader2 } from "lucide-react";
+import { KeyRound, Loader2, LogOut, Percent } from "lucide-react";
+import { BigButton } from "@/components/kit";
+import { ModeSwitch } from "@/components/shell/ModeSwitch";
+import { useShellMode } from "@/components/shell/ModeContext";
+import { logout } from "@/lib/session";
 import { Button } from "@/components/ui/button";
 import { PasswordStrength } from "@/components/fields/PasswordStrength";
 import { apiFetch } from "@/lib/api";
@@ -16,6 +20,7 @@ const inputClass = fieldClass;
 export function SettingsPage() {
   useDarkTheme();
   const navigate = useNavigate();
+  const { mode } = useShellMode();
   const { me } = useMe();
 
   const [currentPassword, setCurrentPassword] = useState("");
@@ -60,6 +65,18 @@ export function SettingsPage() {
                 </p>
               </div>
             </div>
+
+            {mode === "simple" && (
+              <section aria-label="Atalhos" className="mt-6 flex flex-col gap-3">
+                <BigButton variant="secondary" icon={<Percent />} onClick={() => navigate("/comissoes")}>
+                  Minhas comissões
+                </BigButton>
+                <ModeSwitch className="w-full justify-center" />
+                <BigButton variant="danger" icon={<LogOut />} onClick={() => logout(navigate)}>
+                  Sair da conta
+                </BigButton>
+              </section>
+            )}
 
             <div className="mt-6 rounded-3xl border border-border bg-card p-6">
               <div className="flex items-center gap-2">

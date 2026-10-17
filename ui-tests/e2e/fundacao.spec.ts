@@ -77,6 +77,23 @@ test.describe('duas caras — mecânico', () => {
     await expect(page.getByRole('navigation', { name: 'Navegação principal' })).toBeVisible();
   });
 
+  test('início do mecânico: cartões grandes dos carros, cada um abre a OS', async ({ page }) => {
+    const orderId = await openOrder(page);
+    await page.goto('/dashboard');
+    const card = page.getByRole('button', { name: new RegExp(`OS ${orderId}:`) });
+    await expect(card).toBeVisible();
+    const box = await card.boundingBox();
+    expect(box!.height).toBeGreaterThanOrEqual(72);
+    await card.click();
+    await expect(page).toHaveURL(new RegExp(`/os/${orderId}$`));
+  });
+
+  test('tela "Eu": minhas comissões e sair, com botões grandes', async ({ page }) => {
+    await page.goto('/configuracoes');
+    await expect(page.getByRole('button', { name: 'Minhas comissões' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Sair da conta' })).toBeVisible();
+  });
+
   test('"+ Carro" abre o cadastro de OS', async ({ page }) => {
     await page.goto('/dashboard');
     await page.getByRole('button', { name: 'Abrir carro novo' }).click();
