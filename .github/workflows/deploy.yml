@@ -59,10 +59,13 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Subir MinIO
+        # O repositório minio/minio saiu do Docker Hub (projeto descontinuado pelo fabricante em 2026).
+        # Só pro CI usamos a última imagem congelada que ainda existe (MinIO 2025.7.23); a produção
+        # continua com a imagem que já está na VPS — NÃO rode docker pull/prune de imagens lá.
         run: |
           docker run -d --name minio -p 9000:9000 \
             -e MINIO_ROOT_USER=ci-minio -e MINIO_ROOT_PASSWORD=ci-minio-secret \
-            minio/minio server /data
+            bitnamilegacy/minio:2025.7.23-debian-12-r5
           for _ in $(seq 1 30); do
             curl -sf http://localhost:9000/minio/health/live && exit 0
             sleep 2
