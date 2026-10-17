@@ -73,6 +73,21 @@ export async function createTenantWithOwner(
   return { tenant, user, email, password, token: login.body.access_token };
 }
 
+/** Funcionário ativo no banco (sem token) — usado também pelo ui-seed. */
+export async function createStaffRecords(
+  app: INestApplicationContext,
+  tenant: Tenants,
+  role: Role,
+  label: string,
+) {
+  const email = `${label}-${randomUUID().slice(0, 8)}@teste.local`;
+  const password = 'Teste@12345';
+  const user = await app
+    .get(UsersService)
+    .createFromInvite(`${label} ${role}`, email, password, tenant, role);
+  return { user, email, password };
+}
+
 export type Staff = { user: Users; email: string; token: string; role: Role };
 
 /**
@@ -85,10 +100,7 @@ export async function createStaff(
   role: Role,
   label: string,
 ): Promise<Staff> {
-  const email = `${label}-${randomUUID().slice(0, 8)}@teste.local`;
-  const user = await app
-    .get(UsersService)
-    .createFromInvite(`${label} ${role}`, email, 'Teste@12345', tenant, role);
+  const { user, email } = await createStaffRecords(app, tenant, role, label);
   const token = app
     .get(JwtService, { strict: false })
     .sign({ sub: user.user_id, scope: 'access' });

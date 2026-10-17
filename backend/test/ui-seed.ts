@@ -7,7 +7,8 @@ import './helpers/test-env';
 import { NestFactory } from '@nestjs/core';
 import * as sql from 'mssql';
 import { AppModule } from '../src/app.module';
-import { createOwnerRecords } from './helpers/seed';
+import { createOwnerRecords, createStaffRecords } from './helpers/seed';
+import { Role } from '../src/modules/users/role.enum';
 
 async function ensureTestDatabase(): Promise<void> {
   const pool = await new sql.ConnectionPool({
@@ -35,6 +36,7 @@ async function main() {
     logger: false,
   });
   const owner = await createOwnerRecords(app, 'ui');
+  const mechanic = await createStaffRecords(app, owner.tenant, Role.MECHANIC, 'ui-mec');
   await app.close();
 
   process.stdout.write(
@@ -42,6 +44,7 @@ async function main() {
       email: owner.email,
       password: owner.password,
       tenantName: owner.tenant.name,
+      mechanic: { email: mechanic.email, password: mechanic.password },
     })}\n`,
   );
 }

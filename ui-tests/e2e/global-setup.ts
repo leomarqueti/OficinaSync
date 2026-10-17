@@ -26,6 +26,7 @@ export default async function globalSetup() {
     email: string;
     password: string;
     tenantName: string;
+    mechanic: { email: string; password: string };
   };
 
   process.env.UI_EMAIL = owner.email;
@@ -52,6 +53,29 @@ export default async function globalSetup() {
         {
           origin: FRONTEND_ORIGIN,
           localStorage: [{ name: 'token', value: access_token }],
+        },
+      ],
+    }),
+  );
+
+  // segundo perfil: mecânico da mesma oficina (para os testes de permissão)
+  const mechLogin = await fetch(`${BACKEND_URL}/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(owner.mechanic),
+  });
+  if (!mechLogin.ok) {
+    throw new Error(`login do mecânico falhou: ${mechLogin.status} ${await mechLogin.text()}`);
+  }
+  const mech = (await mechLogin.json()) as { access_token: string };
+  writeFileSync(
+    path.join(authDir, 'mechanic.json'),
+    JSON.stringify({
+      cookies: [],
+      origins: [
+        {
+          origin: FRONTEND_ORIGIN,
+          localStorage: [{ name: 'token', value: mech.access_token }],
         },
       ],
     }),

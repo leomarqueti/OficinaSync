@@ -23,6 +23,7 @@ const ScannerPage = lazy(() => import('./pages/ScannerPage').then((m) => ({ defa
 const DashboardPage = lazy(() => import('./pages/dashBoardPage').then((m) => ({ default: m.DashboardPage })))
 const OsCreateWizardPage = lazy(() => import('./pages/OsCreateWizardPage').then((m) => ({ default: m.OsCreateWizardPage })))
 const PublicServiceOrderPage = lazy(() => import('./pages/PublicServiceOrderPage').then((m) => ({ default: m.PublicServiceOrderPage })))
+const OsOfficePage = lazy(() => import('./pages/OsOfficePage').then((m) => ({ default: m.OsOfficePage })))
 const OsWorkPage = lazy(() => import('./pages/OsWorkPage').then((m) => ({ default: m.OsWorkPage })))
 const OsFinishPage = lazy(() => import('./pages/OsFinishPage').then((m) => ({ default: m.OsFinishPage })))
 
@@ -111,6 +112,7 @@ function App() {
           <Route path="/servico/:token" element={<PublicServiceOrderPage />} />
 
           <Route path="/os/:id" element={<OsWorkPage />} />
+          <Route path="/os/:id/escritorio" element={<OsOfficePage />} />
 
           <Route path="/os/:id/finalizar" element={<OsFinishPage />} />
 

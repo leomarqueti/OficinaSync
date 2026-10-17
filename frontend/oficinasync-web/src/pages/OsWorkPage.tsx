@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import {
   Activity,
   ArrowLeft,
+  Boxes,
   Clapperboard,
   Copy,
   ExternalLink,
@@ -433,6 +434,15 @@ export function OsWorkPage() {
                 Scanner ao vivo
               </Button>
             )}
+
+            <Button
+              variant="outline"
+              className="h-11"
+              onClick={() => navigate(`/os/${data.service_order_id}/escritorio`)}
+            >
+              <Boxes className="mr-1.5 h-4 w-4" />
+              Peças e equipe
+            </Button>
 
             <Button
               className="col-span-2 h-11 bg-brand text-brand-foreground hover:bg-brand/90 sm:ml-auto"
