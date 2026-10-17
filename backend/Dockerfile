@@ -1,5 +1,5 @@
 # ---- build ----
-FROM node:22-bullseye-slim AS builder
+FROM node:22-bookworm-slim AS builder
 WORKDIR /app
 
 ENV PUPPETEER_SKIP_DOWNLOAD=true
@@ -20,7 +20,7 @@ COPY . .
 RUN npm run build
 
 # ---- runtime ----
-FROM node:22-bullseye-slim AS runtime
+FROM node:22-bookworm-slim AS runtime
 WORKDIR /app
 
 # Puppeteer usa o Chromium do sistema em vez de baixar o próprio (mais confiável em container).

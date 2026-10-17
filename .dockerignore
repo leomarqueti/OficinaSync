@@ -9,3 +9,4 @@ frontend/oficinasync-web/dist
 *.log
 *.mp4
 *.pdf
+*.bak

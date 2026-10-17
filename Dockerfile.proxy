@@ -1,6 +1,6 @@
 # Builda o frontend estático e serve junto com o proxy reverso (Caddy),
 # evitando um container separado só pra servir arquivos estáticos.
-FROM node:20-bullseye-slim AS frontend-builder
+FROM node:20-bookworm-slim AS frontend-builder
 WORKDIR /app
 
 COPY frontend/oficinasync-web/package*.json ./

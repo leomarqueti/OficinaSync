@@ -100,6 +100,14 @@ jobs:
           npm ci
           npm run build
 
+      # Constrói as MESMAS imagens que a VPS vai construir. Regressão de 2026-10-17: a base
+      # Debian 11 (bullseye) saiu de suporte, o apt-get passou a dar 404 e o deploy quebrou
+      # só na VPS — os passos acima não usam Docker e não pegavam isso.
+      - name: Imagens Docker — build (backend e proxy)
+        run: |
+          docker build -t ci-backend backend
+          docker build -t ci-proxy -f Dockerfile.proxy --build-arg VITE_API_URL=https://api.oficinasync.com.br .
+
   publicar:
     name: Publicar na VPS
     needs: testar
