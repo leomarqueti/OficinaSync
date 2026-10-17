@@ -8,6 +8,7 @@ import type { InternalData } from "@/lib/internalApi";
 import { PartsSection } from "@/components/internal/PartsSection";
 import { ServicesSection } from "@/components/internal/ServicesSection";
 import { NotesSection } from "@/components/internal/NotesSection";
+import { TeamSection } from "@/components/internal/TeamSection";
 
 export function OsOfficePage() {
   useDarkTheme();
@@ -70,6 +71,7 @@ export function OsOfficePage() {
 
         <PartsSection orderId={orderId} parts={data.parts} canEdit={data.can.edit_items} onChanged={load} />
         <ServicesSection orderId={orderId} services={data.services} canEdit={data.can.edit_items} onChanged={load} />
+        <TeamSection data={data} onChanged={load} />
         {data.can.edit_notes && <NotesSection orderId={orderId} notes={data.notes} onChanged={load} />}
       </div>
     </div>

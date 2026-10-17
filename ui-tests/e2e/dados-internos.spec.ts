@@ -81,3 +81,56 @@ test.describe('mecânico (não é o responsável)', () => {
     await expect(page.getByRole('button', { name: /ficha do escritório/ })).toHaveCount(0);
   });
 });
+
+test('equipe: o responsável marca quem ajudou, com o quê e quanto; fica com o resto', async ({ page }) => {
+  const orderId = await openOrder(page);
+  await page.goto(`/os/${orderId}/escritorio`);
+
+  // o mecânico de teste (mesma oficina) aparece na lista
+  const helper = page.getByLabel(/^Ajudou: ui-mec/);
+  await expect(helper).toBeVisible();
+  await helper.check();
+
+  await page.getByLabel(/^Tarefa de ui-mec/).fill('diagnóstico elétrico');
+  await page.getByLabel(/^Porcentagem de ui-mec/).fill('30');
+  await expect(page.getByText('Você fica com 70%')).toBeVisible();
+
+  await page.getByRole('button', { name: 'Salvar equipe' }).click();
+  await expect(page.getByText('Equipe salva!')).toBeVisible();
+
+  await page.reload();
+  await expect(page.getByLabel(/^Ajudou: ui-mec/)).toBeChecked();
+  await expect(page.getByText('Você fica com 70%')).toBeVisible();
+});
+
+test('equipe: soma acima de 99% bloqueia o salvar e mostra aviso', async ({ page }) => {
+  const orderId = await openOrder(page);
+  await page.goto(`/os/${orderId}/escritorio`);
+  await page.getByLabel(/^Ajudou: ui-mec/).check();
+  await page.getByLabel(/^Tarefa de ui-mec/).fill('montagem');
+  await page.getByLabel(/^Porcentagem de ui-mec/).fill('99');
+  await expect(page.getByText('Você fica com 1%')).toBeVisible();
+  await page.getByLabel(/^Porcentagem de ui-mec/).fill('100');
+  await expect(page.getByText(/passa de 99%/)).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Salvar equipe' })).toBeDisabled();
+});
+
+test.describe('mecânico comum vê só a sua parte', () => {
+  test.use({ storageState: 'e2e/.auth/mechanic.json' });
+
+  test('mostra "Sua parte nesta OS" e nenhuma lista de colegas', async ({ page, browser }) => {
+    const ownerCtx = await browser.newContext({ storageState: 'e2e/.auth/state.json' });
+    const ownerPage = await ownerCtx.newPage();
+    const orderId = await openOrder(ownerPage);
+    const team = await api(ownerPage, 'GET', '/users/team');
+    const mech = team.json.find((u: { name: string }) => u.name.startsWith('ui-mec'));
+    await api(ownerPage, 'PUT', `/service_orders/${orderId}/participants`, {
+      participants: [{ user_id: mech.user_id, share_percent: 25, task: 'diagnóstico' }],
+    });
+    await ownerCtx.close();
+
+    await page.goto(`/os/${orderId}/escritorio`);
+    await expect(page.getByText('Sua parte nesta OS: 25%')).toBeVisible();
+    await expect(page.getByLabel(/^Ajudou:/)).toHaveCount(0);
+  });
+});
