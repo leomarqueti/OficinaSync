@@ -16,6 +16,7 @@ import { YearField } from "@/components/fields/YearField";
 import { KmField } from "@/components/fields/KmField";
 import { ApiError, apiFetch } from "@/lib/api";
 import { useDarkTheme } from "@/hooks/useDarkTheme";
+import { HelpHint } from "@/components/guide/HelpHint";
 import { onlyDigits } from "@/lib/validators";
 import type { MissingData, MissingItem, OrderClient } from "./types";
 
@@ -188,7 +189,13 @@ export function CompleteDataSheet({
     <Sheet open={open} onOpenChange={(o) => !o && onClose()}>
       <SheetContent side="bottom" className="max-h-[92vh] overflow-y-auto rounded-t-3xl">
         <SheetHeader>
-          <SheetTitle>Completar dados</SheetTitle>
+          <SheetTitle>
+            Completar dados
+            <HelpHint
+              label="Ajuda: dados pendentes"
+              text="A OS foi aberta rápido. Preencha o que tiver agora; o sistema só deixa finalizar com tudo preenchido."
+            />
+          </SheetTitle>
           <SheetDescription>
             Falta: {labels || "nada"}. Preencha o que tiver agora; o resto continua pendente.
           </SheetDescription>

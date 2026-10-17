@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { KeyRound, Loader2 } from "lucide-react";
 import { SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
@@ -8,12 +9,16 @@ import { PasswordStrength } from "@/components/fields/PasswordStrength";
 import { apiFetch } from "@/lib/api";
 import { isStrongPassword } from "@/lib/validators";
 import { useDarkTheme } from "@/hooks/useDarkTheme";
+import { useMe } from "@/lib/me";
+import { resetTour } from "@/lib/tours";
 
 const inputClass =
   "h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
 export function SettingsPage() {
   useDarkTheme();
+  const navigate = useNavigate();
+  const { me } = useMe();
 
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -129,6 +134,23 @@ export function SettingsPage() {
                   {loading ? "Salvando..." : "Salvar nova senha"}
                 </Button>
               </form>
+            </div>
+
+            <div className="mt-6 rounded-3xl border border-border bg-card p-6">
+              <h2 className="text-lg font-semibold">Passo a passo</h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Reveja o tour rápido que mostra como usar o sistema.
+              </p>
+              <Button
+                variant="outline"
+                className="mt-4 h-11"
+                onClick={() => {
+                  if (me) resetTour(localStorage, me.user_id);
+                  navigate("/dashboard");
+                }}
+              >
+                Rever passo a passo
+              </Button>
             </div>
           </div>
         </div>

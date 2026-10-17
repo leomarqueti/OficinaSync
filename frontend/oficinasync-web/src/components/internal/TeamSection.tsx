@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { apiFetch } from "@/lib/api";
+import { HelpHint } from "@/components/guide/HelpHint";
 import { roleLabels } from "@/lib/me";
 import type { InternalData, TeamMember } from "@/lib/internalApi";
 
@@ -100,7 +101,13 @@ export function TeamSection({ data, onChanged }: Props) {
 
   return (
     <section className="space-y-4 rounded-3xl border border-border bg-card p-5" data-tour="team">
-      <h2 className="text-lg font-semibold">Equipe nesta OS</h2>
+      <h2 className="text-lg font-semibold">
+        Equipe nesta OS
+        <HelpHint
+          label="Ajuda: equipe"
+          text="Marque quem ajudou, com o quê e quanto da OS (%). A sua parte é o que sobra. Isso vira a base da comissão."
+        />
+      </h2>
 
       {can.change_responsible && team.length > 0 && (
         <label className="flex flex-wrap items-center gap-2 text-sm">

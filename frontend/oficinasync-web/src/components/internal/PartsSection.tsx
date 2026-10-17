@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { apiFetch } from "@/lib/api";
 import { compressImage } from "@/lib/imageCompression";
 import { formatMoney, formatQty, type PartView } from "@/lib/internalApi";
+import { HelpHint } from "@/components/guide/HelpHint";
 import { PartSheet } from "./PartSheet";
 
 type Props = {
@@ -73,7 +74,13 @@ export function PartsSection({ orderId, parts, canEdit, onChanged }: Props) {
   return (
     <section className="space-y-3 rounded-3xl border border-border bg-card p-5" data-tour="parts">
       <div className="flex items-center justify-between gap-2">
-        <h2 className="text-lg font-semibold">Peças</h2>
+        <h2 className="text-lg font-semibold">
+          Peças
+          <HelpHint
+            label="Ajuda: peças retiradas e usadas"
+            text="Registre as peças que você pegou no estoque. No final, informe só o que você realmente usou — o escritório lança só o que foi usado. Sem código? Tire foto da caixa."
+          />
+        </h2>
         {canEdit && (
           <Button variant="outline" className="h-10" onClick={() => setOpen(true)}>
             <Plus className="mr-1.5 h-4 w-4" />

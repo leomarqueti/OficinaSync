@@ -7,6 +7,9 @@ import { DashboardSidebar } from "@/components/DashboardSidebar";
 import { apiFetch } from "@/lib/api";
 import { useDarkTheme } from "@/hooks/useDarkTheme";
 import { carDetails, carTitle, clientLabel, kmLabel } from "@/lib/display";
+import { GuidedTour } from "@/components/guide/GuidedTour";
+import { useMe } from "@/lib/me";
+import { markTourDone, shouldShowTour, tourSteps } from "@/lib/tours";
 
 type OpenServiceOrder = {
   service_order_id: number;
@@ -130,6 +133,13 @@ export function DashboardPage() {
 
   const [orders, setOrders] = useState<OpenServiceOrder[]>([]);
   const [me, setMe] = useState<Me | null>(null);
+  const { me: meForTour } = useMe();
+  const [tourOpen, setTourOpen] = useState(false);
+
+  // passo a passo só no primeiro acesso de cada usuário (e de novo se ele pedir em Configurações)
+  useEffect(() => {
+    if (meForTour && shouldShowTour(localStorage, meForTour.user_id)) setTourOpen(true);
+  }, [meForTour]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("open");
@@ -224,6 +234,7 @@ export function DashboardPage() {
 
             <div className="mt-6">
               <Button
+                data-tour="new-os"
                 className="h-12 w-full rounded-full bg-brand text-brand-foreground hover:bg-brand/90"
                 onClick={() => navigate("/os-client-create")}
               >
@@ -474,6 +485,17 @@ export function DashboardPage() {
           </div>
         </div>
       </SidebarInset>
+
+      {meForTour && (
+        <GuidedTour
+          steps={tourSteps(meForTour.role)}
+          open={tourOpen}
+          onClose={() => {
+            markTourDone(localStorage, meForTour.user_id);
+            setTourOpen(false);
+          }}
+        />
+      )}
     </>
   );
 }

@@ -43,6 +43,12 @@ export default async function globalSetup() {
   }
   const { access_token } = (await response.json()) as { access_token: string };
 
+  const tourFlag = async (token: string) => {
+    const res = await fetch(`${BACKEND_URL}/users/me`, { headers: { Authorization: `Bearer ${token}` } });
+    const me = (await res.json()) as { user_id: number };
+    return { name: `oficinasync_tour_v1_${me.user_id}`, value: '1' };
+  };
+
   const authDir = path.resolve(here, '.auth');
   mkdirSync(authDir, { recursive: true });
   writeFileSync(
@@ -52,7 +58,7 @@ export default async function globalSetup() {
       origins: [
         {
           origin: FRONTEND_ORIGIN,
-          localStorage: [{ name: 'token', value: access_token }],
+          localStorage: [{ name: 'token', value: access_token }, await tourFlag(access_token)],
         },
       ],
     }),
@@ -75,7 +81,7 @@ export default async function globalSetup() {
       origins: [
         {
           origin: FRONTEND_ORIGIN,
-          localStorage: [{ name: 'token', value: mech.access_token }],
+          localStorage: [{ name: 'token', value: mech.access_token }, await tourFlag(mech.access_token)],
         },
       ],
     }),

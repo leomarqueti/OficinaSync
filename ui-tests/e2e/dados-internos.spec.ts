@@ -196,3 +196,34 @@ test.describe('mecânico', () => {
     await expect(page.getByRole('heading', { name: 'Minhas comissões' })).toBeVisible();
   });
 });
+
+test('passo a passo: aparece no primeiro acesso, não volta depois, e dá pra rever em Configurações', async ({ page }) => {
+  // o global-setup marca o passo a passo como visto; aqui simulamos o "primeiro acesso"
+  await page.goto('/configuracoes');
+  await page.evaluate(() => Object.keys(localStorage).filter((k) => k.startsWith('oficinasync_tour_')).forEach((k) => localStorage.removeItem(k)));
+  await page.goto('/dashboard');
+
+  const tour = page.getByRole('dialog', { name: 'Passo a passo' });
+  await expect(tour).toBeVisible();
+  await expect(tour.getByText(/Passo 1 de/)).toBeVisible();
+
+  await tour.getByRole('button', { name: 'Próximo' }).click();
+  await expect(tour.getByText(/Passo 2 de/)).toBeVisible();
+  await tour.getByRole('button', { name: 'Pular' }).click();
+  await expect(tour).toHaveCount(0);
+
+  await page.reload();
+  await expect(page.getByRole('dialog', { name: 'Passo a passo' })).toHaveCount(0);
+
+  await page.goto('/configuracoes');
+  await page.getByRole('button', { name: 'Rever passo a passo' }).click();
+  await expect(page).toHaveURL(/\/dashboard$/);
+  await expect(page.getByRole('dialog', { name: 'Passo a passo' })).toBeVisible();
+});
+
+test('dicas "?" explicam peça usada x retirada', async ({ page }) => {
+  const orderId = await openOrder(page);
+  await page.goto(`/os/${orderId}/escritorio`);
+  await page.getByRole('button', { name: 'Ajuda: peças retiradas e usadas' }).click();
+  await expect(page.getByRole('note')).toContainText('realmente usou');
+});
