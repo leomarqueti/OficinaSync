@@ -5,6 +5,7 @@ import { ServiceOrders } from '../serviceOrder/serviceOrder.entity';
 import { ServiceOrdersModule } from '../serviceOrder/serviceOrder.module';
 import { Users } from '../users/users.entity';
 import { UsersModule } from '../users/users.module';
+import { CommissionsController } from './commissions.controller';
 import { InternalContextService } from './internal-context.service';
 import { InternalController } from './internal.controller';
 import { ServiceOrderParticipants } from './service-order-participant.entity';
@@ -30,7 +31,7 @@ import { TeamService } from './team.service';
     MinioModule,
     MediaModule,
   ],
-  controllers: [InternalController],
+  controllers: [InternalController, CommissionsController],
   providers: [InternalContextService, TeamService, PartsService],
   exports: [InternalContextService],
 })

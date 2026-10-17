@@ -18,13 +18,13 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import { JwtAuthGuard } from '../AuthModule/jwt-auth.guard';
 import { SetNotesDto } from './dto/notes.dto';
+import { SetParticipantsDto } from './dto/participants.dto';
 import { CreatePartDto, UpdatePartDto } from './dto/part.dto';
 import { SetResponsibleDto } from './dto/responsible.dto';
 import { CreateServiceItemDto, UpdateServiceItemDto } from './dto/service-item.dto';
 import { UploadConcurrencyInterceptor } from '../medias/upload-concurrency.interceptor';
 import { HARD_UPLOAD_LIMIT_BYTES } from '../minio/upload-limits';
 import { InternalContextService } from './internal-context.service';
-import { responsibleShare } from './internal-access';
 import { PartsService } from './parts.service';
 import { TeamService } from './team.service';
 
@@ -58,9 +58,7 @@ export class InternalController {
       notes: ctx.can.edit_notes ? ctx.order.internal_notes : null,
       parts: await this.partsService.listParts(ctx),
       services: await this.partsService.listServices(ctx),
-      participants: [],
-      responsible_share_percent: responsibleShare([]),
-      my_share_percent: null,
+      ...(await this.team.listParticipants(ctx)),
       can: ctx.can,
     };
   }
@@ -69,6 +67,12 @@ export class InternalController {
   @HttpCode(HttpStatus.OK)
   setNotes(@Param('id', ParseIntPipe) id: number, @Body() dto: SetNotesDto, @Req() req: any) {
     return this.team.setNotes(id, req.user.sub, dto.notes);
+  }
+
+  @Put('service_orders/:id/participants')
+  @HttpCode(HttpStatus.OK)
+  setParticipants(@Param('id', ParseIntPipe) id: number, @Body() dto: SetParticipantsDto, @Req() req: any) {
+    return this.team.setParticipants(id, req.user.sub, dto);
   }
 
   @Patch('service_orders/:id/responsible')
