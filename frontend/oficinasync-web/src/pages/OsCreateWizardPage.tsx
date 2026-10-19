@@ -33,7 +33,7 @@ import {
   quickClientValid,
 } from "@/lib/quickOpen";
 import { carTitle, clientLabel } from "@/lib/display";
-import { fieldClass } from "@/components/kit";
+import { AlertBanner, fieldClass } from "@/components/kit";
 
 const inputClass = fieldClass;
 
@@ -209,6 +209,25 @@ export function OsCreateWizardPage() {
 
     return () => clearTimeout(handle);
   }, [clientSearch, selectedClientId]);
+
+  // CPF já cadastrado em outro cliente: avisa na hora e oferece reaproveitar (antes só travava no fim)
+  const [cpfOwner, setCpfOwner] = useState<ExistingClient | null>(null);
+  useEffect(() => {
+    const digits = onlyDigits(cpf);
+    if (selectedClientId !== null || !isValidCpf(digits)) {
+      setCpfOwner(null);
+      return;
+    }
+    let alive = true;
+    apiFetch<ExistingClient[]>(`/clients?search=${digits}`, { silent: true })
+      .then((found) => {
+        if (alive) setCpfOwner(found.find((c) => onlyDigits(c.cpf ?? "") === digits) ?? null);
+      })
+      .catch(() => alive && setCpfOwner(null));
+    return () => {
+      alive = false;
+    };
+  }, [cpf, selectedClientId]);
 
   // veículos já cadastrados pro cliente selecionado
   useEffect(() => {
@@ -612,6 +631,11 @@ export function OsCreateWizardPage() {
 
             <PhoneField value={phone} onChange={setPhone} />
             <CpfField value={cpf} onChange={setCpf} />
+            {cpfOwner && (
+              <AlertBanner actionLabel="Usar esse cadastro" onAction={() => selectClient(cpfOwner)}>
+                Este CPF já é do cliente {cpfOwner.name}.
+              </AlertBanner>
+            )}
 
             <FieldShell label="Email" htmlFor="email" optional>
               <input
