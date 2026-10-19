@@ -114,6 +114,15 @@ export class CarsService {
         { tenant: { id: tenantId }, plate: plateLike },
         { tenant: { id: tenantId }, model: ILike(`%${term}%`) },
         { tenant: { id: tenantId }, brand: ILike(`%${term}%`) },
+        // nome do dono, sem diferenciar acento nem maiúscula ("antonio" acha "Antônio")
+        {
+          tenant: { id: tenantId },
+          client: {
+            name: Raw((alias) => `${alias} COLLATE Latin1_General_CI_AI LIKE :ownerTerm COLLATE Latin1_General_CI_AI`, {
+              ownerTerm: `%${term}%`,
+            }),
+          },
+        },
       ],
       relations: { client: true },
       order: { created_at: 'DESC' },

@@ -48,7 +48,11 @@ export class ClientsService {
       });
 
       if (checkClientExistence) {
-        throw new ConflictException('Usuario ja cadastrado!');
+        throw new ConflictException({
+          statusCode: 409,
+          message: `Este CPF já é do cliente ${checkClientExistence.name}. Use o cadastro dele em vez de criar outro.`,
+          existing_client: { client_id: checkClientExistence.client_id, name: checkClientExistence.name },
+        });
       }
     }
 

@@ -21,5 +21,6 @@ export default new DataSource({
   options: {
     encrypt: false,
     trustServerCertificate: true,
+    useUTC: true,
   },
 });

@@ -66,6 +66,9 @@ export const PASSWORD_PEPPER = 'PASSWORD_PEPPER';
         migrationsRun: true,
         options: {
           encrypt: false, //Aqui diz para o typeOrm não criptografar a conexão com o banco de dados, isso é necessário para o SQL Server, caso contrário, ele não vai conseguir se conectar. 10/03/2026
+          // Datas sempre em UTC (GETDATE() do SQL Server é UTC): sem isso, num servidor fora de UTC as datas
+          // gravadas pelo Node e as do banco ficavam 3h desencontradas (Seu Zé/Dona Cida, 2026-10-17).
+          useUTC: true,
           trustServerCertificate: true, //Aqui diz para o typeOrm confiar no certificado do servidor, isso é necessário para o SQL Server, caso contrário, ele não vai conseguir se conectar. 10/03/2026.
         },
       }),
