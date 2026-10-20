@@ -16,7 +16,7 @@ import {
   UseGuards,
   Req,
 } from '@nestjs/common';
-import { CarsService } from './cars.service';
+import { CarsService, type PlateMatch } from './cars.service';
 import { JwtAuthGuard } from '../AuthModule/jwt-auth.guard';
 import { CreateCarDto } from './dto/create.cars.dto';
 import { UpdateCarDto } from './dto/update.cars.dto';
@@ -58,6 +58,14 @@ export class CarsController {
       : await this.carsService.findAll(userId, search);
 
     return plainToInstance(ResponseCarDto, cars);
+  }
+
+  // antes de ':id' — senão "by-plate" cai no ParseIntPipe do :id
+  @Get('by-plate/:plate')
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.OK)
+  async findByPlate(@Param('plate') plate: string, @Req() req: any): Promise<PlateMatch[]> {
+    return this.carsService.findByPlate(plate, req.user.sub);
   }
 
   @Get(':id')

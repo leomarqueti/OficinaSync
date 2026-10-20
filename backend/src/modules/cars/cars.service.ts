@@ -7,6 +7,20 @@ import { ILike, Raw, Repository } from 'typeorm';
 import { UsersService } from '../users/users.service';
 import { ClientsService } from '../clients/clients.service';
 
+export type PlateMatch = {
+  car_id: number;
+  plate: string;
+  brand: string | null;
+  model: string | null;
+  year: number | null;
+  fuel_type: string | null;
+  color: string | null;
+  chassis: string | null;
+  /** mileage_in da OS mais recente do carro ?? cars.mileage_in */
+  last_mileage: number | null;
+  owner: { client_id: number; name: string } | null;
+};
+
 @Injectable()
 export class CarsService {
   constructor(
@@ -127,6 +141,49 @@ export class CarsService {
       relations: { client: true },
       order: { created_at: 'DESC' },
       take: 20,
+    });
+  }
+
+  /**
+   * Carro(s) da oficina com essa placa exata (normalizada: maiúscula, só letras e números).
+   * Usado na primeira tela da abertura de OS pra reconhecer o carro e não duplicar.
+   * Mais de um resultado só acontece com dado antigo duplicado — a tela deixa escolher.
+   */
+  async findByPlate(rawPlate: string, userId: number): Promise<PlateMatch[]> {
+    const user = await this.usersService.findById(userId);
+    if (!user.tenant) {
+      throw new UnauthorizedException();
+    }
+
+    const normalized = rawPlate.toUpperCase().replace(/[^A-Z0-9]/g, '');
+    if (!normalized) return [];
+
+    // Raw: com ILike/igualdade direta o mssql tipa o parâmetro como varchar(7) da coluna (gotcha do CLAUDE.md)
+    const cars = await this.carsRepository.find({
+      where: {
+        tenant: { id: user.tenant.id },
+        plate: Raw((alias) => `UPPER(REPLACE(${alias}, '-', '')) = :plateExact`, { plateExact: normalized }),
+      },
+      relations: { client: true, serviceOrders: true },
+      order: { created_at: 'DESC' },
+    });
+
+    return cars.map((car) => {
+      const lastVisit = [...(car.serviceOrders ?? [])]
+        .filter((so) => so.mileage_in != null)
+        .sort((x, y) => new Date(y.created_at).getTime() - new Date(x.created_at).getTime())[0];
+      return {
+        car_id: car.car_id,
+        plate: car.plate,
+        brand: car.brand,
+        model: car.model,
+        year: car.year,
+        fuel_type: car.fuel_type,
+        color: car.color,
+        chassis: car.chassis,
+        last_mileage: lastVisit?.mileage_in ?? car.mileage_in ?? null,
+        owner: car.client ? { client_id: car.client.client_id, name: car.client.name } : null,
+      };
     });
   }
 
