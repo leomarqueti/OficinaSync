@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { Car, Check, ChevronDown, ChevronUp, Loader2, Mic, Plus, Search, Trash2, Video, X } from "lucide-react";
@@ -34,6 +34,7 @@ import {
 } from "@/lib/quickOpen";
 import { carTitle, clientLabel } from "@/lib/display";
 import { AlertBanner, fieldClass } from "@/components/kit";
+import { clearOsDraft, hasDraftContent, loadOsDraft, saveOsDraft } from "@/lib/osDraft";
 
 const inputClass = fieldClass;
 
@@ -109,19 +110,28 @@ function formatAnswers(answers: Record<string, string>): string {
 
 export function OsCreateWizardPage() {
   const navigate = useNavigate();
-  const [step, setStep] = useState(0);
+  // rascunho guardado no aparelho (interrupção no balcão não apaga o que foi digitado)
+  const [draft] = useState(() => {
+    try {
+      return loadOsDraft(window.localStorage);
+    } catch {
+      return null;
+    }
+  });
+  const df = draft?.fields ?? {};
+  const [step, setStep] = useState(() => Math.min(draft?.step ?? 0, 3));
   const [submitting, setSubmitting] = useState(false);
   // modo rápido: abre a OS só com a placa; o resto é cobrado ao finalizar (o backend garante)
-  const [quickMode, setQuickMode] = useState(false);
+  const [quickMode, setQuickMode] = useState(draft?.quickMode ?? false);
 
   // passo 1 — cliente
-  const [name, setName] = useState("");
-  const [phone, setPhone] = useState("");
-  const [cpf, setCpf] = useState("");
-  const [email, setEmail] = useState("");
-  const [address, setAddress] = useState("");
+  const [name, setName] = useState(df.name ?? "");
+  const [phone, setPhone] = useState(df.phone ?? "");
+  const [cpf, setCpf] = useState(df.cpf ?? "");
+  const [email, setEmail] = useState(df.email ?? "");
+  const [address, setAddress] = useState(df.address ?? "");
 
-  const [selectedClientId, setSelectedClientId] = useState<number | null>(null);
+  const [selectedClientId, setSelectedClientId] = useState<number | null>(draft?.selectedClientId ?? null);
   const [clientSearch, setClientSearch] = useState("");
   const [clientResults, setClientResults] = useState<ExistingClient[]>([]);
   const [searchingClients, setSearchingClients] = useState(false);
@@ -129,26 +139,26 @@ export function OsCreateWizardPage() {
   // passo 2 — veículo
   const [existingCars, setExistingCars] = useState<ExistingCar[]>([]);
   const [loadingCars, setLoadingCars] = useState(false);
-  const [selectedCarId, setSelectedCarId] = useState<number | null>(null);
+  const [selectedCarId, setSelectedCarId] = useState<number | null>(draft?.selectedCarId ?? null);
   const [carMode, setCarMode] = useState<"existing" | "new">("new");
   // KM da visita atual quando reaproveita um veículo — nunca sobrescreve o
   // mileage_in do cadastro do carro (perderia o histórico de KM entre visitas).
-  const [currentMileage, setCurrentMileage] = useState("");
-  const [plate, setPlate] = useState("");
-  const [brand, setBrand] = useState("");
-  const [brandMode, setBrandMode] = useState<"list" | "custom">("list");
-  const [model, setModel] = useState("");
-  const [year, setYear] = useState("");
-  const [fuelType, setFuelType] = useState("flex");
-  const [color, setColor] = useState("");
-  const [chassis, setChassis] = useState("");
-  const [mileageIn, setMileageIn] = useState("");
+  const [currentMileage, setCurrentMileage] = useState(df.currentMileage ?? "");
+  const [plate, setPlate] = useState(df.plate ?? "");
+  const [brand, setBrand] = useState(df.brand ?? "");
+  const [brandMode, setBrandMode] = useState<"list" | "custom">(df.brandMode === "custom" ? "custom" : "list");
+  const [model, setModel] = useState(df.model ?? "");
+  const [year, setYear] = useState(df.year ?? "");
+  const [fuelType, setFuelType] = useState(df.fuelType ?? "flex");
+  const [color, setColor] = useState(df.color ?? "");
+  const [chassis, setChassis] = useState(df.chassis ?? "");
+  const [mileageIn, setMileageIn] = useState(df.mileageIn ?? "");
 
   // passo 3 — defeito relatado
-  const [complaint, setComplaint] = useState("");
+  const [complaint, setComplaint] = useState(df.complaint ?? "");
   const [clientMedia, setClientMedia] = useState<ClientMediaItem[]>([]);
   const [showQuestionnaire, setShowQuestionnaire] = useState(false);
-  const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [answers, setAnswers] = useState<Record<string, string>>(draft?.answers ?? {});
 
   // passo 4 — fotos de entrada
   const [photos, setPhotos] = useState<Record<PhotoKey, File | null>>({
@@ -160,6 +170,36 @@ export function OsCreateWizardPage() {
   const [extraPhotos, setExtraPhotos] = useState<ExtraPhotoItem[]>([]);
 
   const stepCount = 5;
+
+  // salva o rascunho a cada mudança; avisa uma vez quando recuperou um
+  useEffect(() => {
+    const current = {
+      step,
+      quickMode,
+      fields: { name, phone, cpf, email, address, plate, brand, model, year, color, chassis, mileageIn, complaint, currentMileage, fuelType, brandMode },
+      answers,
+      selectedClientId,
+      selectedCarId,
+    };
+    if (hasDraftContent(current)) saveOsDraft(window.localStorage, current);
+  }, [step, quickMode, name, phone, cpf, email, address, plate, brand, model, year, color, chassis, mileageIn, complaint, currentMileage, fuelType, brandMode, answers, selectedClientId, selectedCarId]);
+
+  const draftToastShown = useRef(false);
+  useEffect(() => {
+    if (!draft || !hasDraftContent(draft) || draftToastShown.current) return;
+    draftToastShown.current = true;
+    toast("Rascunho recuperado", {
+      description: "Continuamos de onde você parou. As fotos precisam ser tiradas de novo.",
+      duration: 10000,
+      action: {
+        label: "Começar do zero",
+        onClick: () => {
+          clearOsDraft(window.localStorage);
+          window.location.reload();
+        },
+      },
+    });
+  }, [draft]);
 
   const clientValid =
     selectedClientId !== null ||
@@ -487,6 +527,7 @@ export function OsCreateWizardPage() {
         await apiFetch(`/sections/${section.section_id}/publish`, { method: "PATCH" });
       }
 
+      clearOsDraft(window.localStorage);
       toast.success("OS criada com sucesso!");
       navigate(`/os/${serviceOrder.service_order_id}`);
     } catch {

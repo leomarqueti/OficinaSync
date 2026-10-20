@@ -51,4 +51,22 @@ test('CPF que já é de outro cliente: avisa na hora e oferece usar o cadastro (
   await expect(page.getByText('Cliente já cadastrado')).toBeVisible();
 });
 
+test('interrupção no balcão: sair no meio do cadastro e voltar recupera o que foi digitado', async ({ page }) => {
+  await page.goto('/os-client-create');
+  await page.evaluate(() => localStorage.removeItem('oficinasync_os_draft'));
+  await page.reload();
+  await page.locator('#name').fill('Dona Interrompida');
+  await page.locator('#address').fill('Rua do Balcão, 5');
+
+  await page.goto('/dashboard'); // telefone tocou, foi atender
+  await page.goto('/os-client-create');
+
+  await expect(page.locator('#name')).toHaveValue('Dona Interrompida');
+  await expect(page.locator('#address')).toHaveValue('Rua do Balcão, 5');
+  await expect(page.getByText('Rascunho recuperado')).toBeVisible();
+
+  await page.getByRole('button', { name: 'Começar do zero' }).click();
+  await expect(page.locator('#name')).toHaveValue('');
+});
+
 export { api, generateCpf, randomPlate };
