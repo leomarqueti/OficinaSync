@@ -504,6 +504,26 @@ Spec: `docs/superpowers/specs/2026-10-20-tela-da-os-modo-simples-design.md`. A `
 - `SectionStepper` e `IntakeCard` foram apagados.
 - **Bug achado durante o trabalho:** numa OS sem check-in, um diagnóstico em rascunho sumia da tela. Corrigido com `listedSections`; testes `osFlow.test.ts` e `tela-da-os.spec.ts` ("fora de ordem").
 
+### Finalizar OS no passo a passo (feito, 2026-10-20)
+
+Pedido do Leonardo testando no celular: fotos finais sem galeria, texto se perdia e fora do padrão da abertura. A `OsFinishPage` (`/os/:id/finalizar`) virou passo a passo com a `StepFrame` da abertura. Sem mudança no backend.
+
+- **Telas:**
+  1. Como terminou? Resolvido / em parte / não resolvido; o toque avança.
+  2. Causa (opcional, ditado).
+  3. Como o carro saiu (opcional, ditado; vira as `notes` da etapa final quando ela é criada aqui).
+  4. Fotos de saída (4 obrigatórias + extras).
+  5. Conferir, com lápis pra corrigir cada item, e "Finalizar OS".
+- **Avisos:** peças sem acerto aparecem na 1ª e na última tela, sem bloquear. Dados pendentes abrem o `CompleteDataSheet` antes de qualquer upload.
+- **Lógica pura** em `src/lib/finishFlow.ts`:
+  - `finishMissing`;
+  - rascunho `oficinasync_finish_draft_<id>` (7 dias; texto e tela; as fotos vão pro `photoStore`);
+  - `submitFinish` em fila e retomável: etapa final existente ou criada → fotos "Frente na saída"… uma por vez → publica → `PATCH /finish` (textos em branco não vão).
+- **`PhotoSidesCapture`** (`components/guided-open/`): as 4 fotos guiadas (câmera embutida + "Escolher da galeria" + ilustrações + extras), compartilhado entre a abertura (`PhotosStep`) e a finalização.
+- **`photoStore` agora tem `scope`** (`"open"` e `"finish-<id>"`): limpar um conjunto nunca apaga o outro.
+- **Testes:** `unit/finishFlow.test.ts`, `e2e/finalizar-guiado.spec.ts`. Helpers dos testes de tela ficam em `e2e/helpers.ts`: importar de um `.spec.ts` faz o Playwright rodar os testes daquele arquivo junto.
+- **Correção junto:** o `PhotoCaptureButton` dos testes (antes e depois, compressão, injetores, achado) ganhou "Galeria". Com `capture`, o Android só abre a câmera.
+
 ### Agentes por área (time de subagentes do projeto)
 
 Definições em `.claude/agents/` (carregam ao abrir a sessão; `/agents` lista). Cada um é dono de uma área e conhece as regras deste arquivo. Eles trabalham **sob demanda** (não ficam vigiando sozinhos); rotinas recorrentes precisam de uma tarefa agendada.

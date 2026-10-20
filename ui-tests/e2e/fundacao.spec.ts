@@ -168,11 +168,12 @@ test('publicar etapa comemora: "O cliente já pode ver"', async ({ page }) => {
   await expect(page.getByText('O cliente já pode ver', { exact: true })).toBeVisible();
 });
 
-test('finalizar OS: o botão de escolher foto é legível no tema escuro', async ({ page }) => {
+test('finalizar OS: as fotos de saída têm câmera embutida e "Escolher da galeria"', async ({ page }) => {
   const orderId = await openOrder(page);
   await page.goto(`/os/${orderId}/finalizar`);
-  const input = page.locator('input[type="file"]').first();
-  await expect(input).toBeAttached();
-  const color = await input.evaluate((el) => getComputedStyle(el, '::file-selector-button').color);
-  expect(color).toBe('rgb(10, 10, 10)');
+  await page.getByRole('button', { name: 'Resolvido', exact: true }).click();
+  await page.getByRole('button', { name: 'Continuar' }).click();
+  await page.getByRole('button', { name: 'Continuar' }).click();
+  await expect(page.getByRole('button', { name: /tirar foto da frente/i })).toBeVisible();
+  await expect(page.getByText('Escolher da galeria')).toBeVisible();
 });

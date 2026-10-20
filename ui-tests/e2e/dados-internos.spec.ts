@@ -237,11 +237,11 @@ test('finalizar: avisa das peças retiradas sem acerto (sem bloquear) e some qua
 
   await page.goto(`/os/${orderId}/finalizar`);
   await expect(page.getByText(/1 peça\(s\) retirada\(s\) sem acerto/)).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Finalizar ordem de serviço' })).toBeEnabled();
+  await expect(page.getByRole('button', { name: 'Resolvido', exact: true })).toBeEnabled(); // avisa, não bloqueia
 
   await api(page, 'PATCH', `/service_orders/${orderId}/parts/${part.json.part_id}`, { used_quantity: 3 });
   await page.reload();
-  await expect(page.getByRole('button', { name: 'Finalizar ordem de serviço' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /como terminou/i })).toBeVisible();
   await expect(page.getByText(/retirada\(s\) sem acerto/)).toHaveCount(0);
 });
 

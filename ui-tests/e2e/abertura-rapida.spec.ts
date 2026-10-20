@@ -84,12 +84,22 @@ test('finalizar com dados pendentes abre a folha antes de subir qualquer foto', 
   await page.getByRole('dialog', { name: 'Mais ações' }).getByRole('button', { name: 'Finalizar OS' }).click();
   await expect(page).toHaveURL(/\/finalizar$/);
 
+  await page.getByRole('button', { name: 'Resolvido', exact: true }).click();
+  await page.getByRole('button', { name: 'Continuar' }).click();
+  await page.getByRole('button', { name: 'Continuar' }).click();
+  for (let i = 0; i < 4; i++) {
+    await page.getByRole('button', { name: /^tirar foto d/i }).click();
+    await page.getByRole('dialog', { name: /câmera/i }).getByRole('button', { name: 'Disparar' }).click();
+    await expect(page.getByRole('dialog', { name: /câmera/i })).toHaveCount(0);
+  }
+  await page.getByRole('button', { name: 'Conferir', exact: true }).click();
+
   const uploads: string[] = [];
   page.on('request', (req) => {
     if (req.url().includes('/medias') && req.method() === 'POST') uploads.push(req.url());
   });
 
-  await page.getByRole('button', { name: 'Finalizar ordem de serviço' }).click();
+  await page.getByRole('button', { name: 'Finalizar OS' }).click();
 
   await expect(page.getByRole('dialog').getByText('Completar dados')).toBeVisible();
   expect(uploads).toHaveLength(0);
@@ -210,14 +220,13 @@ test('editar um carro só com a placa muda só o que foi preenchido (sem ano 0, 
   expect(car.fuel_type).toBeNull();
 });
 
-test('a tela de finalizar não escurece o resto da página quando não há pendência aberta', async ({ page }) => {
+test('a tela de finalizar abre na primeira pergunta, sem folha de pendência aberta', async ({ page }) => {
   const plate = randomPlate();
   await openQuickOrder(page, plate, `Teste de tema ${plate}`);
   await page.getByRole('button', { name: 'Mais ações' }).click();
   await page.getByRole('dialog', { name: 'Mais ações' }).getByRole('button', { name: 'Finalizar OS' }).click();
   await expect(page).toHaveURL(/\/finalizar$/);
 
-  await expect(page.getByText(/Finalizar OS #/)).toBeVisible();
-  const dark = await page.evaluate(() => document.body.classList.contains('dark'));
-  expect(dark).toBe(false);
+  await expect(page.getByRole('heading', { name: /como terminou/i })).toBeVisible();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
 });

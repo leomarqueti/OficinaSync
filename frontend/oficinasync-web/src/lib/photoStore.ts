@@ -1,6 +1,8 @@
 // Fotos da abertura de OS guardadas no aparelho (IndexedDB) assim que são tiradas.
 // No Android com pouca memória a página pode ser fechada por trás e recarregar — as fotos já
 // tiradas voltam daqui. Limpo ao abrir a OS ou em "Começar do zero".
+// `scope` separa os conjuntos: "open" (abertura) e "finish-<id>" (fotos de saída de cada OS) —
+// limpar um nunca apaga o outro.
 
 const DB_NAME = "oficinasync";
 const STORE = "os_draft_photos";
@@ -31,16 +33,16 @@ async function withStore<T>(mode: IDBTransactionMode, fn: (store: IDBObjectStore
 }
 
 /** Guarda a foto (chave: "front" | "rear" | "left" | "right" | "extra-0"…). Falha em silêncio. */
-export async function savePhoto(key: string, file: File): Promise<void> {
+export async function savePhoto(key: string, file: File, scope = "open"): Promise<void> {
   try {
-    await withStore("readwrite", (s) => s.put(file, key));
+    await withStore("readwrite", (s) => s.put(file, `${scope}:${key}`));
   } catch {
     // sem IndexedDB (aba anônima, cota): segue só com a foto em memória
   }
 }
 
 /** Todas as fotos guardadas, por chave. */
-export async function loadPhotos(): Promise<Record<string, File>> {
+export async function loadPhotos(scope = "open"): Promise<Record<string, File>> {
   try {
     const out: Record<string, File> = {};
     const db = await openDb();
@@ -50,7 +52,8 @@ export async function loadPhotos(): Promise<Record<string, File>> {
       req.onsuccess = () => {
         const cursor = req.result;
         if (!cursor) return;
-        out[String(cursor.key)] = cursor.value as File;
+        const key = String(cursor.key);
+        if (key.startsWith(`${scope}:`)) out[key.slice(scope.length + 1)] = cursor.value as File;
         cursor.continue();
       };
       tx.oncomplete = () => {
@@ -68,9 +71,10 @@ export async function loadPhotos(): Promise<Record<string, File>> {
   }
 }
 
-export async function clearPhotos(): Promise<void> {
+export async function clearPhotos(scope = "open"): Promise<void> {
   try {
-    await withStore("readwrite", (s) => s.clear());
+    // apaga só as chaves "<scope>:..." (faixa [scope:, scope;) — ";" vem logo depois de ":")
+    await withStore("readwrite", (s) => s.delete(IDBKeyRange.bound(`${scope}:`, `${scope};`, false, true)));
   } catch {
     // nada a limpar
   }
