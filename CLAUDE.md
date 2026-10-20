@@ -443,6 +443,40 @@ Personas simuladas (Seu Zé 6/10 no modo simples, Dona Cida 6,5/10 no balcão �
 - Ambiente de teste: `FRONTEND_URL` na porta 5183 (o link do cliente apontava pra 5173).
 - **Ficou pra Fase 2** (tela da OS): 6 botões no topo, "Finalizar" principal cedo demais, barra de baixo some dentro da OS, voltar pequeno, botões de etapa de 34px.
 
+### Abertura de OS guiada — uma pergunta por tela (feito, 2026-10-19; Fase 2 da reforma visual)
+
+Substitui o `OsCreateWizardPage` (apagado, junto com `WizardShell`, `EntryPhotoSlot`, `lib/quickOpen.ts` e o rascunho v1) na rota `/os-client-create`. Spec: `docs/superpowers/specs/2026-10-19-abertura-de-os-guiada-design.md`; plano: `docs/superpowers/plans/2026-10-19-abertura-de-os-guiada.md`.
+
+- **Telas** (`GuidedOpenPage` + `src/components/guided-open/`):
+  1. Placa
+  2. Marca
+  3. Modelo
+  4. Ano (2 a 4: toque e avança)
+  5. KM, com `painel-km.svg` e o hodômetro piscando
+  6. Combustível, cor e chassi (opcionais)
+  7. Defeito: **texto obrigatório** + ditado grátis do navegador (`DictationButton`/`lib/dictation.ts`) + áudio e vídeo opcionais
+  8. "O cliente está aqui?" (Não → o escritório completa)
+  9. 4 fotos guiadas **obrigatórias**, com as ilustrações do Leonardo em `src/assets/illustrations/`, + "mais fotos?"
+  10. Conferir
+
+  Mecânico e escritório usam a mesma tela.
+- **Regras puras** em `src/lib/guidedOpen.ts`: `stepsFor` (carro reconhecido pula o que o cadastro já tem; "corrigir" reabre tudo), `missingFor` (vira o `nextHint`), `buildCarPayload` (carro novo → create; reconhecido → patch só do que mudou; **nunca cria carro repetido**), `buildOrderPayload`, `editPlate`. Catálogo de modelos e cores em `src/lib/carCatalog.ts`.
+- **Envio retomável e em fila** (`src/lib/guidedSubmit.ts`): cliente → carro → OS → etapa `intake` (áudio, vídeo, triagem) → `checkin` (fotos com os rótulos "Frente do veículo" etc., que o dashboard usa). Falha no meio + tocar de novo continua de onde parou. Uploads vão **um por vez**, porque o servidor aceita só 4 envios simultâneos no total.
+- **Rascunho v2** (`osDraft.ts`: `saveGuidedDraft`/`loadGuidedDraft`): guarda as respostas e a tela, não os arquivos. O formato antigo é ignorado. Recuperado na revisão, volta pras fotos.
+- **Backend:**
+  - **`service_orders.client_id`** (opção A: a OS guarda quem trouxe o carro naquela visita). A migration `ServiceOrderClient` copiou o dono do carro pra todas as OS existentes.
+  - **Leia o cliente de uma OS SEMPRE por `orderClient(order)`** (`serviceOrder/order-client.ts`, `order.client ?? car.client`), nunca `car.client`. `POST /service_orders` aceita `client_id`: valida o tenant; sem ele, herda o dono do carro; carro sem dono ganha esse dono. `completeData` mexe no cliente da OS e só dá dono ao carro se ele não tinha.
+  - **`GET /cars/by-plate/:plate`**: placa exata, normalizada, por oficina, com `last_mileage` (OS mais recente) e `owner`. Declarada antes de `:id`. Usa `Raw(UPPER(REPLACE(...)))` por causa do `varchar(7)`.
+- **Medição** (persona Seu Zé, `docs/equipe/feedback/2026-10-19-seu-ze-abertura-guiada.md`):
+  - nota 8/10 (o wizard antigo tinha 6);
+  - carro conhecido em 56s (15 toques);
+  - carro novo em ~2 min (23 toques).
+- **Pendências anotadas:**
+  - avisar quando o carro já tem OS aberta;
+  - KM da visita anterior vem preenchido (decidir: deixar em branco com a dica?);
+  - tela da OS (resto da Fase 2);
+  - os menores da revisão (ver o histórico do commit `53c2ae0`).
+
 ### Agentes por área (time de subagentes do projeto)
 
 Definições em `.claude/agents/` (carregam ao abrir a sessão; `/agents` lista). Cada um é dono de uma área e conhece as regras deste arquivo. Eles trabalham **sob demanda** (não ficam vigiando sozinhos); rotinas recorrentes precisam de uma tarefa agendada.
