@@ -173,7 +173,14 @@ export function OsSheetPage() {
 
         <Block title="Totais">
           <p>Peças: {formatMoney(sheet.totals.parts_total)} · Serviços: {formatMoney(sheet.totals.services_total)}</p>
-          <p className="text-base font-bold">Total: {formatMoney(sheet.totals.grand_total)}</p>
+          <p className="text-base font-bold">
+            {sheet.pending_parts.length > 0 ? "Total parcial" : "Total"}: {formatMoney(sheet.totals.grand_total)}
+          </p>
+          {sheet.pending_parts.length > 0 && (
+            <p className="text-amber-800">
+              {sheet.pending_parts.length} peça(s) retirada(s) sem acerto ficaram fora da conta — acerte antes de fechar a nota.
+            </p>
+          )}
           {sheet.totals.unpriced_items > 0 && <p className="text-amber-800">{sheet.totals.unpriced_items} item(ns) sem preço — o total não os inclui.</p>}
         </Block>
       </div>

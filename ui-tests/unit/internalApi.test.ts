@@ -69,6 +69,18 @@ describe('sheetToText', () => {
     expect(text).toContain('Paga no PIX');
   });
 
+  it('peça retirada sem acerto: o total avisa que está incompleto (antes parecia R$ 0,00 e dava pra cobrar sem a peça)', () => {
+    const totalLine = text.split(String.fromCharCode(10)).find((l) => l.startsWith('TOTAL'))!;
+    expect(totalLine).toMatch(/PARCIAL/);
+    expect(totalLine).toContain('1 peça retirada sem acerto fora da conta');
+  });
+
+  it('sem pendência, o total não leva aviso', () => {
+    const clean = sheetToText({ ...sheet, pending_parts: [] });
+    const totalLine = clean.split(String.fromCharCode(10)).find((l) => l.startsWith('TOTAL'))!;
+    expect(totalLine).not.toMatch(/PARCIAL|sem acerto/);
+  });
+
   it('não escreve "null" nem "undefined"; cliente ausente vira "Cliente não identificado"', () => {
     const bare = sheetToText({ ...sheet, client: null, internal_notes: null, parts: [], pending_parts: [], services: [], participants: [] });
     expect(bare).not.toMatch(/\bnull\b|\bundefined\b/);

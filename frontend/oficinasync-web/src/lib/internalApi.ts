@@ -149,9 +149,15 @@ export function sheetToText(s: OfficeSheet): string {
   }
 
   lines.push("");
+  // peça retirada sem acerto fica FORA da soma — o total precisa dizer que está incompleto
+  const pending = s.pending_parts.length;
+  const warnings = [
+    s.totals.unpriced_items > 0 ? `${s.totals.unpriced_items} item(ns) sem preço` : null,
+    pending > 0 ? `${pending} ${pending === 1 ? "peça retirada sem acerto fora da conta" : "peças retiradas sem acerto fora da conta"}` : null,
+  ].filter(Boolean);
   lines.push(
-    `TOTAL: peças ${formatMoney(s.totals.parts_total)} + serviços ${formatMoney(s.totals.services_total)} = ${formatMoney(s.totals.grand_total)}` +
-      (s.totals.unpriced_items > 0 ? ` (${s.totals.unpriced_items} item(ns) sem preço)` : ""),
+    `TOTAL${pending > 0 ? " PARCIAL" : ""}: peças ${formatMoney(s.totals.parts_total)} + serviços ${formatMoney(s.totals.services_total)} = ${formatMoney(s.totals.grand_total)}` +
+      (warnings.length > 0 ? ` (${warnings.join("; ")})` : ""),
   );
   return lines.join("\n");
 }
