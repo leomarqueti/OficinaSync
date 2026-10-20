@@ -476,6 +476,13 @@ Substitui o `OsCreateWizardPage` (apagado, junto com `WizardShell`, `EntryPhotoS
   - KM da visita anterior vem preenchido (decidir: deixar em branco com a dica?);
   - tela da OS (resto da Fase 2);
   - os menores da revisão (ver o histórico do commit `53c2ae0`).
+- **Câmera embutida (correção, 2026-10-20):**
+  - O problema: no Android com pouca memória, o `<input capture>` abria o app de câmera e o sistema fechava o OficinaSync por trás ("insuficiência de memória"). A foto se perdia.
+  - Agora as fotos são tiradas pela `InAppCamera.tsx` (`getUserMedia`, a página nunca sai da tela).
+  - Se a câmera não abrir (sem permissão), a tela volta pro `<input capture>` antigo. "Escolher da galeria" fica sempre disponível.
+  - Cada foto é guardada no aparelho na hora (`src/lib/photoStore.ts`, IndexedDB) e volta junto com o rascunho. É apagada ao abrir a OS e em "Começar do zero".
+  - O app Android precisa de `android.permission.CAMERA` no manifest. O `BridgeActivity` padrão do Capacitor repassa o pedido da WebView.
+  - Os testes de tela usam câmera simulada do Chromium (`playwright.config.ts`).
 
 ### Agentes por área (time de subagentes do projeto)
 
