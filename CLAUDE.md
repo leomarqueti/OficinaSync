@@ -429,6 +429,20 @@ Spec: `docs/superpowers/specs/2026-10-17-reforma-visual-fase1-fundacao-design.md
   - Os testes de tela e o `start-env.sh` usam 1000, porque a bateria estourava o limite.
   - **Decisão pendente do Leonardo:** subir em produção, já que a oficina inteira sai pelo mesmo IP.
 
+### Rodada de usabilidade simulada + correções (feito, 2026-10-19)
+
+Personas simuladas (Seu Zé 6/10 no modo simples, Dona Cida 6,5/10 no balcão — relatórios em `docs/equipe/feedback/2026-10-17-*.md`). Corrigido com teste de regressão (`backend/test/usability-round.e2e-spec.ts`, `ui-tests/e2e/usabilidade.spec.ts` + unitários):
+- **Datas em UTC** (`useUTC: true` no mssql, `app.module.ts` e `data-source.ts`): em máquina fora de UTC, `GETDATE()` do banco e as datas gravadas pelo Node ficavam 3h desencontradas ("criada 01:28 do dia seguinte"). Produção já rodava em UTC, então os dados de lá não mudam.
+- **CPF repetido:** `POST /clients` devolve 409 com `message` ("Este CPF já é do cliente X…") e `existing_client`; o cadastro de OS avisa **na hora** que o CPF é digitado e oferece "Usar esse cadastro".
+- **Busca de veículo pelo nome do dono**, sem acento (`COLLATE Latin1_General_CI_AI`).
+- **Rascunho da abertura de OS** (`src/lib/osDraft.ts`, `localStorage` `oficinasync_os_draft`, 24h, sem fotos): interrupção não apaga; toast "Rascunho recuperado" com "Começar do zero"; limpa ao criar a OS.
+- **"Continuar" travado diz o que falta** (`src/lib/wizardMissing.ts`, prop `nextHint` do `WizardShell`).
+- **OS:** botão "Mandar no WhatsApp" (`src/lib/whatsapp.ts`, `wa.me`, sem API paga) e "Copiar link" avisa e mostra o link quando o celular bloqueia a cópia.
+- **Ficha:** com peça retirada sem acerto o total vira "TOTAL PARCIAL" com aviso (antes parecia R$ 0,00).
+- **Saudação** "Olá, Sr. Antônio." (antes "Olá, Sr.."); teste de bateria pergunta o resultado uma vez só (`bateriaResultadoFromVerdict`).
+- Ambiente de teste: `FRONTEND_URL` na porta 5183 (o link do cliente apontava pra 5173).
+- **Ficou pra Fase 2** (tela da OS): 6 botões no topo, "Finalizar" principal cedo demais, barra de baixo some dentro da OS, voltar pequeno, botões de etapa de 34px.
+
 ### Agentes por área (time de subagentes do projeto)
 
 Definições em `.claude/agents/` (carregam ao abrir a sessão; `/agents` lista). Cada um é dono de uma área e conhece as regras deste arquivo. Eles trabalham **sob demanda** (não ficam vigiando sozinhos); rotinas recorrentes precisam de uma tarefa agendada.

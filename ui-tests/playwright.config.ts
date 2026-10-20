@@ -45,6 +45,7 @@ export default defineConfig({
         DB_NAME: 'oficinasync_test',
         MINIO_BUCKET: 'oficinasync-test',
         CORS_ORIGINS: FRONTEND_URL,
+        FRONTEND_URL,
         // a bateria inteira passa de 60 req/min (limite global por IP); login continua com 5/min
         THROTTLE_LIMIT: '1000',
       },
