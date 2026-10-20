@@ -17,4 +17,10 @@ export class CreateServiceOrderDto {
   @Type(() => Number)
   @IsInt()
   mileage_in?: number;
+
+  // Quem trouxe o carro nessa visita (opção A). Ausente = o dono atual do carro.
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  client_id?: number | null;
 }

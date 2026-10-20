@@ -1,3 +1,4 @@
+import { orderClient } from '../serviceOrder/order-client';
 import { ForbiddenException, Injectable } from '@nestjs/common';
 import puppeteer from 'puppeteer';
 import * as QRCode from 'qrcode';
@@ -163,7 +164,7 @@ export class ReportService {
         fuel_type: order.car.fuel_type,
         mileage_in: order.car.mileage_in,
       },
-      clientName: order.car.client?.name ?? null,
+      clientName: orderClient(order)?.name ?? null,
       clientComplaint: order.client_complaint,
       intakePhotos,
       createdAt: order.created_at,

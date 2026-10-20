@@ -11,6 +11,7 @@ import {
 } from 'typeorm';
 import { Tenants } from '../tenants/tenants.entity';
 import { Cars } from '../cars/cars.entity';
+import { Clients } from '../clients/clients.entity';
 import { Users } from '../users/users.entity';
 import { Status } from './status.enum';
 import { FinalVerdict } from './finalVerdict.enum';
@@ -106,6 +107,15 @@ export class ServiceOrders {
   })
   @JoinColumn({ name: 'car_id' })
   car: Cars;
+
+  /**
+   * Quem trouxe o carro NESTA visita (opção A, 2026-10-19). null = cai pro dono do carro
+   * (OS antigas). Sempre leia via `orderClient(order)`, nunca `order.car.client` direto.
+   */
+  @Index()
+  @ManyToOne(() => Clients, { nullable: true })
+  @JoinColumn({ name: 'client_id' })
+  client: Clients | null;
 
   @ManyToOne(() => Users, (user) => user.serviceOrders, {
     nullable: false,

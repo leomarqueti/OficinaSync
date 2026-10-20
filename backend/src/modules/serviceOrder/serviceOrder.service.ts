@@ -24,6 +24,7 @@ import { UsersService } from '../users/users.service';
 import { CarsService } from '../cars/cars.service';
 import { MinioService } from '../minio/minio.service';
 import { Status } from './status.enum';
+import { orderClient } from './order-client';
 import { computeMissingData, isComplete } from './missing-data';
 import { SectionType } from '../sections/typeSection.enum';
 
@@ -68,6 +69,28 @@ export class ServiceOrdersService {
     serviceOrder.client_complaint = createServiceOrdesDto.client_complaint;
     serviceOrder.mileage_in = createServiceOrdesDto.mileage_in ?? null;
 
+    // Cliente da OS = quem trouxe o carro nessa visita; sem client_id, o dono atual do carro.
+    // `!= null`: @IsOptional deixa null passar e null aqui significa "não informado".
+    if (createServiceOrdesDto.client_id != null) {
+      const client = await this.dataSource.getRepository(Clients).findOne({
+        where: { client_id: createServiceOrdesDto.client_id },
+        relations: { tenant: true },
+      });
+      if (!client) {
+        throw new NotFoundException('Cliente não encontrado!');
+      }
+      if (client.tenant.id !== user.tenant.id) {
+        throw new ForbiddenException('Esse cliente não pertence ao tenant do usuário.');
+      }
+      serviceOrder.client = client;
+      if (!car.client) {
+        car.client = client;
+        await this.dataSource.getRepository(Cars).save(car);
+      }
+    } else {
+      serviceOrder.client = car.client ?? null;
+    }
+
     return this.serviceOrdersRepository.save(serviceOrder);
   }
 
@@ -79,6 +102,7 @@ export class ServiceOrdersService {
       relations: {
         tenant: true,
         user: true,
+        client: true,
         car: {
           client: true,
         },
@@ -109,7 +133,7 @@ export class ServiceOrdersService {
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
     const missing = computeMissingData(
       serviceOrder.car,
-      serviceOrder.car.client,
+      orderClient(serviceOrder),
     );
 
     return {
@@ -151,16 +175,19 @@ export class ServiceOrdersService {
         fuel_type: serviceOrder.car.fuel_type,
       },
 
-      client: serviceOrder.car.client
-        ? {
-            client_id: serviceOrder.car.client.client_id,
-            name: serviceOrder.car.client.name,
-            phone: serviceOrder.car.client.phone,
-            email: serviceOrder.car.client.email,
-            cpf: serviceOrder.car.client.cpf,
-            address: serviceOrder.car.client.address,
-          }
-        : null,
+      client: (() => {
+        const client = orderClient(serviceOrder);
+        return client
+          ? {
+              client_id: client.client_id,
+              name: client.name,
+              phone: client.phone,
+              email: client.email,
+              cpf: client.cpf,
+              address: client.address,
+            }
+          : null;
+      })(),
       missing_data: missing,
       is_complete: isComplete(missing),
 
@@ -207,6 +234,7 @@ export class ServiceOrdersService {
       },
       relations: {
         tenant: true,
+        client: true,
         car: {
           client: true,
         },
@@ -271,9 +299,10 @@ export class ServiceOrdersService {
         fuel_type: serviceOrder.car.fuel_type,
       },
       // página pública (link no WhatsApp): só o nome, pra saudação — telefone/CPF nunca saem aqui
-      client: serviceOrder.car.client
-        ? { name: serviceOrder.car.client.name }
-        : null,
+      client: (() => {
+        const client = orderClient(serviceOrder);
+        return client ? { name: client.name } : null;
+      })(),
       sections: publishedSections,
     };
   }
@@ -291,7 +320,8 @@ export class ServiceOrdersService {
       .createQueryBuilder('so')
       .leftJoinAndSelect('so.tenant', 'tenant')
       .leftJoinAndSelect('so.car', 'car')
-      .leftJoinAndSelect('car.client', 'client')
+      .leftJoinAndSelect('car.client', 'carClient')
+      .leftJoinAndSelect('so.client', 'client')
       .leftJoinAndSelect(
         'so.sections',
         'section',
@@ -325,7 +355,7 @@ export class ServiceOrdersService {
     return serviceOrders.map((serviceOrder, index) => {
       const missing = computeMissingData(
         serviceOrder.car,
-        serviceOrder.car.client,
+        orderClient(serviceOrder),
       );
 
       return {
@@ -350,12 +380,10 @@ export class ServiceOrdersService {
           color: serviceOrder.car.color,
           fuel_type: serviceOrder.car.fuel_type,
         },
-        client: serviceOrder.car.client
-          ? {
-              name: serviceOrder.car.client.name,
-              phone: serviceOrder.car.client.phone,
-            }
-          : null,
+        client: (() => {
+          const client = orderClient(serviceOrder);
+          return client ? { name: client.name, phone: client.phone } : null;
+        })(),
         missing_data: missing,
         is_complete: isComplete(missing),
       };
@@ -419,7 +447,8 @@ export class ServiceOrdersService {
         where: { car_id: order.car.car_id },
         relations: { client: true },
       });
-      let client: Clients | null = car.client ?? null;
+      // cliente da OS (quem trouxe nessa visita); OS antigas sem cliente próprio usam o dono do carro
+      let client: Clients | null = orderClient(order);
 
       if (dto.client_id != null) {
         const existing = await clientRepo.findOne({
@@ -485,15 +514,23 @@ export class ServiceOrdersService {
         if (input.mileage_in != null) car.mileage_in = input.mileage_in;
       }
 
-      car.client = client;
+      // o carro só ganha esse dono se ainda não tiver um (não reescreve o histórico de quem já é dono)
+      if (!car.client && client) car.client = client;
       await carRepo.save(car);
+
+      if (client) {
+        await manager.getRepository(ServiceOrders).update(
+          { service_order_id: order.service_order_id },
+          { client: { client_id: client.client_id } },
+        );
+      }
     });
 
     const fresh = await this.findEntityById(orderId);
-    const missing = computeMissingData(fresh.car, fresh.car.client);
+    const missing = computeMissingData(fresh.car, orderClient(fresh));
 
     return {
-      client_id: fresh.car.client?.client_id ?? null,
+      client_id: orderClient(fresh)?.client_id ?? null,
       missing_data: missing,
       is_complete: isComplete(missing),
     };
@@ -513,7 +550,7 @@ export class ServiceOrdersService {
       );
     }
 
-    const missing = computeMissingData(order.car, order.car.client);
+    const missing = computeMissingData(order.car, orderClient(order));
 
     if (!isComplete(missing)) {
       throw new ConflictException({

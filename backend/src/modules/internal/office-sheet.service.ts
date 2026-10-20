@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { ServiceOrdersService } from '../serviceOrder/serviceOrder.service';
 import { computeMissingData } from '../serviceOrder/missing-data';
+import { orderClient } from '../serviceOrder/order-client';
 import { InternalContextService } from './internal-context.service';
 import { itemTotals, lineTotal } from './internal-math';
 import { PartsService } from './parts.service';
@@ -22,7 +23,7 @@ export class OfficeSheetService {
 
     const full = await this.serviceOrders.findEntityById(orderId);
     const car = full.car;
-    const client = car.client;
+    const client = orderClient(full);
 
     const partViews = await this.partsService.listParts(ctx);
     const services = await this.partsService.listServices(ctx);
