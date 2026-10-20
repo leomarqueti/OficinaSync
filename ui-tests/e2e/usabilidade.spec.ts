@@ -69,4 +69,24 @@ test('interrupção no balcão: sair no meio do cadastro e voltar recupera o que
   await expect(page.locator('#name')).toHaveValue('');
 });
 
+test('OS: botão de mandar no WhatsApp e "Copiar link" avisa quando o celular não deixa copiar', async ({ page }) => {
+  await page.goto('/dashboard');
+  const car = await api(page, 'POST', '/cars', { plate: randomPlate() });
+  const order = await api(page, 'POST', '/service_orders', { car_id: car.json.car_id, client_complaint: 'teste link' });
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, 'clipboard', {
+      value: { writeText: () => Promise.reject(new Error('bloqueado')) },
+      configurable: true,
+    });
+  });
+  await page.goto(`/os/${order.json.service_order_id}`);
+
+  const wa = page.getByRole('link', { name: /whatsapp/i });
+  await expect(wa).toBeVisible();
+  expect(await wa.getAttribute('href')).toMatch(/^https:\/\/wa\.me\/\?text=/);
+
+  await page.getByRole('button', { name: 'Copiar link' }).click();
+  await expect(page.getByText('Não deu pra copiar automático')).toBeVisible();
+});
+
 export { api, generateCpf, randomPlate };

@@ -13,6 +13,7 @@ import {
   Flag,
   Loader2,
   Radio,
+  MessageCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -37,6 +38,7 @@ import { MediaUploadSheet } from "@/components/os/MediaUploadSheet";
 import { EditNotesSheet } from "@/components/os/EditNotesSheet";
 import { CompleteDataSheet } from "@/components/os/CompleteDataSheet";
 import { carTitle, clientLabel, kmLabel } from "@/lib/display";
+import { whatsappShareUrl } from "@/lib/whatsapp";
 import { EditTestSheet } from "@/components/os/EditTestSheet";
 import { celebrate } from "@/components/motion/celebration";
 import { CreateSectionSheet } from "@/components/os/CreateSectionSheet";
@@ -225,8 +227,16 @@ export function OsWorkPage() {
 
   const copyClientLink = async () => {
     if (!data) return;
-    await navigator.clipboard.writeText(data.public_url);
-    toast.success("Link copiado! É só mandar pro cliente.");
+    try {
+      await navigator.clipboard.writeText(data.public_url);
+      toast.success("Link copiado! É só mandar pro cliente.");
+    } catch {
+      // alguns celulares bloqueiam a cópia automática — mostra o link pra copiar na mão
+      toast.error("Não deu pra copiar automático", {
+        description: `Segure o dedo no link e copie: ${data.public_url}`,
+        duration: 15000,
+      });
+    }
   };
 
   const downloadReport = async () => {
@@ -372,6 +382,20 @@ export function OsWorkPage() {
               <ExternalLink className="mr-1.5 h-4 w-4" />
               Página do cliente
             </Button>
+            <a
+              href={whatsappShareUrl({
+                phone: data.client?.phone,
+                clientName: data.client?.name,
+                carName: carTitle(data.car),
+                link: data.public_url,
+              })}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="col-span-2 inline-flex h-11 items-center justify-center gap-1.5 rounded-lg bg-brand px-4 text-sm font-bold text-brand-foreground"
+            >
+              <MessageCircle className="h-4 w-4" aria-hidden="true" />
+              Mandar no WhatsApp
+            </a>
             <Button variant="outline" className="h-11" onClick={copyClientLink}>
               <Copy className="mr-1.5 h-4 w-4" />
               Copiar link
