@@ -65,9 +65,14 @@ async function newCarUntilClient(page: Page, plate: string) {
   await expect(page.getByRole('heading', { name: /o cliente está aqui/i })).toBeVisible();
 }
 
+/** Tira as fotos pela câmera embutida (câmera simulada do navegador de teste). */
 async function takeFourPhotos(page: Page, count = 4) {
   for (let i = 0; i < count; i++) {
-    await page.locator('[data-current] input[type="file"]').setInputFiles({ name: `f${i}.png`, mimeType: 'image/png', buffer: PNG_1PX });
+    await page.getByRole('button', { name: /^tirar foto d/i }).click();
+    const camera = page.getByRole('dialog', { name: /câmera/i });
+    await expect(camera.locator('video')).toBeVisible();
+    await camera.getByRole('button', { name: 'Disparar' }).click();
+    await expect(camera).toHaveCount(0);
   }
 }
 
@@ -263,5 +268,20 @@ test.describe('abertura de OS guiada', () => {
     await page.getByRole('button', { name: 'Conferir', exact: true }).click();
     await page.getByRole('button', { name: /o escritório completa/i }).click();
     await expect(page.getByRole('button', { name: /sim, anotar os dados/i })).toBeVisible();
+  });
+
+  test('fotos pela câmera embutida (sem sair da página) continuam lá se a página recarregar', async ({ page }) => {
+    await start(page);
+    await newCarUntilClient(page, randomPlate());
+    await page.getByRole('button', { name: /não, o escritório completa/i }).click();
+    await takeFourPhotos(page, 2);
+
+    // Android sem memória fecha a página por trás: simula recarregando
+    await page.reload();
+    await expect(page.getByRole('heading', { name: /fotos do carro/i })).toBeVisible();
+    await expect(page.getByRole('button', { name: /tirar foto do lado esquerdo/i })).toBeVisible();
+
+    await takeFourPhotos(page, 2);
+    await expect(page.getByRole('button', { name: 'Conferir', exact: true })).toBeEnabled();
   });
 });

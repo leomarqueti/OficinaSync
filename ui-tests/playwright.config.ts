@@ -32,7 +32,17 @@ export default defineConfig({
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
   },
-  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
+  projects: [
+    {
+      name: 'chromium',
+      use: {
+        ...devices['Desktop Chrome'],
+        // câmera simulada: a abertura de OS tira as fotos com a câmera embutida na página (getUserMedia)
+        permissions: ['camera'],
+        launchOptions: { args: ['--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream'] },
+      },
+    },
+  ],
   webServer: [
     {
       command: 'node dist/main.js',

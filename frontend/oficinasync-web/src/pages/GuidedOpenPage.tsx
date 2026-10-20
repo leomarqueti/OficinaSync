@@ -15,11 +15,14 @@ import { ApiError, apiFetch } from "@/lib/api";
 import {
   emptyGuidedState,
   missingFor,
+  PHOTO_SIDES,
   stepsFor,
   type GuidedState,
+  type PhotoSide,
   type StepId,
 } from "@/lib/guidedOpen";
 import { clearOsDraft, loadGuidedDraft, saveGuidedDraft } from "@/lib/osDraft";
+import { clearPhotos, loadPhotos } from "@/lib/photoStore";
 import { emptySubmitProgress, submitGuidedOpen, type SubmitProgress } from "@/lib/guidedSubmit";
 import { nextHint } from "@/lib/wizardMissing";
 
@@ -64,20 +67,42 @@ export function GuidedOpenPage() {
   const index = Math.max(0, steps.indexOf(stepId));
   const current = steps[index];
 
-  // fotos/áudio/vídeo não entram no rascunho: ao recuperar, volta pras fotos se já tinha passado delas
+  // áudio/vídeo não entram no rascunho; as fotos ficam guardadas no aparelho (photoStore) e voltam
   const draftToastShown = useRef(false);
   useEffect(() => {
-    if (!draft || draftToastShown.current) return;
+    if (draftToastShown.current) return;
     draftToastShown.current = true;
+    if (!draft) {
+      void clearPhotos(); // sobra de uma abertura antiga
+      return;
+    }
     patch({ photos: { front: false, rear: false, left: false, right: false }, extraPhotos: 0, hasAudio: false, hasVideo: false });
+    void loadPhotos().then((stored) => {
+      const photos = { ...stateRef.current.photos };
+      const restored: Partial<Record<PhotoSide, File>> = {};
+      for (const side of PHOTO_SIDES) {
+        if (stored[side]) {
+          restored[side] = stored[side];
+          photos[side] = true;
+        }
+      }
+      const extras = Object.keys(stored)
+        .filter((k) => k.startsWith("extra-"))
+        .sort((a, b) => Number(a.slice(6)) - Number(b.slice(6)))
+        .map((k) => stored[k]);
+      if (!Object.keys(restored).length && !extras.length) return;
+      setFiles((f) => ({ ...f, photos: { ...f.photos, ...restored }, extraPhotos: extras }));
+      patch({ photos, extraPhotos: extras.length });
+    });
     toast("Rascunho recuperado", {
-      description: "Continuamos de onde você parou. Fotos, áudio e vídeo precisam ser feitos de novo.",
+      description: "Continuamos de onde você parou. As fotos já tiradas foram guardadas; áudio e vídeo precisam ser feitos de novo.",
       duration: 10000,
       action: {
         label: "Começar do zero",
-        onClick: () => {
+        onClick: async () => {
           const storage = safeStorage();
           if (storage) clearOsDraft(storage);
+          await clearPhotos();
           window.location.reload();
         },
       },
@@ -128,6 +153,7 @@ export function GuidedOpenPage() {
       });
       const storage = safeStorage();
       if (storage) clearOsDraft(storage);
+      void clearPhotos();
       celebrate("OS aberta");
       navigate(`/os/${orderId}`);
     } catch (err) {
