@@ -320,3 +320,11 @@ export interface AchadoAdicionalData {
 export function emptyAchadoAdicionalData(): AchadoAdicionalData {
   return { severity: "media", description: "", media_id: null, previewUrl: null };
 }
+
+/** O veredito geral do teste define o selo da bateria — o formulário pergunta uma vez só. */
+export function bateriaResultadoFromVerdict(verdict: string): BateriaData["resultado"] {
+  if (verdict === "approved") return "APROVADA";
+  if (verdict === "failed") return "REPROVADA";
+  if (verdict === "inconclusive") return "INSPECAO";
+  return "";
+}

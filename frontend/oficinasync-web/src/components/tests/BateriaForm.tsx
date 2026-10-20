@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { TestFormShell } from "./TestFormShell";
 import type { BateriaData } from "./testTypes";
-import { emptyBateriaData, testTypeLabels } from "./testTypes";
+import { emptyBateriaData, testTypeLabels, bateriaResultadoFromVerdict } from "./testTypes";
 
 type BateriaFormProps = {
   initial?: { title: string; data: BateriaData; verdict: string; notes: string };
@@ -56,7 +56,7 @@ export function BateriaForm({ initial, onSave, onCancel, saving }: BateriaFormPr
       onVerdictChange={setVerdict}
       notes={notes}
       onNotesChange={setNotes}
-      onSave={() => onSave({ title, data, verdict, notes })}
+      onSave={() => onSave({ title, data: { ...data, resultado: bateriaResultadoFromVerdict(verdict) }, verdict, notes })}
       onCancel={onCancel}
       saving={saving}
     >
@@ -73,19 +73,6 @@ export function BateriaForm({ initial, onSave, onCancel, saving }: BateriaFormPr
             />
           </div>
 
-          <div className="space-y-1">
-            <label className="text-xs font-medium text-muted-foreground">Resultado</label>
-            <select
-              value={data.resultado}
-              onChange={(e) => updateField("resultado", e.target.value)}
-              className="h-12 rounded-xl border-white/12 bg-white/[0.04] text-base placeholder:text-white/50 w-full border px-3 py-2 outline-none focus-visible:border-brand/60 focus-visible:ring-2 focus-visible:ring-brand/40"
-            >
-              <option value="">Selecione</option>
-              <option value="APROVADA">Aprovada</option>
-              <option value="INSPECAO">Necessita inspeção</option>
-              <option value="REPROVADA">Reprovada</option>
-            </select>
-          </div>
         </div>
 
         <div className="grid grid-cols-2 gap-3">

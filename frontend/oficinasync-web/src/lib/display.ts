@@ -22,8 +22,19 @@ export function kmLabel(km?: number | null): string {
   return km == null ? "KM não informado" : `${km.toLocaleString("pt-BR")} km`;
 }
 
+const HONORIFICS = /^(sr|sra|srta|dr|dra|d|seu|dona)\.?$/i;
+
+function capitalize(word: string): string {
+  return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+}
+
 export function greeting(name?: string | null): string {
-  const first = name?.trim().split(/\s+/)[0] ?? "";
-  if (!first) return "Olá!";
-  return `Olá, ${first.charAt(0).toUpperCase()}${first.slice(1).toLowerCase()}.`;
+  const words = name?.trim().split(/\s+/).filter(Boolean) ?? [];
+  if (words.length === 0) return "Olá!";
+  // "Sr. Antônio" → "Olá, Sr. Antônio." (antes saía "Olá, Sr..")
+  if (HONORIFICS.test(words[0])) {
+    if (words.length < 2) return "Olá!";
+    return `Olá, ${capitalize(words[0])} ${capitalize(words[1])}.`;
+  }
+  return `Olá, ${capitalize(words[0])}.`;
 }

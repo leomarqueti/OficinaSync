@@ -37,6 +37,10 @@ describe('textos reserva (OS aberta no modo rápido)', () => {
 
   it('saudação da página do cliente: com nome vira "Olá, Fulano." e sem nome "Olá!"', () => {
     expect(greeting('maria da silva')).toBe('Olá, Maria.');
+    // "Sr. Antônio" virava "Olá, Sr.." na página do cliente (Seu Zé, 2026-10-17)
+    expect(greeting('Sr. Antônio')).toBe('Olá, Sr. Antônio.');
+    expect(greeting('dona cida')).toBe('Olá, Dona Cida.');
+    expect(greeting('Dr.')).toBe('Olá!');
     expect(greeting(null)).toBe('Olá!');
     expect(greeting('  ')).toBe('Olá!');
   });
