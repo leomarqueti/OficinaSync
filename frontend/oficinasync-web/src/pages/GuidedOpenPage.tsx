@@ -13,27 +13,15 @@ import { celebrate } from "@/components/motion/celebration";
 import { useDarkTheme } from "@/hooks/useDarkTheme";
 import { ApiError, apiFetch } from "@/lib/api";
 import {
-  buildCarPayload,
-  buildOrderPayload,
   emptyGuidedState,
   missingFor,
   stepsFor,
   type GuidedState,
-  type PhotoSide,
   type StepId,
 } from "@/lib/guidedOpen";
-import { intakeQuestions } from "@/lib/intakeQuestions";
 import { clearOsDraft, loadGuidedDraft, saveGuidedDraft } from "@/lib/osDraft";
-import { onlyDigits } from "@/lib/validators";
+import { emptySubmitProgress, submitGuidedOpen, type SubmitProgress } from "@/lib/guidedSubmit";
 import { nextHint } from "@/lib/wizardMissing";
-
-// Mesmos rótulos do wizard antigo: o dashboard usa "Frente do veículo" pra miniatura do card.
-const PHOTO_MEDIA_LABELS: Record<PhotoSide, string> = {
-  front: "Frente do veículo",
-  rear: "Traseira do veículo",
-  left: "Lado esquerdo do veículo",
-  right: "Lado direito do veículo",
-};
 
 const TITLES: Record<StepId, { title: string; subtitle?: string }> = {
   plate: { title: "Qual a placa?" },
@@ -56,13 +44,6 @@ function safeStorage(): Storage | undefined {
   }
 }
 
-function answersText(answers: Record<string, string>): string {
-  return intakeQuestions
-    .filter((q) => answers[q.key]?.trim())
-    .map((q) => `${q.label}\nR: ${answers[q.key].trim()}`)
-    .join("\n\n");
-}
-
 /** Abertura de OS guiada: uma pergunta por tela, começando pela placa. */
 export function GuidedOpenPage() {
   useDarkTheme();
@@ -76,8 +57,8 @@ export function GuidedOpenPage() {
   const [stepId, setStepId] = useState<StepId>(() => (draft?.step === "review" ? "photos" : draft?.step ?? "plate"));
   const [files, setFiles] = useState<GuidedFiles>(emptyGuidedFiles);
   const [submitting, setSubmitting] = useState(false);
-  // o que já foi criado num envio que falhou no meio — tocar de novo não repete
-  const created = useRef<{ clientId?: number; carId?: number; orderId?: number }>({});
+  // o que já foi criado/enviado num envio que falhou no meio — tocar de novo continua de onde parou
+  const progress = useRef<SubmitProgress>(emptySubmitProgress());
 
   const steps = stepsFor(state);
   const index = Math.max(0, steps.indexOf(stepId));
@@ -130,108 +111,39 @@ export function GuidedOpenPage() {
     setStepId(steps[index - 1]);
   };
 
-  const upload = async (file: File, label: string, sectionId: number, type: "photo" | "video" | "audio") => {
-    const form = new FormData();
-    form.append("file", file);
-    form.append("section_id", String(sectionId));
-    form.append("type", type);
-    form.append("label", label);
-    await apiFetch("/medias", { method: "POST", body: form });
-  };
-
   const submit = async () => {
     setSubmitting(true);
     try {
-      let clientId: number | null = state.clientPresent ? state.client.client_id : null;
-      if (state.clientPresent && clientId === null) {
-        if (!created.current.clientId) {
-          const c = state.client;
-          try {
-            const res = await apiFetch<{ client_id: number }>("/clients", {
-              method: "POST",
-              silent: true,
-              json: {
-                name: c.name.trim(),
-                phone: c.phone,
-                ...(c.cpf ? { cpf: onlyDigits(c.cpf) } : {}),
-                ...(c.email.trim() ? { email: c.email.trim() } : {}),
-                ...(c.address.trim() ? { address: c.address.trim() } : {}),
-              },
-            });
-            created.current.clientId = res.client_id;
-          } catch (err) {
-            const existing = err instanceof ApiError ? (err.body as { existing_client?: { client_id: number; name: string } })?.existing_client : undefined;
-            if (existing) {
-              toast.error(`Este CPF já é do cliente ${existing.name}.`, {
-                duration: 15000,
-                action: { label: "Usar esse cadastro", onClick: () => patch({ client: { ...state.client, client_id: existing.client_id, name: existing.name } }) },
-              });
-            } else {
-              toast.error(err instanceof Error ? err.message : "Não foi possível salvar o cliente.");
-            }
-            return;
-          }
-        }
-        clientId = created.current.clientId ?? null;
-      }
-
-      if (!created.current.carId) {
-        const carPayload = buildCarPayload(state);
-        if (carPayload && "create" in carPayload) {
-          const car = await apiFetch<{ car_id: number }>("/cars", {
-            method: "POST",
-            json: { ...carPayload.create, ...(clientId ? { client_id: clientId } : {}) },
-          });
-          created.current.carId = car.car_id;
-        } else {
-          if (carPayload && "patch" in carPayload) {
-            await apiFetch(`/cars/${carPayload.patch.car_id}`, { method: "PATCH", json: carPayload.patch.body });
-          }
-          created.current.carId = state.match!.car_id;
-        }
-      }
-      const carId = created.current.carId;
-
-      if (!created.current.orderId) {
-        const order = await apiFetch<{ service_order_id: number }>("/service_orders", {
-          method: "POST",
-          json: buildOrderPayload(state, carId, clientId),
-        });
-        created.current.orderId = order.service_order_id;
-      }
-      const orderId = created.current.orderId;
-
-      const notes = answersText(state.answers);
-      if (notes || files.audio || files.video) {
-        const intake = await apiFetch<{ section_id: number }>("/sections", {
-          method: "POST",
-          json: { service_order_id: orderId, type: "intake", notes: notes || null },
-        });
-        await Promise.all([
-          files.audio ? upload(files.audio, "Áudio do defeito", intake.section_id, "audio") : null,
-          files.video ? upload(files.video, "Vídeo do defeito", intake.section_id, "video") : null,
-        ]);
-        await apiFetch(`/sections/${intake.section_id}/publish`, { method: "PATCH" });
-      }
-
-      const checkin = await apiFetch<{ section_id: number }>("/sections", {
-        method: "POST",
-        json: { service_order_id: orderId, type: "checkin", notes: "Registro fotográfico da entrada do veículo." },
+      const { orderId } = await submitGuidedOpen(state, files, progress.current, {
+        json: (method, path, body) =>
+          apiFetch<Record<string, unknown>>(path, { method, ...(body !== undefined ? { json: body } : {}), silent: path === "/clients" }),
+        upload: async (file, label, sectionId, type) => {
+          const form = new FormData();
+          form.append("file", file);
+          form.append("section_id", String(sectionId));
+          form.append("type", type);
+          form.append("label", label);
+          await apiFetch("/medias", { method: "POST", body: form });
+        },
       });
-      await Promise.all([
-        ...(Object.keys(PHOTO_MEDIA_LABELS) as PhotoSide[]).map((side) =>
-          files.photos[side] ? upload(files.photos[side] as File, PHOTO_MEDIA_LABELS[side], checkin.section_id, "photo") : null,
-        ),
-        ...files.extraPhotos.map((file, i) => upload(file, `Detalhe adicional ${i + 1}`, checkin.section_id, "photo")),
-      ]);
-      await apiFetch(`/sections/${checkin.section_id}/publish`, { method: "PATCH" });
-
       const storage = safeStorage();
       if (storage) clearOsDraft(storage);
       celebrate("OS aberta");
       navigate(`/os/${orderId}`);
-    } catch {
-      // apiFetch já mostrou o erro; o que foi criado fica guardado em `created` pra não repetir
+    } catch (err) {
+      // CPF de outro cliente: oferece o cadastro existente (os outros erros o apiFetch já mostrou)
+      const existing = err instanceof ApiError ? (err.body as { existing_client?: { client_id: number; name: string } })?.existing_client : undefined;
+      if (existing) {
+        toast.error(`Este CPF já é do cliente ${existing.name}.`, {
+          duration: 15000,
+          action: {
+            label: "Usar esse cadastro",
+            onClick: () => patch({ client: { ...stateRef.current.client, client_id: existing.client_id, name: existing.name } }),
+          },
+        });
+      } else if (err instanceof ApiError && err.status === 409) {
+        toast.error(err.message);
+      }
     } finally {
       setSubmitting(false);
     }
@@ -271,7 +183,17 @@ export function GuidedOpenPage() {
       {current === "defect" && <DefectStep {...fileProps} />}
       {current === "client" && <ClientStep {...stepProps} />}
       {current === "photos" && <PhotosStep {...fileProps} />}
-      {current === "review" && <ReviewStep state={state} files={files} onEdit={(step) => setStepId(step)} />}
+      {current === "review" && (
+        <ReviewStep
+          state={state}
+          files={files}
+          onEdit={(step) => {
+            // editar o cliente reabre "o cliente está aqui?" (ele pode ter chegado depois)
+            if (step === "client") patch({ clientPresent: null });
+            setStepId(step);
+          }}
+        />
+      )}
     </StepFrame>
   );
 }

@@ -9,6 +9,9 @@ export function DictationButton({ onText }: { onText: (text: string) => void }) 
   const [supported] = useState(() => getSpeechRecognition() !== null);
   const [listening, setListening] = useState(false);
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
+  // o reconhecimento contínuo guarda o callback do start(); usar sempre o mais novo (senão apaga fala anterior)
+  const onTextRef = useRef(onText);
+  onTextRef.current = onText;
 
   useEffect(() => () => recognitionRef.current?.stop(), []);
 
@@ -24,7 +27,7 @@ export function DictationButton({ onText }: { onText: (text: string) => void }) 
     recognition.onresult = (event) => {
       for (let i = event.resultIndex; i < event.results.length; i++) {
         const result = event.results[i];
-        if (result.isFinal) onText(result[0].transcript.trim());
+        if (result.isFinal) onTextRef.current(result[0].transcript.trim());
       }
     };
     recognition.onerror = (event) => {

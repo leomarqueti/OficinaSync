@@ -113,3 +113,21 @@ describe('o que é enviado ao abrir', () => {
     expect(buildOrderPayload({ ...semDono, clientPresent: true }, 9, 12)).toMatchObject({ client_id: 12 });
   });
 });
+
+describe('trocar a placa depois de um carro reconhecido', () => {
+  it('limpa o dono que veio do carro antigo (não vira dono do carro novo)', async () => {
+    const { editPlate } = await import('../../frontend/oficinasync-web/src/lib/guidedOpen');
+    const s = { ...withMatch(fullMatch), clientPresent: true };
+    const edited = editPlate(s, 'XYZ9A88');
+    expect(edited.match).toBeNull();
+    expect(edited.client.client_id).toBeNull();
+    expect(edited.clientPresent).toBeNull();
+    expect(edited.plate).toBe('XYZ9A88');
+  });
+
+  it('cliente escolhido à mão (não o dono do carro) é mantido', async () => {
+    const { editPlate } = await import('../../frontend/oficinasync-web/src/lib/guidedOpen');
+    const s = { ...withMatch(fullMatch), client: { ...emptyGuidedState().client, client_id: 99, name: 'Outro' } };
+    expect(editPlate(s, 'XYZ9A88').client.client_id).toBe(99);
+  });
+});

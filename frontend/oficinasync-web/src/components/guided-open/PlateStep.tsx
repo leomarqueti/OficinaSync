@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { BigButton } from "@/components/kit";
 import { fieldClass } from "@/components/kit";
 import { apiFetch } from "@/lib/api";
-import { applyMatch, normalizePlate, resolvePlateMatch, type PlateMatch } from "@/lib/guidedOpen";
+import { applyMatch, editPlate, normalizePlate, resolvePlateMatch, type PlateMatch } from "@/lib/guidedOpen";
 import { isValidPlate } from "@/lib/validators";
 import { cn } from "@/lib/utils";
 import type { StepProps } from "./types";
@@ -22,21 +22,25 @@ export function PlateStep({ state, onChange, onNext }: StepProps) {
   const plate = normalizePlate(state.plate);
   const valid = isValidPlate(state.plate);
   const [matches, setMatches] = useState<PlateMatch[] | null>(null);
+  // falha na busca NÃO vira "carro novo" (criaria carro repetido): pede pra tentar de novo
+  const [failed, setFailed] = useState(false);
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     setMatches(null);
+    setFailed(false);
     if (!valid) return;
     let alive = true;
     const handle = setTimeout(() => {
       apiFetch<PlateMatch[]>(`/cars/by-plate/${plate}`, { silent: true })
         .then((found) => alive && setMatches(found))
-        .catch(() => alive && setMatches([]));
+        .catch(() => alive && setFailed(true));
     }, 400);
     return () => {
       alive = false;
       clearTimeout(handle);
     };
-  }, [plate, valid]);
+  }, [plate, valid, attempt]);
 
   const result = matches ? resolvePlateMatch(matches) : null;
 
@@ -68,12 +72,21 @@ export function PlateStep({ state, onChange, onNext }: StepProps) {
         inputMode="text"
         maxLength={8}
         value={state.plate}
-        onChange={(e) => onChange({ plate: e.target.value.toUpperCase(), match: null, correcting: false })}
+        onChange={(e) => onChange(editPlate(state, e.target.value.toUpperCase()))}
         placeholder="ABC1D23"
         className={cn(fieldClass, "h-16 text-center font-display text-3xl uppercase tracking-[0.2em]")}
       />
 
-      {valid && result === null && <p className="text-center text-base text-white/70">Procurando essa placa…</p>}
+      {valid && result === null && !failed && <p className="text-center text-base text-white/70">Procurando essa placa…</p>}
+
+      {failed && (
+        <div className="flex flex-col gap-3 rounded-2xl border-l-4 border-warning bg-warning/10 p-4 text-warning">
+          <p className="text-base font-semibold">Não deu pra verificar a placa (internet?). Esse carro pode já estar cadastrado.</p>
+          <BigButton variant="secondary" onClick={() => setAttempt((n) => n + 1)}>
+            Tentar de novo
+          </BigButton>
+        </div>
+      )}
 
       {result?.kind === "one" && (
         <div className="rounded-2xl border-2 border-brand/50 bg-brand/10 p-4">

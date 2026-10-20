@@ -89,6 +89,22 @@ export function resolvePlateMatch(
   return { kind: "many", matches };
 }
 
+/**
+ * Mudou a placa: o carro reconhecido deixa de valer. Se o cliente tinha vindo do dono daquele carro,
+ * ele também sai (senão o dono do carro antigo viraria dono do carro novo).
+ */
+export function editPlate(state: GuidedState, plate: string): GuidedState {
+  const ownerId = state.match?.owner?.client_id ?? null;
+  const clientFromOwner = ownerId !== null && state.client.client_id === ownerId;
+  return {
+    ...state,
+    plate,
+    match: null,
+    correcting: false,
+    ...(clientFromOwner ? { client: { ...emptyGuidedState().client }, clientPresent: null } : {}),
+  };
+}
+
 /** Preenche o estado com o carro reconhecido (o KM vem do último conhecido; o mecânico confere). */
 export function applyMatch(state: GuidedState, match: PlateMatch): GuidedState {
   return {

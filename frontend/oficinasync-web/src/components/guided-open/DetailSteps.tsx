@@ -1,5 +1,5 @@
 import { Mic, Video } from "lucide-react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import painelKm from "@/assets/illustrations/painel-km.svg";
 import { KmField } from "@/components/fields/KmField";
 import { fieldClass, textAreaClass } from "@/components/kit";
@@ -100,6 +100,8 @@ export function DefectStep({ state, onChange, files, onFiles }: FileStepProps) {
   const [showAudio, setShowAudio] = useState(Boolean(files.audio));
   const [showQuestions, setShowQuestions] = useState(Object.keys(state.answers).length > 0);
   const quick = intakeQuestions.filter((q) => q.type === "select");
+  const defectRef = useRef(state.defect);
+  defectRef.current = state.defect;
 
   return (
     <div className="flex flex-col gap-4">
@@ -113,7 +115,14 @@ export function DefectStep({ state, onChange, files, onFiles }: FileStepProps) {
         placeholder="Ex.: falha ao acelerar, luz da injeção acesa"
         className={cn(textAreaClass, "min-h-32 text-lg")}
       />
-      <DictationButton onText={(text) => onChange({ defect: state.defect ? `${state.defect.trimEnd()} ${text}` : text })} />
+      <DictationButton
+        onText={(text) => {
+          const current = defectRef.current;
+          const next = current ? `${current.trimEnd()} ${text}` : text;
+          defectRef.current = next;
+          onChange({ defect: next });
+        }}
+      />
 
       <div className="grid grid-cols-2 gap-2">
         <button
