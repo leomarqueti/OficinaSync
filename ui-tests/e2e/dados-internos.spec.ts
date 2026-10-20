@@ -168,13 +168,16 @@ test('ficha: HTML digitado na descrição aparece como texto (não executa)', as
 test('o botão "Ficha do escritório" aparece para o dono e não para o mecânico comum', async ({ page, browser }) => {
   const orderId = await openOrder(page);
   await page.goto(`/os/${orderId}`);
-  await expect(page.getByRole('button', { name: 'Ficha do escritório' })).toBeVisible();
+  await page.getByRole('button', { name: 'Mais ações' }).click();
+  await expect(page.getByRole('dialog', { name: 'Mais ações' }).getByRole('button', { name: 'Ficha do escritório' })).toBeVisible();
 
   const mechCtx = await browser.newContext({ storageState: 'e2e/.auth/mechanic.json' });
   const mechPage = await mechCtx.newPage();
   await mechPage.goto(`/os/${orderId}`);
-  await expect(mechPage.getByRole('button', { name: 'Peças e equipe' })).toBeVisible();
-  await expect(mechPage.getByRole('button', { name: 'Ficha do escritório' })).toHaveCount(0);
+  await mechPage.getByRole('button', { name: 'Mais ações' }).click();
+  const mechMenu = mechPage.getByRole('dialog', { name: 'Mais ações' });
+  await expect(mechMenu.getByRole('button', { name: 'Peças e equipe' })).toBeVisible();
+  await expect(mechMenu.getByRole('button', { name: 'Ficha do escritório' })).toHaveCount(0);
   await mechCtx.close();
 });
 

@@ -21,6 +21,8 @@ type SectionCardProps = {
   onDeleteTest: (test: TestItem) => void;
   onPublish: () => void;
   onOpenMedia: (media: LightboxMedia) => void;
+  /** false = só o conteúdo (o cartão "Agora" da OS já tem os botões grandes). */
+  showActions?: boolean;
 };
 
 function MediaThumb({
@@ -95,6 +97,7 @@ export function SectionCard({
   onDeleteTest,
   onPublish,
   onOpenMedia,
+  showActions = true,
 }: SectionCardProps) {
   const published = section.status === "published";
 
@@ -187,6 +190,7 @@ export function SectionCard({
       )}
 
       {/* ações */}
+      {showActions && (
       <div className="grid grid-cols-3 gap-2 border-t border-border pt-4 sm:flex sm:flex-wrap">
         <Button variant="outline" className="h-11" onClick={onAddMedia}>
           <Camera className="mr-1.5 h-4 w-4" />
@@ -213,6 +217,7 @@ export function SectionCard({
           {published ? "Etapa publicada" : publishing ? "Publicando..." : "Publicar pro cliente"}
         </Button>
       </div>
+      )}
     </div>
   );
 }

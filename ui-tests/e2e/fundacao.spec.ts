@@ -158,11 +158,13 @@ test.describe('duas caras — dono', () => {
 
 test('publicar etapa comemora: "O cliente já pode ver"', async ({ page }) => {
   const orderId = await openOrder(page);
+  const checkin = await api(page, 'POST', '/sections', { service_order_id: orderId, type: 'checkin', notes: 'Entrada' });
+  await api(page, 'PATCH', `/sections/${checkin.json.section_id}/publish`);
   const section = await api(page, 'POST', '/sections', { service_order_id: orderId, type: 'diagnosis', notes: 'Medi a bateria' });
   expect(section.status).toBeLessThan(300);
   await page.goto(`/os/${orderId}`);
-  await page.getByRole('button', { name: 'Publicar pro cliente' }).first().click();
-  await page.getByRole('alertdialog').getByRole('button', { name: 'Publicar' }).click();
+  await page.getByRole('button', { name: /pronto, mostrar ao cliente/i }).click();
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Mostrar' }).click();
   await expect(page.getByText('O cliente já pode ver', { exact: true })).toBeVisible();
 });
 

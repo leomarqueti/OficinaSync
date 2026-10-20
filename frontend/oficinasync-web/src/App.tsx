@@ -123,7 +123,14 @@ function App() {
           <Route path="/os-client-create" element={<GuidedOpenPage />} />
           <Route path="/servico/:token" element={<PublicServiceOrderPage />} />
 
-          <Route path="/os/:id" element={<OsWorkPage />} />
+          <Route
+            path="/os/:id"
+            element={
+              <AppShell>
+                <OsWorkPage />
+              </AppShell>
+            }
+          />
           <Route path="/os/:id/escritorio" element={<OsOfficePage />} />
           <Route path="/os/:id/ficha" element={<OsSheetPage />} />
 

@@ -80,7 +80,8 @@ test('finalizar com dados pendentes abre a folha antes de subir qualquer foto', 
   const plate = randomPlate();
   await openQuickOrder(page, plate, `Barulho na suspensão ${plate}`);
 
-  await page.getByRole('button', { name: /Finalizar/ }).first().click();
+  await page.getByRole('button', { name: 'Mais ações' }).click();
+  await page.getByRole('dialog', { name: 'Mais ações' }).getByRole('button', { name: 'Finalizar OS' }).click();
   await expect(page).toHaveURL(/\/finalizar$/);
 
   const uploads: string[] = [];
@@ -212,7 +213,8 @@ test('editar um carro só com a placa muda só o que foi preenchido (sem ano 0, 
 test('a tela de finalizar não escurece o resto da página quando não há pendência aberta', async ({ page }) => {
   const plate = randomPlate();
   await openQuickOrder(page, plate, `Teste de tema ${plate}`);
-  await page.getByRole('button', { name: /Finalizar/ }).first().click();
+  await page.getByRole('button', { name: 'Mais ações' }).click();
+  await page.getByRole('dialog', { name: 'Mais ações' }).getByRole('button', { name: 'Finalizar OS' }).click();
   await expect(page).toHaveURL(/\/finalizar$/);
 
   await expect(page.getByText(/Finalizar OS #/)).toBeVisible();

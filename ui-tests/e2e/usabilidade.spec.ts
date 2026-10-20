@@ -53,7 +53,8 @@ test('OS: botão de mandar no WhatsApp e "Copiar link" avisa quando o celular n�
   await expect(wa).toBeVisible();
   expect(await wa.getAttribute('href')).toMatch(/^https:\/\/wa\.me\/\?text=/);
 
-  await page.getByRole('button', { name: 'Copiar link' }).click();
+  await page.getByRole('button', { name: 'Mais ações' }).click();
+  await page.getByRole('dialog', { name: 'Mais ações' }).getByRole('button', { name: 'Copiar link' }).click();
   await expect(page.getByText('Não deu pra copiar automático')).toBeVisible();
 });
 

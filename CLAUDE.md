@@ -484,6 +484,26 @@ Substitui o `OsCreateWizardPage` (apagado, junto com `WizardShell`, `EntryPhotoS
   - O app Android precisa de `android.permission.CAMERA` no manifest. O `BridgeActivity` padrão do Capacitor repassa o pedido da WebView.
   - Os testes de tela usam câmera simulada do Chromium (`playwright.config.ts`).
 
+### Tela da OS — uma etapa por vez (feito, 2026-10-20; Fase 2 da reforma visual)
+
+Spec: `docs/superpowers/specs/2026-10-20-tela-da-os-modo-simples-design.md`. A `OsWorkPage` (rota `/os/:id`, agora dentro do `AppShell`, então o mecânico vê a barra de baixo) foi reescrita. Sem mudança no backend.
+
+- **Topo:**
+  - voltar de 48px;
+  - nome do carro; embaixo, placa em destaque · OS · cliente · KM;
+  - "Dados pendentes" compacto;
+  - o botão "⋯ Mais ações" (`MoreActionsSheet`) concentra o resto: página do cliente, copiar link, laudo, vídeo, OBD, peças e equipe, ficha, nova etapa extra, finalizar.
+- **`ArrivalCard`** ("Como o carro chegou"): fotos do check-in (as 4 guiadas primeiro), defeito, mídia do relato e "Mandar link pro cliente no WhatsApp". Sempre no topo, como proteção do mecânico.
+- **`StepProgress`** + **`StepNowCard`** (região "Agora"): etapa da vez = a primeira de `checkin → diagnosis → repair → final` ainda não publicada.
+  - 4 `ActionTile`: Falar (`SpeakSheet`: ditado/texto **somado** às `notes` + áudio opcional), Foto ou vídeo, Teste, Achado.
+  - O primeiro toque cria a etapa sozinho (`ensureCurrentSection`).
+  - "Pronto, mostrar ao cliente" = publicar, com confirmação. Etapa vazia não publica e diz o que falta.
+  - Com as 4 publicadas vira `AllDoneCard` ("Tudo pronto" + Finalizar OS como principal).
+- **`StepRow`:** toda etapa existente fora a da vez (inclusive rascunho fora de ordem e extras), expansível pro `SectionCard` completo.
+- **Regras puras** em `src/lib/osFlow.ts`: `currentStep`, `mainSteps`, `listedSections`, `sectionSummary`, `publishBlocker`, `appendNotes`, `checkinPhotos`.
+- `SectionStepper` e `IntakeCard` foram apagados.
+- **Bug achado durante o trabalho:** numa OS sem check-in, um diagnóstico em rascunho sumia da tela. Corrigido com `listedSections`; testes `osFlow.test.ts` e `tela-da-os.spec.ts` ("fora de ordem").
+
 ### Agentes por área (time de subagentes do projeto)
 
 Definições em `.claude/agents/` (carregam ao abrir a sessão; `/agents` lista). Cada um é dono de uma área e conhece as regras deste arquivo. Eles trabalham **sob demanda** (não ficam vigiando sozinhos); rotinas recorrentes precisam de uma tarefa agendada.
