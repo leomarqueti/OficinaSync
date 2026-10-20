@@ -20,33 +20,30 @@ function randomPlate(): string {
   return `${letter()}${letter()}${letter()}${digit()}${letter()}${digit()}${digit()}`;
 }
 
-/** Abre uma OS no modo rápido: pula o cliente, só placa + defeito, sem fotos. */
+/**
+ * Abre uma OS só com a placa e o defeito (cliente pendente), sem fotos — pela API.
+ * A abertura pela tela é testada em abertura-guiada.spec.ts; aqui o foco é o que acontece DEPOIS
+ * (pendência, completar dados, finalizar, card do dashboard).
+ */
 async function openQuickOrder(page: Page, plate: string, complaint: string) {
-  await page.goto('/os-client-create');
-  await page.getByLabel(/Abertura rápida/).check();
-
-  // passo 1 — pular cliente
-  await page.getByRole('button', { name: 'Pular cliente' }).click();
-
-  // passo 2 — só a placa
-  await expect(page.getByText('Qual é o veículo?')).toBeVisible();
-  await page.locator('#plate').fill(plate);
-  await page.getByRole('button', { name: 'Continuar' }).click();
-
-  // passo 3 — defeito relatado
-  await page.getByPlaceholder(/veículo falha ao ligar/).fill(complaint);
-  await page.getByRole('button', { name: 'Continuar' }).click();
-
-  // passo 4 — fotos opcionais no modo rápido
-  await expect(page.getByText('Fotos de entrada')).toBeVisible();
-  await page.getByRole('button', { name: 'Continuar' }).click();
-
-  // passo 5 — revisão mostra o que vai ficar pendente
-  await expect(page.getByText('Confere e cria a OS')).toBeVisible();
-  await expect(page.getByText(/Vai ficar pendente/)).toBeVisible();
-  await page.getByRole('button', { name: 'Criar ordem de serviço' }).click();
-
-  await expect(page).toHaveURL(/\/os\/\d+$/, { timeout: 30_000 });
+  await page.goto('/dashboard');
+  const orderId = await page.evaluate(
+    async ({ plate, complaint }) => {
+      const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token')}` };
+      const car = await (await fetch('http://localhost:3100/cars', { method: 'POST', headers, body: JSON.stringify({ plate }) })).json();
+      const order = await (
+        await fetch('http://localhost:3100/service_orders', {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ car_id: car.car_id, client_complaint: complaint }),
+        })
+      ).json();
+      return order.service_order_id as number;
+    },
+    { plate, complaint },
+  );
+  await page.goto(`/os/${orderId}`);
+  await expect(page).toHaveURL(/\/os\/\d+$/);
 }
 
 test('abre a OS só com a placa e o defeito; a pendência aparece e some ao completar', async ({ page }) => {
