@@ -130,6 +130,20 @@ test.describe('tela da OS — uma etapa por vez', () => {
     await expect(page.getByText('O cliente já pode ver', { exact: true })).toBeVisible();
   });
 
+  test('teste antes e depois: dá pra pegar a foto da galeria do celular (não só a câmera)', async ({ page }) => {
+    const orderId = await openedOrder(page);
+    await page.goto(`/os/${orderId}`);
+    await agora(page).getByRole('button', { name: 'Teste' }).click();
+    const sheet = page.getByRole('dialog');
+    await sheet.getByRole('button', { name: /antes e depois/i }).click();
+
+    // a galeria é um campo de arquivo SEM "capture" (com capture o Android só abre a câmera)
+    const galeria = sheet.getByLabel('Foto ANTES: escolher da galeria');
+    expect(await galeria.getAttribute('capture')).toBeNull();
+    await galeria.setInputFiles({ name: 'antes.png', mimeType: 'image/png', buffer: Buffer.from(PNG_1PX, 'base64') });
+    await expect(sheet.getByRole('img', { name: 'Foto ANTES' })).toBeVisible();
+  });
+
   test('no fim, "Finalizar OS" vira o botão principal', async ({ page }) => {
     const orderId = await openedOrder(page);
     for (const type of ['diagnosis', 'repair', 'final']) {
