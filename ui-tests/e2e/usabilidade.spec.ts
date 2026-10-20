@@ -89,4 +89,18 @@ test('OS: botão de mandar no WhatsApp e "Copiar link" avisa quando o celular n�
   await expect(page.getByText('Não deu pra copiar automático')).toBeVisible();
 });
 
+test('botão "Continuar" travado diz o que falta (antes só ficava apagado)', async ({ page }) => {
+  await page.goto('/os-client-create');
+  await page.evaluate(() => localStorage.removeItem('oficinasync_os_draft'));
+  await page.reload();
+  await page.locator('#name').fill('Cliente Sem Endereço');
+  await page.locator('#phone').fill('14997951011');
+  await page.locator('#cpf').fill(generateCpf());
+  await expect(page.getByRole('button', { name: 'Continuar' })).toBeDisabled();
+  await expect(page.getByText('Falta: endereço')).toBeVisible();
+  await page.locator('#address').fill('Rua A, 10');
+  await expect(page.getByText('Falta: endereço')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Continuar' })).toBeEnabled();
+});
+
 export { api, generateCpf, randomPlate };

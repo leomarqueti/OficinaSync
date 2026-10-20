@@ -35,6 +35,7 @@ import {
 import { carTitle, clientLabel } from "@/lib/display";
 import { AlertBanner, fieldClass } from "@/components/kit";
 import { clearOsDraft, hasDraftContent, loadOsDraft, saveOsDraft } from "@/lib/osDraft";
+import { missingCarFields, missingClientFields, nextHint } from "@/lib/wizardMissing";
 
 const inputClass = fieldClass;
 
@@ -350,6 +351,27 @@ export function OsCreateWizardPage() {
     true,
   ][step];
 
+  // o que falta pra liberar o "Continuar" (aparece embaixo do botão travado)
+  const stepHint = [
+    selectedClientId !== null
+      ? undefined
+      : quickMode
+        ? "Escreva o nome do cliente (2 letras ou mais) ou toque em Pular cliente; o que for preenchido precisa estar certo"
+        : nextHint(missingClientFields({ name, phone, cpf, email, address })),
+    carMode === "existing"
+      ? selectedCarId === null
+        ? "Escolha o veículo"
+        : quickMode
+          ? undefined
+          : nextHint(currentMileage.length > 0 ? [] : ["KM de hoje"])
+      : quickMode
+        ? "Falta: placa válida (o que for preenchido precisa estar certo)"
+        : nextHint(missingCarFields({ plate, brand, model, year, color, chassis, mileageIn })),
+    "Falta: descrever o defeito (5 letras ou mais)",
+    "Falta: tirar as 4 fotos do carro (frente, traseira e os dois lados)",
+    undefined,
+  ][step];
+
   const goBack = () => {
     if (step === 0) {
       navigate("/dashboard");
@@ -547,6 +569,7 @@ export function OsCreateWizardPage() {
         onBack={goBack}
         onNext={goNext}
         nextDisabled={!canAdvance}
+        nextHint={stepHint}
       >
         <div className="space-y-4">
           <label
@@ -716,6 +739,7 @@ export function OsCreateWizardPage() {
         onBack={goBack}
         onNext={goNext}
         nextDisabled={!canAdvance}
+        nextHint={stepHint}
       >
         <div className="space-y-4">
           {loadingCars && (
@@ -919,6 +943,7 @@ export function OsCreateWizardPage() {
         onBack={goBack}
         onNext={goNext}
         nextDisabled={!canAdvance}
+        nextHint={stepHint}
       >
         <div className="space-y-6">
           <div>
@@ -1052,6 +1077,7 @@ export function OsCreateWizardPage() {
         onBack={goBack}
         onNext={goNext}
         nextDisabled={!canAdvance}
+        nextHint={stepHint}
       >
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-3">

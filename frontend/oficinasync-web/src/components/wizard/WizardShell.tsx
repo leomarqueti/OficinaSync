@@ -10,6 +10,8 @@ type WizardShellProps = {
   onNext: () => void;
   nextLabel?: string;
   nextDisabled?: boolean;
+  /** Mostrado embaixo do botão quando ele está travado: o que falta pra continuar. */
+  nextHint?: string;
   loading?: boolean;
   children: React.ReactNode;
 };
@@ -24,6 +26,7 @@ export function WizardShell({
   onNext,
   nextLabel = "Continuar",
   nextDisabled,
+  nextHint,
   loading,
   children,
 }: WizardShellProps) {
@@ -71,6 +74,11 @@ export function WizardShell({
             {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             {loading ? "Enviando..." : nextLabel}
           </Button>
+          {nextDisabled && !loading && nextHint && (
+            <p role="status" className="mt-2 text-center text-sm font-medium text-warning">
+              {nextHint}
+            </p>
+          )}
         </div>
       </div>
     </div>
