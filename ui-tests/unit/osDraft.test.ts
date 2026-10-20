@@ -5,9 +5,12 @@ import {
   clearOsDraft,
   hasDraftContent,
   loadOsDraft,
+  loadGuidedDraft,
+  saveGuidedDraft,
   saveOsDraft,
   type OsDraft,
 } from '../../frontend/oficinasync-web/src/lib/osDraft';
+import { emptyGuidedState } from '../../frontend/oficinasync-web/src/lib/guidedOpen';
 
 function fakeStorage() {
   const data = new Map<string, string>();
@@ -67,5 +70,26 @@ describe('rascunho da abertura de OS (interrupção no balcão não apaga nada)'
     expect(loadOsDraft(s, 0)).toBeNull();
     expect(hasDraftContent({ ...draft, fields: { name: '', plate: '  ' }, answers: {} })).toBe(false);
     expect(hasDraftContent(draft)).toBe(true);
+  });
+});
+
+describe('rascunho da abertura guiada (formato novo)', () => {
+  it('guarda as respostas e a tela onde parou', () => {
+    const s = fakeStorage();
+    const state = { ...emptyGuidedState(), plate: 'ABC1D23', brand: 'Fiat', model: 'Uno' };
+    saveGuidedDraft(s, { state, step: 'km' }, 1000);
+    expect(loadGuidedDraft(s, 2000)).toEqual({ state, step: 'km' });
+  });
+
+  it('rascunho do formato antigo é ignorado (não quebra a tela)', () => {
+    const s = fakeStorage();
+    saveOsDraft(s, draft, 1000);
+    expect(loadGuidedDraft(s, 2000)).toBeNull();
+  });
+
+  it('rascunho novo vencido é ignorado', () => {
+    const s = fakeStorage();
+    saveGuidedDraft(s, { state: emptyGuidedState(), step: 'plate' }, 0);
+    expect(loadGuidedDraft(s, DRAFT_MAX_AGE_MS + 1)).toBeNull();
   });
 });

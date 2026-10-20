@@ -23,7 +23,7 @@ const CarsPage = lazy(() => import('./pages/CarsPage').then((m) => ({ default: m
 const CarHistoryPage = lazy(() => import('./pages/CarHistoryPage').then((m) => ({ default: m.CarHistoryPage })))
 const ScannerPage = lazy(() => import('./pages/ScannerPage').then((m) => ({ default: m.ScannerPage })))
 const DashboardPage = lazy(() => import('./pages/dashBoardPage').then((m) => ({ default: m.DashboardPage })))
-const OsCreateWizardPage = lazy(() => import('./pages/OsCreateWizardPage').then((m) => ({ default: m.OsCreateWizardPage })))
+const GuidedOpenPage = lazy(() => import('./pages/GuidedOpenPage').then((m) => ({ default: m.GuidedOpenPage })))
 const PublicServiceOrderPage = lazy(() => import('./pages/PublicServiceOrderPage').then((m) => ({ default: m.PublicServiceOrderPage })))
 const OsSheetPage = lazy(() => import('./pages/OsSheetPage').then((m) => ({ default: m.OsSheetPage })))
 const OsOfficePage = lazy(() => import('./pages/OsOfficePage').then((m) => ({ default: m.OsOfficePage })))
@@ -120,7 +120,7 @@ function App() {
               </AppShell>
             }
           />
-          <Route path="/os-client-create" element={<OsCreateWizardPage />} />
+          <Route path="/os-client-create" element={<GuidedOpenPage />} />
           <Route path="/servico/:token" element={<PublicServiceOrderPage />} />
 
           <Route path="/os/:id" element={<OsWorkPage />} />
