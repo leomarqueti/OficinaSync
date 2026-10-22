@@ -524,6 +524,34 @@ Pedido do Leonardo testando no celular: fotos finais sem galeria, texto se perdi
 - **Testes:** `unit/finishFlow.test.ts`, `e2e/finalizar-guiado.spec.ts`. Helpers dos testes de tela ficam em `e2e/helpers.ts`: importar de um `.spec.ts` faz o Playwright rodar os testes daquele arquivo junto.
 - **Correção junto:** o `PhotoCaptureButton` dos testes (antes e depois, compressão, injetores, achado) ganhou "Galeria". Com `capture`, o Android só abre a câmera.
 
+### Funcionário sem e-mail: convite pelo WhatsApp + PIN (feito, 2026-10-22)
+
+Spec: `docs/superpowers/specs/2026-10-21-funcionario-sem-email-design.md`; plano: `docs/superpowers/plans/2026-10-21-funcionario-sem-email.md`.
+
+- **Cadastro:** o dono cadastra o funcionário com nome, celular e cargo em `/equipe` (`TeamPage`).
+  - `POST /invites` aceita `phone` (nome obrigatório) ou `email` e devolve `link` + `qr_data_url` (o QR é gerado no backend com `qrcode`; o `package.json` do frontend não muda).
+  - O convite por celular vale **24 h**, uso único. A folha mostra "Mandar no WhatsApp" (`whatsappInviteUrl`, `wa.me`), o QR e "Copiar link".
+- **Aceitar:** `/convite?token=` (`AcceptInvitePage`) com `kind` `email` / `phone` / `access`. O PIN tem **6 dígitos**; fraco é recusado nos dois lados (`backend/src/modules/users/pin-policy.ts` e o espelho `src/lib/pin.ts`).
+- **Entrar:** `LoginPage` com abas, **"Entrar com celular" como padrão** (lembrada em `oficinasync_login_mode`). `POST /auth/pin-login`:
+  - 5/min por IP;
+  - **5 erros travam a conta por 15 min**;
+  - a mesma mensagem pra celular inexistente e PIN errado.
+- **Novo acesso:** `POST /invites/access-link` (só o dono) troca o PIN e invalida o link anterior.
+- **Desativar:**
+  - `GET /users/members` e `PATCH /users/:id/active` (só o dono, nunca a si mesmo);
+  - **o `JwtAuthGuard` confere `users.is_active` a cada requisição de escopo `access`**: desativar corta até token já emitido;
+  - o onboarding (dono ainda inativo) fica fora da checagem.
+- **Banco** (migration `StaffPinLogin`):
+  - `users.email`/`password_hash` opcionais, `phone`, `pin_hash`, `failed_pin_attempts`, `pin_locked_until`;
+  - **índices únicos filtrados** (`WHERE ... IS NOT NULL`): no SQL Server o UNIQUE comum aceita um NULL só;
+  - `invites.phone/name/target_user_id`.
+- **Bug corrigido:** o convite por e-mail dava 500 quando o Resend recusava (domínio ainda sem verificação). Agora o convite é criado mesmo assim e o link volta com `email_sent: false`.
+- **Testes:**
+  - `backend/test/staff-pin.e2e-spec.ts` (15);
+  - `ui-tests/unit/pin.test.ts`;
+  - `ui-tests/e2e/funcionario-pin.spec.ts`;
+  - o `test-app.ts` passou a ter `trust proxy` (o `X-Forwarded-For` separa o limite por IP nos testes).
+
 ### Agentes por área (time de subagentes do projeto)
 
 Definições em `.claude/agents/` (carregam ao abrir a sessão; `/agents` lista). Cada um é dono de uma área e conhece as regras deste arquivo. Eles trabalham **sob demanda** (não ficam vigiando sozinhos); rotinas recorrentes precisam de uma tarefa agendada.

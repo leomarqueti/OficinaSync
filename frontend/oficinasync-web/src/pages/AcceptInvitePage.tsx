@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { PasswordStrength } from "@/components/fields/PasswordStrength";
 import { apiFetch, ApiError } from "@/lib/api";
 import { isStrongPassword } from "@/lib/validators";
+import { isWeakPin } from "@/lib/pin";
 import { useDarkTheme } from "@/hooks/useDarkTheme";
 import { BrandLogo } from "@/components/brand/BrandLogo";
 import { fieldClass } from "@/components/kit";
@@ -18,10 +19,17 @@ const roleLabels: Record<string, string> = {
 };
 
 type InvitePreview = {
-  email: string;
+  email: string | null;
+  phone: string | null;
+  name: string | null;
   role: string;
   tenant_name: string;
+  /** email = convite antigo (senha); phone = funcionário novo pelo celular (PIN); access = novo acesso (troca o PIN) */
+  kind: "email" | "phone" | "access";
 };
+
+const pinClass = `${fieldClass} text-center font-mono text-2xl tracking-[0.5em]`;
+const onlyPin = (v: string) => v.replace(/\D/g, "").slice(0, 6);
 
 export function AcceptInvitePage() {
   useDarkTheme();
@@ -33,6 +41,8 @@ export function AcceptInvitePage() {
   const [previewError, setPreviewError] = useState("");
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
+  const [pin, setPin] = useState("");
+  const [pin2, setPin2] = useState("");
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -42,7 +52,10 @@ export function AcceptInvitePage() {
     }
 
     apiFetch<InvitePreview>(`/invites/${token}`, { silent: true })
-      .then(setPreview)
+      .then((p) => {
+        setPreview(p);
+        if (p.name) setName(p.name);
+      })
       .catch((err) => {
         setPreviewError(
           err instanceof ApiError ? err.message : "Convite inválido ou expirado.",
@@ -50,7 +63,12 @@ export function AcceptInvitePage() {
       });
   }, [token]);
 
-  const canSubmit = name.trim().length >= 2 && isStrongPassword(password);
+  const byPin = preview?.kind === "phone" || preview?.kind === "access";
+  const pinWeak = pin.length === 6 && isWeakPin(pin);
+  const pinMismatch = pin2.length === 6 && pin !== pin2;
+  const canSubmit = byPin
+    ? name.trim().length >= 2 && pin.length === 6 && !isWeakPin(pin) && pin === pin2
+    : name.trim().length >= 2 && isStrongPassword(password);
 
   const submit = async () => {
     if (!canSubmit) return;
@@ -59,11 +77,13 @@ export function AcceptInvitePage() {
       setLoading(true);
       const result = await apiFetch<{ access_token: string }>("/invites/accept", {
         method: "POST",
-        json: { token, name: name.trim(), password },
+        json: byPin
+          ? { token, pin, ...(preview?.kind === "phone" ? { name: name.trim() } : {}) }
+          : { token, name: name.trim(), password },
         silent: true,
       });
       localStorage.setItem("token", result.access_token);
-      toast.success("Conta criada! Bem-vindo(a).");
+      toast.success(preview?.kind === "access" ? "PIN novo criado." : "Conta criada! Bem-vindo(a).");
       navigate("/dashboard");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Não foi possível aceitar o convite.");
@@ -99,70 +119,134 @@ export function AcceptInvitePage() {
             <p className="text-sm text-muted-foreground">Carregando convite...</p>
           ) : (
             <>
-              <h1 className="text-3xl font-bold tracking-tight">Bem-vindo(a)!</h1>
+              <h1 className="text-3xl font-bold tracking-tight">{preview.name ? `Olá, ${preview.name.split(" ")[0]}!` : "Bem-vindo(a)!"}</h1>
               <p className="mt-2 text-sm text-muted-foreground">
                 Você foi convidado(a) como <strong>{roleLabels[preview.role] ?? preview.role}</strong> em{" "}
-                <strong>{preview.tenant_name}</strong>. Crie sua senha pra começar.
+                <strong>{preview.tenant_name}</strong>. {byPin ? "Crie seu PIN pra começar." : "Crie sua senha pra começar."}
               </p>
 
-              <form
-                className="mt-8 flex flex-col gap-4"
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  submit();
-                }}
-              >
-                <div className="flex flex-col gap-2">
-                  <label htmlFor="email" className="text-sm font-medium">
-                    Email
-                  </label>
-                  <input
-                    id="email"
-                    type="email"
-                    value={preview.email}
-                    disabled
-                    className={`${inputClass} opacity-60`}
-                  />
-                </div>
-
-                <div className="flex flex-col gap-2">
-                  <label htmlFor="name" className="text-sm font-medium">
-                    Nome completo
-                  </label>
-                  <input
-                    id="name"
-                    type="text"
-                    placeholder="Seu nome"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    className={inputClass}
-                  />
-                </div>
-
-                <div className="flex flex-col gap-2">
-                  <label htmlFor="password" className="text-sm font-medium">
-                    Senha
-                  </label>
-                  <input
-                    id="password"
-                    type="password"
-                    placeholder="******"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className={inputClass}
-                  />
-                  <PasswordStrength password={password} />
-                </div>
-
-                <Button
-                  type="submit"
-                  className="h-11 w-full bg-brand text-brand-foreground hover:bg-brand/90"
-                  disabled={loading || !canSubmit}
+              {byPin ? (
+                <form
+                  className="mt-8 flex flex-col gap-4"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    submit();
+                  }}
                 >
-                  {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  {loading ? "Criando conta..." : "Criar conta e entrar"}
-                </Button>
-              </form>
+                  {preview.kind === "phone" ? (
+                    <div className="flex flex-col gap-2">
+                      <label htmlFor="name" className="text-sm font-medium">
+                        Seu nome
+                      </label>
+                      <input id="name" type="text" value={name} onChange={(e) => setName(e.target.value)} className={inputClass} />
+                    </div>
+                  ) : (
+                    <p className="text-lg font-semibold">{name}</p>
+                  )}
+                  <div className="flex flex-col gap-2">
+                    <label htmlFor="pin" className="text-sm font-medium">
+                      Crie seu PIN de 6 números
+                    </label>
+                    <input
+                      id="pin"
+                      type="password"
+                      inputMode="numeric"
+                      autoComplete="new-password"
+                      maxLength={6}
+                      value={pin}
+                      onChange={(e) => setPin(onlyPin(e.target.value))}
+                      className={pinClass}
+                    />
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <label htmlFor="pin2" className="text-sm font-medium">
+                      Repita o PIN
+                    </label>
+                    <input
+                      id="pin2"
+                      type="password"
+                      inputMode="numeric"
+                      autoComplete="new-password"
+                      maxLength={6}
+                      value={pin2}
+                      onChange={(e) => setPin2(onlyPin(e.target.value))}
+                      className={pinClass}
+                    />
+                  </div>
+                  {pinWeak && (
+                    <p className="text-sm text-warning">PIN fácil demais. Evite números repetidos ou em sequência (ex.: 123456).</p>
+                  )}
+                  {!pinWeak && pinMismatch && <p className="text-sm text-warning">Os dois PINs estão diferentes.</p>}
+                  <p className="text-sm text-muted-foreground">Você vai entrar com o seu celular e esse PIN. Não conte pra ninguém.</p>
+                  <Button
+                    type="submit"
+                    className="h-14 w-full bg-brand text-lg font-bold text-brand-foreground hover:bg-brand/90"
+                    disabled={loading || !canSubmit}
+                  >
+                    {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    {loading ? "Entrando..." : "Criar PIN e entrar"}
+                  </Button>
+                </form>
+              ) : (
+              <form
+                  className="mt-8 flex flex-col gap-4"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    submit();
+                  }}
+                >
+                  <div className="flex flex-col gap-2">
+                    <label htmlFor="email" className="text-sm font-medium">
+                      Email
+                    </label>
+                    <input
+                      id="email"
+                      type="email"
+                      value={preview.email ?? ""}
+                      disabled
+                      className={`${inputClass} opacity-60`}
+                    />
+                  </div>
+  
+                  <div className="flex flex-col gap-2">
+                    <label htmlFor="name" className="text-sm font-medium">
+                      Nome completo
+                    </label>
+                    <input
+                      id="name"
+                      type="text"
+                      placeholder="Seu nome"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      className={inputClass}
+                    />
+                  </div>
+  
+                  <div className="flex flex-col gap-2">
+                    <label htmlFor="password" className="text-sm font-medium">
+                      Senha
+                    </label>
+                    <input
+                      id="password"
+                      type="password"
+                      placeholder="******"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className={inputClass}
+                    />
+                    <PasswordStrength password={password} />
+                  </div>
+  
+                  <Button
+                    type="submit"
+                    className="h-11 w-full bg-brand text-brand-foreground hover:bg-brand/90"
+                    disabled={loading || !canSubmit}
+                  >
+                    {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    {loading ? "Criando conta..." : "Criar conta e entrar"}
+                  </Button>
+                </form>
+              )}
             </>
           )}
         </div>

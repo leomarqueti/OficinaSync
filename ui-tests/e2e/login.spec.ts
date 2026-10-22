@@ -6,6 +6,7 @@ test.use({ storageState: { cookies: [], origins: [] } });
 test.describe('login', () => {
   test('senha errada mostra o erro na tela e não entra (antes falhava em silêncio)', async ({ page }) => {
     await page.goto('/login');
+    await page.getByRole('tab', { name: 'Entrar com e-mail' }).click();
     await page.locator('#email').fill(process.env.UI_EMAIL!);
     await page.locator('#senha').fill('SenhaErrada@123');
     await page.getByRole('button', { name: 'Entrar no sistema' }).click();
@@ -16,6 +17,7 @@ test.describe('login', () => {
 
   test('credenciais certas levam ao dashboard e mostram a oficina', async ({ page }) => {
     await page.goto('/login');
+    await page.getByRole('tab', { name: 'Entrar com e-mail' }).click();
     await page.locator('#email').fill(process.env.UI_EMAIL!);
     await page.locator('#senha').fill(process.env.UI_PASSWORD!);
     await page.getByRole('button', { name: 'Entrar no sistema' }).click();
@@ -31,7 +33,7 @@ test.describe('rota raiz', () => {
   test('sem sessão, "/" leva ao login (e não a uma tela em branco)', async ({ page }) => {
     await page.goto('/');
     await expect(page).toHaveURL(/\/login$/);
-    await expect(page.locator('#email')).toBeVisible();
+    await expect(page.getByRole('tab', { name: 'Entrar com celular' })).toBeVisible();
   });
 
   test('rota que não existe cai na raiz em vez de ficar em branco', async ({ page }) => {

@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { apiFetch } from "./api";
 
 export type Role = "owner" | "mechanic" | "receptionist";
-export type Me = { user_id: number; name: string; email: string; role: Role; tenant_name: string | null };
+export type Me = { user_id: number; name: string; email: string | null; role: Role; tenant_name: string | null };
 
 export const isOfficeRole = (role?: Role | null) => role === "owner" || role === "receptionist";
 
