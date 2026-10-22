@@ -18,7 +18,7 @@ import { UsersService } from '../users/users.service';
 import { EmailService } from '../emailResend/emailResend.service';
 import { Role } from '../users/role.enum';
 import { Users } from '../users/users.entity';
-import { isWeakPin } from '../users/pin-policy';
+import { isWeakPin, normalizePhone } from '../users/pin-policy';
 
 const EMAIL_INVITE_MS = 7 * 24 * 60 * 60 * 1000; // 7 dias (convite por e-mail, como antes)
 const PHONE_INVITE_MS = 24 * 60 * 60 * 1000; // 24 h (link mandado no WhatsApp / QR)
@@ -83,7 +83,7 @@ export class InvitesService {
       this.invitesRepository.create({
         token,
         email: dto.email ?? null,
-        phone: dto.phone ?? null,
+        phone: dto.phone ? normalizePhone(dto.phone) : null,
         name: dto.name?.trim() || null,
         role: dto.role,
         expires_at,

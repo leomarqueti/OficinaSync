@@ -143,6 +143,25 @@ describe('funcionário sem e-mail (celular + PIN)', () => {
       expect(row.failed_pin_attempts).toBe(0);
     });
 
+    it('tentativas em paralelo não furam a trava (regressão da revisão de segurança: corrida no contador)', async () => {
+      const ph = phone();
+      await hire(a, 'Paralelo', ph);
+      const wrongs = await Promise.all(Array.from({ length: 20 }, () => pinLogin({ phone: ph, pin: '907364' })));
+      expect(wrongs.every((r) => r.status === 401)).toBe(true);
+      const after = await pinLogin({ phone: ph, pin: '482915' }).expect(401);
+      expect(after.body.message).toMatch(/Muitas tentativas/);
+    });
+
+    it('o mesmo celular com outra formatação é o mesmo número (convite e login)', async () => {
+      const digits = `149${String(Math.floor(Math.random() * 1e8)).padStart(8, '0')}`;
+      const pretty = `+55 ${digits.slice(0, 2)} ${digits.slice(2, 7)}-${digits.slice(7)}`;
+      await hire(a, 'Formatado', pretty);
+      const dup = await invite(a.token, { name: 'Dup', phone: `+55${digits}`, role: 'mechanic' }).expect(409);
+      expect(dup.body.message).toBe('Esse celular já está cadastrado.');
+      await pinLogin({ phone: `+55${digits}`, pin: '482915' }).expect(201);
+      await pinLogin({ phone: pretty, pin: '482915' }).expect(201);
+    });
+
     it('o login por PIN tem limite por IP', async () => {
       const ph = phone();
       await hire(a, 'Limite', ph);

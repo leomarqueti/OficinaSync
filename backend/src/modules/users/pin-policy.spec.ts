@@ -1,4 +1,4 @@
-import { isPinLocked, isWeakPin, PIN_LOCK_MS, registerPinFailure } from './pin-policy';
+import { attemptOverLimit, attemptReachesLimit, isPinLocked, isWeakPin, normalizePhone, PIN_LOCK_MS } from './pin-policy';
 
 describe('regras do PIN', () => {
   it.each(['000000', '111111', '123456', '654321', '012345', '121212', '112233', '123123'])(
@@ -12,16 +12,11 @@ describe('regras do PIN', () => {
     expect(isWeakPin(pin)).toBe(true),
   );
 
-  it('4 erros ainda não travam', () => {
-    const now = new Date('2026-10-22T12:00:00Z');
-    expect(registerPinFailure(3, now)).toEqual({ attempts: 4, lockedUntil: null });
-  });
-
-  it('o 5º erro trava por 15 minutos e zera o contador', () => {
-    const now = new Date('2026-10-22T12:00:00Z');
-    const r = registerPinFailure(4, now);
-    expect(r.attempts).toBe(0);
-    expect(r.lockedUntil?.getTime()).toBe(now.getTime() + PIN_LOCK_MS);
+  it('a 5ª tentativa errada trava; da 6ª em diante nem confere o PIN', () => {
+    expect(attemptReachesLimit(4)).toBe(false);
+    expect(attemptReachesLimit(5)).toBe(true);
+    expect(attemptOverLimit(5)).toBe(false);
+    expect(attemptOverLimit(6)).toBe(true);
     expect(PIN_LOCK_MS).toBe(15 * 60 * 1000);
   });
 
@@ -30,5 +25,10 @@ describe('regras do PIN', () => {
     expect(isPinLocked(until, new Date('2026-10-22T12:14:59Z'))).toBe(true);
     expect(isPinLocked(until, new Date('2026-10-22T12:15:01Z'))).toBe(false);
     expect(isPinLocked(null, new Date())).toBe(false);
+  });
+
+  it('celular em formatos diferentes vira o mesmo número', () => {
+    expect(normalizePhone('+55 14 99999-0000')).toBe('+5514999990000');
+    expect(normalizePhone('+5514999990000')).toBe('+5514999990000');
   });
 });

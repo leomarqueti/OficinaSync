@@ -24,11 +24,22 @@ export function isWeakPin(pin: string): boolean {
   return COMMON.has(pin) || isRepeating(pin) || isSequence(pin, 1) || isSequence(pin, -1);
 }
 
-/** Mais um PIN errado: na 5ª falha trava por 15 minutos e o contador recomeça. */
-export function registerPinFailure(attempts: number, now: Date): { attempts: number; lockedUntil: Date | null } {
-  const next = attempts + 1;
-  if (next >= PIN_MAX_ATTEMPTS) return { attempts: 0, lockedUntil: new Date(now.getTime() + PIN_LOCK_MS) };
-  return { attempts: next, lockedUntil: null };
+/**
+ * A tentativa é contada ANTES de conferir o PIN (reserva atômica no banco): acima do limite ela
+ * já é recusada sem conferir. Assim, nem em paralelo dá pra passar de 5 chutes por trava.
+ */
+export function attemptOverLimit(reservedCount: number): boolean {
+  return reservedCount > PIN_MAX_ATTEMPTS;
+}
+
+/** A tentativa que atinge o limite (e errou) trava a conta. */
+export function attemptReachesLimit(reservedCount: number): boolean {
+  return reservedCount >= PIN_MAX_ATTEMPTS;
+}
+
+/** Celular sempre no mesmo formato: "+55 14 99999-0000" e "+5514999990000" são o mesmo número. */
+export function normalizePhone(phone: string): string {
+  return `+${phone.replace(/\D/g, '')}`;
 }
 
 export function isPinLocked(lockedUntil: Date | null, now: Date): boolean {

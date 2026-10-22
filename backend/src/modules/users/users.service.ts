@@ -17,6 +17,7 @@ import * as argon2 from 'argon2';
 import { ConfigService } from '@nestjs/config';
 import { Tenants } from '../tenants/tenants.entity';
 import { Role } from './role.enum';
+import { normalizePhone } from './pin-policy';
 
 @Injectable()
 export class UsersService {
@@ -227,7 +228,7 @@ export class UsersService {
   }
 
   async findByPhone(phone: string): Promise<Users | null> {
-    return this.usersRepository.findOne({ where: { phone }, relations: { tenant: true } });
+    return this.usersRepository.findOne({ where: { phone: normalizePhone(phone) }, relations: { tenant: true } });
   }
 
   /** Convite por celular aceito: nasce ativo, na oficina e no cargo do convite, sem e-mail. */
@@ -237,7 +238,7 @@ export class UsersService {
     }
     const user = this.usersRepository.create({
       name,
-      phone,
+      phone: normalizePhone(phone),
       email: null,
       password_hash: null,
       pin_hash: await this.hashSecret(pin),
@@ -261,12 +262,44 @@ export class UsersService {
     return this.usersRepository
       .createQueryBuilder('user')
       .addSelect('user.pin_hash')
-      .where('user.phone = :phone', { phone })
+      .where('user.phone = :phone', { phone: normalizePhone(phone) })
       .getOne();
   }
 
-  async savePinState(userId: number, attempts: number, lockedUntil: Date | null): Promise<void> {
-    await this.usersRepository.update({ user_id: userId }, { failed_pin_attempts: attempts, pin_locked_until: lockedUntil });
+  /**
+   * Conta a tentativa ANTES de conferir o PIN, num UPDATE atômico (sem corrida entre requisições
+   * paralelas). Trava vencida recomeça a contagem. Devolve a contagem e a trava atual.
+   */
+  async reservePinAttempt(userId: number, now: Date): Promise<{ count: number; lockedUntil: Date | null }> {
+    const rows: { n: number; locked: Date | null }[] = await this.usersRepository.query(
+      `UPDATE users SET
+         failed_pin_attempts = CASE WHEN pin_locked_until IS NOT NULL AND pin_locked_until <= @1 THEN 1 ELSE failed_pin_attempts + 1 END,
+         pin_locked_until = CASE WHEN pin_locked_until IS NOT NULL AND pin_locked_until <= @1 THEN NULL ELSE pin_locked_until END
+       OUTPUT inserted.failed_pin_attempts AS n, inserted.pin_locked_until AS locked
+       WHERE user_id = @0`,
+      [userId, now],
+    );
+    return { count: rows[0]?.n ?? 0, lockedUntil: rows[0]?.locked ?? null };
+  }
+
+  /** Trava (só se ainda não estiver travada: a primeira trava vale). */
+  async lockPin(userId: number, until: Date, now: Date): Promise<void> {
+    await this.usersRepository.query(
+      `UPDATE users SET pin_locked_until = @1 WHERE user_id = @0 AND (pin_locked_until IS NULL OR pin_locked_until <= @2)`,
+      [userId, until, now],
+    );
+  }
+
+  async resetPinState(userId: number): Promise<void> {
+    await this.usersRepository.update({ user_id: userId }, { failed_pin_attempts: 0, pin_locked_until: null });
+  }
+
+  private dummyHash: Promise<string> | null = null;
+
+  /** Celular inexistente também paga o custo do argon2: o tempo de resposta não revela quem tem conta. */
+  async burnPinCheck(pin: string): Promise<void> {
+    this.dummyHash ??= this.hashSecret('000000-oficinasync');
+    await this.verifyHash(pin, await this.dummyHash).catch(() => false);
   }
 
   /* ---------------- equipe (só o dono) ---------------- */

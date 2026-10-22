@@ -11,7 +11,7 @@ import { Email_verificationsService } from '../email_verifications/email_verific
 import { PasswordResetsService } from '../password_resets/password_resets.service';
 import { EmailService } from '../emailResend/emailResend.service';
 import { JwtService } from '@nestjs/jwt';
-import { isPinLocked, registerPinFailure } from '../users/pin-policy';
+import { attemptOverLimit, attemptReachesLimit, isPinLocked, PIN_LOCK_MS } from '../users/pin-policy';
 import { ConfigService } from '@nestjs/config';
 import { ResponseUserDto } from '../users/dto/response-users.dto';
 import { plainToInstance } from 'class-transformer';
@@ -94,20 +94,34 @@ export class AuthService {
       );
 
     const user = await this.usersService.findPinUser(phone);
-    // mesma resposta pra celular inexistente e PIN errado: não revela quem tem conta
-    if (!user || !user.pin_hash) throw invalid;
+    // mesma resposta (e o mesmo custo de tempo) pra celular inexistente e PIN errado
+    if (!user || !user.pin_hash) {
+      await this.usersService.burnPinCheck(pin);
+      throw invalid;
+    }
     if (isPinLocked(user.pin_locked_until, now)) throw lockedMessage(user.pin_locked_until as Date);
+
+    // conta a tentativa ANTES de conferir (atômico): em paralelo, no máximo 5 conferências por trava
+    const reserved = await this.usersService.reservePinAttempt(user.user_id, now);
+    if (isPinLocked(reserved.lockedUntil, now)) throw lockedMessage(reserved.lockedUntil as Date);
+    const lockUntil = new Date(now.getTime() + PIN_LOCK_MS);
+    if (attemptOverLimit(reserved.count)) {
+      await this.usersService.lockPin(user.user_id, lockUntil, now);
+      throw lockedMessage(lockUntil);
+    }
 
     const ok = await this.usersService.verifyHash(pin, user.pin_hash);
     if (!ok) {
-      const next = registerPinFailure(user.failed_pin_attempts, now);
-      await this.usersService.savePinState(user.user_id, next.attempts, next.lockedUntil);
-      throw next.lockedUntil ? lockedMessage(next.lockedUntil) : invalid;
+      if (attemptReachesLimit(reserved.count)) {
+        await this.usersService.lockPin(user.user_id, lockUntil, now);
+        throw lockedMessage(lockUntil);
+      }
+      throw invalid;
     }
 
     if (!user.is_active) throw new UnauthorizedException('Acesso desativado.');
 
-    await this.usersService.savePinState(user.user_id, 0, null);
+    await this.usersService.resetPinState(user.user_id);
     return {
       access_token: await this.jwtService.signAsync({ sub: user.user_id, email: user.email ?? null, scope: 'access' }),
     };
