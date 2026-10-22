@@ -24,8 +24,16 @@ export class Invites {
   })
   token: string;
 
-  @Column({ length: 100 })
-  email: string;
+  @Column({ type: 'nvarchar', length: 100, nullable: true })
+  email: string | null;
+
+  /** Convite por celular (WhatsApp/QR): o funcionário cria um PIN. */
+  @Column({ type: 'varchar', length: 20, nullable: true })
+  phone: string | null;
+
+  /** Nome digitado pelo dono no convite por celular. */
+  @Column({ type: 'nvarchar', length: 150, nullable: true })
+  name: string | null;
 
   @Column({ type: 'varchar' })
   role: Role;
@@ -46,4 +54,9 @@ export class Invites {
   @ManyToOne(() => Users)
   @JoinColumn({ name: 'invited_by' })
   invitedBy: Users;
+
+  /** Preenchido = "novo acesso" de um funcionário que já existe (troca o PIN dele). */
+  @ManyToOne(() => Users, { nullable: true })
+  @JoinColumn({ name: 'target_user_id' })
+  targetUser: Users | null;
 }

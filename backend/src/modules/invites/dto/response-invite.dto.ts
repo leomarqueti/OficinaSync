@@ -6,7 +6,13 @@ export class ResponseInviteDto {
   id: number;
 
   @Expose()
-  email: string;
+  email: string | null;
+
+  @Expose()
+  phone: string | null;
+
+  @Expose()
+  name: string | null;
 
   @Expose()
   role: string;

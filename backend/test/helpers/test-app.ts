@@ -32,6 +32,8 @@ export async function createTestApp(): Promise<INestApplication> {
   }).compile();
 
   const app = moduleRef.createNestApplication();
+  // igual ao main.ts (atrás do Caddy): o limite por IP usa o X-Forwarded-For
+  (app.getHttpAdapter().getInstance() as { set: (k: string, v: unknown) => void }).set('trust proxy', 1);
   app.useGlobalPipes(appValidationPipe());
   app.useGlobalInterceptors(
     new ClassSerializerInterceptor(app.get(Reflector), {

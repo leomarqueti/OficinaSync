@@ -15,6 +15,7 @@ import { CreateUserDto } from '../users/dto/create-users.dto';
 import { plainToInstance } from 'class-transformer';
 import { ResponseAuthDto } from './dto/response-auth.dto';
 import { LoginDto } from './dto/login.dto';
+import { PinLoginDto } from './dto/pin-login.dto';
 import { TokenExpiredError } from '@nestjs/jwt';
 import { ForgotPasswordDto } from '../password_resets/dto/forgot-password.dto';
 import { ResetPasswordDto } from '../password_resets/dto/reset-password.dto';
@@ -45,6 +46,13 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   async login(@Body() body: LoginDto) {
     return this.authService.login(body.email, body.password);
+  }
+
+  /** Funcionário sem e-mail: celular + PIN (mesmo limite por IP do login; trava por conta no serviço). */
+  @Post('/pin-login')
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
+  async pinLogin(@Body() body: PinLoginDto) {
+    return this.authService.pinLogin(body.phone, body.pin);
   }
 
   @Get('/verify-email')

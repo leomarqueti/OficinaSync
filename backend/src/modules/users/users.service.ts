@@ -2,7 +2,9 @@
 /* eslint-disable @typescript-eslint/await-thenable */
 /* eslint-disable prettier/prettier */
 import {
+  BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   InternalServerErrorException,
   UnauthorizedException,
@@ -129,7 +131,8 @@ export class UsersService {
     const hashUser = user?.password_hash;
 
     if (!hashUser) {
-      throw new UnauthorizedException('Credenciais inválidas');
+      // mesma mensagem do login: não revela se o e-mail existe nem se a conta só tem PIN
+      throw new UnauthorizedException('Usuario ou senha invalidos!');
     }
 
     return user;
@@ -211,5 +214,105 @@ export class UsersService {
       { user_id: userId },
       { password_hash: senhaHash },
     );
+  }
+
+  /* ---------------- funcionário com celular + PIN (spec 2026-10-21) ---------------- */
+
+  private async hashSecret(plain: string): Promise<string> {
+    const PEPPER = this.configService.get<string>('PASSWORD_PEPPER');
+    if (!PEPPER) {
+      throw new InternalServerErrorException('PASSWORD_PEPPER não foi definido no .env');
+    }
+    return argon2.hash(plain, { type: argon2.argon2id, secret: Buffer.from(PEPPER, 'utf8') });
+  }
+
+  async findByPhone(phone: string): Promise<Users | null> {
+    return this.usersRepository.findOne({ where: { phone }, relations: { tenant: true } });
+  }
+
+  /** Convite por celular aceito: nasce ativo, na oficina e no cargo do convite, sem e-mail. */
+  async createFromPhoneInvite(name: string, phone: string, pin: string, tenant: Tenants, role: Role): Promise<Users> {
+    if (await this.findByPhone(phone)) {
+      throw new ConflictException('Esse celular já está cadastrado.');
+    }
+    const user = this.usersRepository.create({
+      name,
+      phone,
+      email: null,
+      password_hash: null,
+      pin_hash: await this.hashSecret(pin),
+      tenant,
+      role,
+      is_active: true,
+    });
+    return this.usersRepository.save(user);
+  }
+
+  /** Novo acesso: troca o PIN e solta a trava. */
+  async setPin(userId: number, pin: string): Promise<void> {
+    await this.usersRepository.update(
+      { user_id: userId },
+      { pin_hash: await this.hashSecret(pin), failed_pin_attempts: 0, pin_locked_until: null },
+    );
+  }
+
+  /** Usuário pro login por PIN, com o hash (que tem select: false). */
+  async findPinUser(phone: string): Promise<Users | null> {
+    return this.usersRepository
+      .createQueryBuilder('user')
+      .addSelect('user.pin_hash')
+      .where('user.phone = :phone', { phone })
+      .getOne();
+  }
+
+  async savePinState(userId: number, attempts: number, lockedUntil: Date | null): Promise<void> {
+    await this.usersRepository.update({ user_id: userId }, { failed_pin_attempts: attempts, pin_locked_until: lockedUntil });
+  }
+
+  /* ---------------- equipe (só o dono) ---------------- */
+
+  private async requireOwner(ownerId: number) {
+    const owner = await this.findById(ownerId);
+    if (owner.role !== Role.OWNER || !owner.tenant) {
+      throw new ForbiddenException('Só o dono da oficina gerencia a equipe.');
+    }
+    return owner as Users & { tenant: Tenants };
+  }
+
+  private toMember(u: Users) {
+    return {
+      user_id: u.user_id,
+      name: u.name,
+      role: u.role,
+      email: u.email,
+      phone: u.phone,
+      is_active: u.is_active,
+      created_at: u.created_at,
+    };
+  }
+
+  /** Funcionários da oficina do dono, inclusive os desativados. */
+  async listMembers(ownerId: number) {
+    const owner = await this.requireOwner(ownerId);
+    const users = await this.usersRepository.find({
+      where: { tenant: { id: owner.tenant.id } },
+      order: { name: 'ASC' },
+    });
+    return users.map((u) => this.toMember(u));
+  }
+
+  /** Desativar corta o acesso na hora (o JwtAuthGuard confere is_active); reativar devolve. */
+  async setActive(ownerId: number, targetId: number, active: boolean) {
+    const owner = await this.requireOwner(ownerId);
+    if (targetId === owner.user_id) {
+      throw new BadRequestException('O dono não pode desativar a própria conta.');
+    }
+    const target = await this.usersRepository.findOne({ where: { user_id: targetId }, relations: { tenant: true } });
+    if (!target || target.tenant?.id !== owner.tenant.id) {
+      throw new ForbiddenException('Esse funcionário não é da sua oficina.');
+    }
+    target.is_active = active;
+    await this.usersRepository.save(target);
+    return this.toMember(target);
   }
 }

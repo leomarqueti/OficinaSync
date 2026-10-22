@@ -11,7 +11,8 @@ import {
 } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { plainToInstance } from 'class-transformer';
-import { InvitesService } from './invites.service';
+import { InvitesService, type InviteLink } from './invites.service';
+import { AccessLinkDto } from './dto/access-link.dto';
 import { CreateInviteDto } from './dto/create-invite.dto';
 import { AcceptInviteDto } from './dto/accept-invite.dto';
 import { ResponseInviteDto } from './dto/response-invite.dto';
@@ -24,13 +25,16 @@ export class InvitesController {
   @Post()
   @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.CREATED)
-  async create(
-    @Body() dto: CreateInviteDto,
-    @Req() req: any,
-  ): Promise<{ message: string }> {
-    await this.invitesService.create(req.user.sub, dto);
+  async create(@Body() dto: CreateInviteDto, @Req() req: any): Promise<InviteLink> {
+    return this.invitesService.create(req.user.sub, dto);
+  }
 
-    return { message: 'Convite enviado com sucesso.' };
+  /** "Novo acesso" pra quem esqueceu o PIN: link de uso único (24 h). Só o dono. */
+  @Post('access-link')
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.CREATED)
+  async accessLink(@Body() dto: AccessLinkDto, @Req() req: any): Promise<InviteLink> {
+    return this.invitesService.createAccessLink(req.user.sub, dto.user_id);
   }
 
   @Get()

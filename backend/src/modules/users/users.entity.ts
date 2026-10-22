@@ -3,6 +3,7 @@
 import {
   Check,
   Column,
+  Index,
   CreateDateColumn,
   Entity,
   JoinColumn,
@@ -17,6 +18,10 @@ import { ServiceOrders } from '../serviceOrder/serviceOrder.entity';
 import { Sections } from '../sections/section.entity';
 
 @Entity('users')
+// e-mail e celular são opcionais (funcionário só com celular + PIN); no SQL Server um UNIQUE comum
+// aceita um NULL só, por isso os índices únicos são filtrados.
+@Index('UQ_users_email', ['email'], { unique: true, where: '"email" IS NOT NULL' })
+@Index('UQ_users_phone', ['phone'], { unique: true, where: '"phone" IS NOT NULL' })
 @Check(
   'check_values_user_role',
   `"role" IN  ('owner','mechanic','receptionist')`,
@@ -28,11 +33,24 @@ export class Users {
   @Column({ length: 150 })
   name: string;
 
-  @Column({ length: 100, unique: true })
-  email: string;
+  @Column({ type: 'nvarchar', length: 100, nullable: true })
+  email: string | null;
 
-  @Column({ type: 'varchar', length: 150, select: false })
-  password_hash: string;
+  @Column({ type: 'varchar', length: 150, select: false, nullable: true })
+  password_hash: string | null;
+
+  /** Celular em E.164 (+5514999990000) — login do funcionário com PIN. */
+  @Column({ type: 'varchar', length: 20, nullable: true })
+  phone: string | null;
+
+  @Column({ type: 'varchar', length: 150, select: false, nullable: true })
+  pin_hash: string | null;
+
+  @Column({ type: 'int', default: 0 })
+  failed_pin_attempts: number;
+
+  @Column({ type: 'datetime2', nullable: true })
+  pin_locked_until: Date | null;
 
   @Column({
     type: 'varchar',
