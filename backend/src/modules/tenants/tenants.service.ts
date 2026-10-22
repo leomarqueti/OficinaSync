@@ -68,7 +68,9 @@ export class TenantsService {
 
     //Agora vamos chamar a funçao de criar a verificacao de email
     await this.email_verificationService.saveToken(userId, token);
-    this.emailService.sendVerificationEmail(email, token, name);
+    // envio sem esperar, mas com a falha TRATADA: um erro do provedor (ex.: domínio sem verificação)
+    // solto aqui virava "unhandled rejection" e podia derrubar o processo do backend
+    this.emailService.sendVerificationEmail(email, token, name).catch(() => undefined);
 
     // vamos vincular o user com o tenant
     await this.usersService.updateTenantId(userId, saveTenant);

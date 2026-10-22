@@ -213,6 +213,27 @@ describe('funcionário sem e-mail (celular + PIN)', () => {
       await request(server()).patch(`/users/${t.userId}/active`).set(as(mech.token)).send({ active: false }).expect(403);
     });
 
+    it('criar a oficina com o e-mail falhando não deixa erro solto (regressão: derrubava o processo / a suíte seguinte)', async () => {
+      const loose: unknown[] = [];
+      const catcher = (reason: unknown) => loose.push(reason);
+      process.on('unhandledRejection', catcher);
+      try {
+        const reg = await request(server())
+          .post('/auth/register')
+          .set(fresh())
+          .send({ name: 'Dono Sem Email', email: `sem-email-${Date.now()}@teste.local`, password: 'Teste@12345' })
+          .expect(201);
+        await request(server())
+          .post('/tenants')
+          .set(as(reg.body.onboarding_token))
+          .send({ name: 'Oficina Email Falha', cnpj: '11444777000161', phone: '+5514997951011' });
+        await new Promise((r) => setTimeout(r, 3000)); // dá tempo do envio (que falha) terminar
+        expect(loose).toEqual([]);
+      } finally {
+        process.off('unhandledRejection', catcher);
+      }
+    });
+
     it('o token de onboarding (dono se cadastrando, ainda inativo) continua criando a oficina', async () => {
       const email = `novo-dono-${Date.now()}@teste.local`;
       const reg = await request(server())
