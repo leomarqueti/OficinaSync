@@ -4,6 +4,16 @@ import { Test } from '@nestjs/testing';
 import * as sql from 'mssql';
 import { AppModule } from '../../src/app.module';
 import { appValidationPipe } from '../../src/common/validation';
+import { EmailService } from '../../src/modules/emailResend/emailResend.service';
+
+const emailOff = () => Promise.reject(new Error('e-mail desligado nos testes'));
+
+/** Provedor de e-mail dos testes: recusa todo envio imediatamente (sem rede). */
+export const failingEmailService = {
+  sendVerificationEmail: emailOff,
+  sendPasswordResetEmail: emailOff,
+  sendInviteEmail: emailOff,
+};
 
 async function ensureTestDatabase(): Promise<void> {
   const pool = await new sql.ConnectionPool({
@@ -29,7 +39,13 @@ export async function createTestApp(): Promise<INestApplication> {
 
   const moduleRef = await Test.createTestingModule({
     imports: [AppModule],
-  }).compile();
+  })
+    // Os testes NUNCA chamam o provedor de e-mail de verdade: a resposta dele (sempre um erro, a chave
+    // é falsa) chegava depois da suíte acabar e o Jest saía com código 1 no CI ("Cannot log after tests
+    // are done"). O falso falha NA HORA, igual ao provedor recusando — o que o código precisa aguentar.
+    .overrideProvider(EmailService)
+    .useValue(failingEmailService)
+    .compile();
 
   const app = moduleRef.createNestApplication();
   // igual ao main.ts (atrás do Caddy): o limite por IP usa o X-Forwarded-For
